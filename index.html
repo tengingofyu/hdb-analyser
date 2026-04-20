@@ -639,6 +639,15 @@ function linearRegression(xs, ys) {
   return { slope, intercept: my - slope*mx };
 }
 
+const API_KEY = 'v2:ebc47ef4f68900ca3990ac0f5732a6be30e58b34e98bd72a0787404738e28b48:-g2ntzRlvEOPUPW2yYmMGuZrPtfL_O92';       // PASTE YOUR data.gov.sg API KEY HERE
+const ONEMAP_TOKEN = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMjgxOCwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc3NjY1MzQ4NCwibmJmIjoxNzc2NjUzNDg0LCJleHAiOjE3NzY5MTI2ODQsImp0aSI6IjBjN2M0OTA4LWZlNWMtNDY2OS05OGIwLWI2NGQ1OTM2MzdkZCJ9.b3xMO0adTBi1Z570v4qhEYxFNgvbjJdd7nHVNxxFvHtuiBx2hYlealCNqJW5GhceHhSCqN-QUKsIZTyCzzHgBt7w73Fd3xqQjLHHzkjd5f4bFEi2zzQGziA01iKgFzQ3DGlPYdUlytLCYulxWBGu7RGC48t7WC1cpk1MznlcnrV2rlyO45K_0-_omfZDeqSUD0WnpkwoKFjrasGea4uioJLxPyvzrnKELXu-yb6Rrr3yzMd7EWsAXKzBRGEbRO37hgIPyUJcjSzAEjXS7oyub1HKuvhd_J6snD_x0cCJ7_JrKF2JeVBOj8DZXOd7NmCPb3BkxrcYg9fauv-Y8KdXzQ'; // PASTE YOUR OneMap TOKEN HERE
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function buildHeaders() {
+  return API_KEY ? { 'Authorization': API_KEY } : {};
+}
+
 async function fetchRecs(filters, monthsBack, maxOffset=5000) {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth()-monthsBack, 1);
@@ -647,8 +656,14 @@ async function fetchRecs(filters, monthsBack, maxOffset=5000) {
   while (offset < maxOffset) {
     let url = `${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}`;
     for (const [k,v] of Object.entries(filters)) if (v) url += `&filters[${k}]=${encodeURIComponent(v)}`;
-    const resp = await fetch(url);
+    const resp = await fetch(url, { headers: buildHeaders() });
     const json = await resp.json();
+    if (json.code === 24 || json.name === 'TOO_MANY_REQUESTS') {
+      showStatus('Rate limit hit — waiting 12 seconds before retrying...');
+      await sleep(12000);
+      showStatus('Retrying...');
+      continue;
+    }
     if (!json.result?.records) break;
     const recs = json.result.records.filter(r => r.month >= cutoffStr);
     all = all.concat(recs);
@@ -656,6 +671,7 @@ async function fetchRecs(filters, monthsBack, maxOffset=5000) {
     const last = json.result.records[json.result.records.length-1]?.month;
     if (last && last < cutoffStr) break;
     offset += limit;
+    if (offset < maxOffset) await sleep(300);
   }
   return all;
 }
@@ -664,13 +680,15 @@ async function fetchAllSchools() {
   let all=[], offset=0, limit=500;
   while (true) {
     const url = `${API_HDB}?resource_id=${DS_SCH}&limit=${limit}&offset=${offset}`;
-    const resp = await fetch(url);
+    const resp = await fetch(url, { headers: buildHeaders() });
     const json = await resp.json();
+    if (json.code === 24 || json.name === 'TOO_MANY_REQUESTS') { await sleep(12000); continue; }
     if (!json.result?.records?.length) break;
     all = all.concat(json.result.records);
     if (json.result.records.length < limit) break;
     offset += limit;
     if (offset > 2000) break;
+    await sleep(300);
   }
   return all.filter(s => s.mainlevel_code === 'PRIMARY');
 }
@@ -678,7 +696,7 @@ async function fetchAllSchools() {
 async function geocodeSchool(s) {
   const query = encodeURIComponent(s.postal_code || s.address || s.school_name);
   try {
-    const r = await fetch(`${ONEMAP}?searchVal=${query}&returnGeom=Y&getAddrDetails=N&pageNum=1`);
+    const r = await fetch(`${ONEMAP}?searchVal=${query}&returnGeom=Y&getAddrDetails=N&pageNum=1`, { headers: ONEMAP_TOKEN ? { 'Authorization': `Bearer ${ONEMAP_TOKEN}` } : {} });
     const j = await r.json();
     if (j.results?.length) {
       return { ...s, lat: parseFloat(j.results[0].LATITUDE), lng: parseFloat(j.results[0].LONGITUDE) };
@@ -722,7 +740,7 @@ async function doLookup() {
   showStatus('Resolving postal code via OneMap...');
 
   try {
-    const r = await fetch(`${ONEMAP}?searchVal=${postal}&returnGeom=Y&getAddrDetails=Y&pageNum=1`);
+    const r = await fetch(`${ONEMAP}?searchVal=${postal}&returnGeom=Y&getAddrDetails=Y&pageNum=1`, { headers: ONEMAP_TOKEN ? { 'Authorization': `Bearer ${ONEMAP_TOKEN}` } : {} });
     const j = await r.json();
     if (!j.results?.length) {
       document.getElementById('resolved-tag').innerHTML = '<div class="tag t-err">Postal code not found.</div>';
