@@ -645,17 +645,18 @@ const ONEMAP_TOKEN = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMjgxO
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function buildHeaders() {
-  return API_KEY ? { 'Authorization': API_KEY } : {};
+  return API_KEY ? { 'x-api-key': API_KEY } : {};
 }
 
 async function fetchRecs(filters, monthsBack, maxOffset=5000) {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth()-monthsBack, 1);
   const cutoffStr = cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0');
-  let all=[], offset=0, limit=500;
+  let all=[], offset=0, limit=100;
   while (offset < maxOffset) {
-    let url = `${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}`;
-    for (const [k,v] of Object.entries(filters)) if (v) url += `&filters[${k}]=${encodeURIComponent(v)}`;
+    let url = `${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}&sort=month%20desc`;
+    const activeFilters = Object.fromEntries(Object.entries(filters).filter(([k,v]) => v));
+    if (Object.keys(activeFilters).length) url += `&filters=${encodeURIComponent(JSON.stringify(activeFilters))}`;
     const resp = await fetch(url, { headers: buildHeaders() });
     const json = await resp.json();
     if (json.code === 24 || json.name === 'TOO_MANY_REQUESTS') {
@@ -671,7 +672,7 @@ async function fetchRecs(filters, monthsBack, maxOffset=5000) {
     const last = json.result.records[json.result.records.length-1]?.month;
     if (last && last < cutoffStr) break;
     offset += limit;
-    if (offset < maxOffset) await sleep(300);
+    if (offset < maxOffset) await sleep(600);
   }
   return all;
 }
