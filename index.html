@@ -738,12 +738,15 @@ async function doLookup() {
 
     showStatus('Fetching HDB transaction history...');
     const mb = +document.getElementById('months_back').value;
-    allBlockRecs = filterByStreet(await fetchRecs({block:resolvedBlock}, mb, 3000), resolvedStreet);
-    if (!allBlockRecs.length) {
-      showStatus('No block data — fetching street-level transactions...');
-      allStreetRecs = filterByStreet(await fetchRecs({}, mb, 8000), resolvedStreet);
-    } else {
+    allBlockRecs = await fetchRecs({block:resolvedBlock}, mb, 3000);
+    if (allBlockRecs.length) {
+      const hdbStreet = allBlockRecs[0]?.street_name || '';
+      resolvedStreet = hdbStreet || resolvedStreet;
       allStreetRecs = allBlockRecs;
+    } else {
+      showStatus('No block data — fetching street-level transactions...');
+      const streetRecs = await fetchRecs({}, mb, 8000);
+      allStreetRecs = filterByStreet(streetRecs, resolvedStreet);
     }
     showStatus('', false);
 
@@ -825,10 +828,18 @@ async function runFallbackChain(flatType, bands, mb) {
                bands.some(b => { const m=storeyMid(r.storey_range); return m>=b.min&&m<=b.max; })) },
     { id:2, label:'Same street, same floor band',
       desc:`${resolvedStreet} · ${flatType}`,
-      fn: () => filterByBands(allStreetRecs.filter(r => r.flat_type===flatType), bands) },
+      fn: async () => {
+        if (allStreetRecs.length) return filterByBands(allStreetRecs.filter(r => r.flat_type===flatType), bands);
+        const recs = await fetchRecs({}, mb, 8000);
+        return filterByBands(filterByStreet(recs, resolvedStreet).filter(r => r.flat_type===flatType), bands);
+      }},
     { id:3, label:'Same street, any floor',
       desc:`${resolvedStreet} · ${flatType} · all floors`,
-      fn: () => allStreetRecs.filter(r => r.flat_type===flatType) },
+      fn: async () => {
+        if (allStreetRecs.length) return allStreetRecs.filter(r => r.flat_type===flatType);
+        const recs = await fetchRecs({}, mb, 8000);
+        return filterByStreet(recs, resolvedStreet).filter(r => r.flat_type===flatType);
+      }},
     { id:4, label:'Same town, same flat type',
       desc:`${resolvedTown} · ${flatType}`,
       fn: async () => {
