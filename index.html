@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HDB Resale Analyser — Price, Schools & Value Signals</title>
-<meta name="description" content="Free tool to research HDB resale prices, nearby primary schools for P1 registration, and value signals for any Singapore HDB block."/>
+<meta name="description" content="Free tool to research HDB resale prices, nearby amenities, and value signals for any Singapore HDB block."/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -37,26 +37,27 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .subtitle{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
 .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1rem}
 .sl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;font-weight:500}
-.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:1rem}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:1rem}
 .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
-.field select,.field input{width:100%;font-size:14px;padding:7px 10px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);outline:none}
+.field select,.field input{width:100%;font-size:14px;padding:9px 10px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);outline:none;min-height:42px}
 .field select:focus,.field input:focus{border-color:#378ADD;box-shadow:0 0 0 3px rgba(55,138,221,0.15)}
-.field select:disabled{opacity:0.45;cursor:not-allowed}
 .hint{font-size:11px;color:var(--text3);margin-top:3px}
-.btn{border-radius:var(--radius);padding:9px 20px;font-size:14px;font-weight:500;cursor:pointer;width:100%;border:none;transition:opacity 0.15s,transform 0.1s}
+.btn{border-radius:var(--radius);padding:11px 20px;font-size:14px;font-weight:500;cursor:pointer;width:100%;border:none;transition:opacity 0.15s,transform 0.1s;min-height:44px}
 .btn:active{transform:scale(0.98)}
 .btn-primary{background:var(--text);color:var(--bg)}
 .btn-primary:hover{opacity:0.88}
 .btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--bg2);color:var(--text);border:0.5px solid var(--border2)}
 .btn-secondary:hover{background:var(--bg3)}
+.btn-outline{background:transparent;color:var(--text);border:0.5px solid var(--border2);font-size:13px;padding:7px 16px;width:auto}
+.btn-outline:hover{background:var(--bg2)}
 .tabs{display:flex;gap:6px;margin-bottom:1rem}
 .tab{flex:1;padding:7px 4px;font-size:13px;font-weight:500;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);cursor:pointer;text-align:center;transition:all 0.15s}
 .tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 .tab:hover:not(.active){background:var(--bg3)}
 .steps{display:flex;flex-direction:column;gap:6px;margin-bottom:1.25rem}
 .step{display:flex;align-items:center;gap:10px}
-.sn{width:24px;height:24px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text2);flex-shrink:0;transition:all 0.2s}
+.sn{width:24px;height:24px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text2);flex-shrink:0}
 .sn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 .sn.done{background:var(--ok-bg);color:var(--ok-text);border-color:transparent}
 .sl2{font-size:13px;color:var(--text2)}
@@ -66,17 +67,30 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .t-err{background:var(--err-bg);color:var(--err-text)}
 .t-info{background:var(--info-bg);color:var(--info-text)}
 .t-warn{background:var(--warn-bg);color:var(--warn-text)}
+/* Quick result */
+.quick-result{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.quick-price{font-size:28px;font-weight:500;color:var(--text);margin-bottom:2px}
+.quick-range{font-size:13px;color:var(--text2);margin-bottom:0.75rem}
+.quick-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.qm{background:var(--bg2);border-radius:var(--radius);padding:0.6rem 0.75rem}
+.qm-label{font-size:11px;color:var(--text2);margin-bottom:2px}
+.qm-value{font-size:15px;font-weight:500;color:var(--text)}
+.quick-verdict{font-size:13px;padding:8px 12px;border-radius:var(--radius);margin-bottom:1rem}
+.quick-source{font-size:11px;color:var(--text3);margin-bottom:1rem}
+/* Fallback banner */
 .fallback-banner{border-radius:var(--radius);padding:10px 14px;margin-bottom:1rem;font-size:13px;line-height:1.5}
 .fb-exact{background:var(--ok-bg);color:var(--ok-text)}
 .fb-block{background:var(--info-bg);color:var(--info-text)}
 .fb-street{background:var(--warn-bg);color:var(--warn-text)}
 .fb-town{background:var(--neu-bg);color:var(--text2);border:0.5px solid var(--border2)}
 .fb-title{font-weight:500;margin-bottom:2px}
+/* Metrics */
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem}
 .metric{background:var(--bg2);border-radius:var(--radius);padding:0.65rem 0.875rem}
 .metric-label{font-size:11px;color:var(--text2);margin-bottom:3px}
 .metric-value{font-size:17px;font-weight:500;color:var(--text)}
 .metric-sub{font-size:10px;color:var(--text3);margin-top:2px}
+/* Verdict */
 .verdict{border-radius:var(--radius);padding:0.875rem 1rem;margin-bottom:1rem}
 .verdict-title{font-size:14px;font-weight:500;margin-bottom:4px}
 .verdict-body{font-size:13px;opacity:0.9;line-height:1.5}
@@ -85,6 +99,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .v-below{background:var(--info-bg);color:var(--info-text)}
 .v-danger{background:var(--err-bg);color:var(--err-text)}
 .v-neutral{background:var(--neu-bg);color:var(--text);border:0.5px solid var(--border2)}
+/* Table */
 .tx-table{width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed}
 .tx-table th{text-align:left;font-weight:500;font-size:11px;color:var(--text2);padding:5px 4px;border-bottom:0.5px solid var(--border)}
 .tx-table td{padding:5px 4px;border-bottom:0.5px solid var(--border);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -98,36 +113,22 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .p-green{background:#EAF3DE;color:#27500A}
 .p-amber{background:#FAEEDA;color:#633806}
 .p-red{background:#FCEBEB;color:#791F1F}
-.school-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
-@media(max-width:480px){.school-grid{grid-template-columns:1fr}}
-.school-col-title{font-size:12px;font-weight:500;margin-bottom:8px;padding:4px 8px;border-radius:var(--radius)}
-.school-1km{background:#EAF3DE;color:#27500A}
-.school-2km{background:#FAEEDA;color:#633806}
-.school-item{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--border)}
-.school-item:last-child{border-bottom:none}
-.school-name{font-size:12px;font-weight:500;color:var(--text);line-height:1.3}
-.school-dist{font-size:11px;color:var(--text2);white-space:nowrap;margin-left:8px;padding-top:1px}
-.school-none{font-size:13px;color:var(--text3);padding:0.5rem 0}
-.mrt-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px}
-.mrt-item:last-child{border-bottom:none}
-.mrt-name{color:var(--text);font-weight:500}
-.mrt-detail{text-align:right;font-size:12px;color:var(--text2)}
-.value-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px}
-.value-row:last-child{border-bottom:none}
-.value-label{color:var(--text2)}
-.value-val{font-weight:500;color:var(--text);text-align:right}
-.lease-track{height:10px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:4px}
-.status{font-size:13px;color:var(--text2);text-align:center;padding:1.5rem;display:none}
-.kofi-bar{background:var(--bg2);border-radius:var(--radius);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:0.75rem;flex-wrap:wrap}
-.kofi-bar span{font-size:12px;color:var(--text2)}
-.kofi-btn{font-size:12px;padding:5px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer;font-weight:500}
-.kofi-btn:hover{background:var(--bg2)}
-.attribution{font-size:11px;color:var(--text3);margin-top:2rem;padding-top:1rem;border-top:0.5px solid var(--border);line-height:1.7}
-.attribution a{color:#378ADD;text-decoration:none}
-.attribution a:hover{text-decoration:underline}
-.cooldown-msg{font-size:11px;color:var(--text3);text-align:center;margin-top:5px;display:none}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#ad-slot{text-align:center;padding:0.5rem;font-size:11px;color:var(--text3);border:0.5px dashed var(--border2);border-radius:var(--radius);margin-bottom:1rem}
+/* Amenities */
+.amenity-section{margin-bottom:1.25rem}
+.amenity-section:last-child{margin-bottom:0}
+.amenity-header{font-size:12px;font-weight:500;padding:4px 8px;border-radius:var(--radius);margin-bottom:8px;display:inline-block}
+.ah-mrt{background:#E8F4FD;color:#0A3D6B}
+.ah-school{background:var(--ok-bg);color:var(--ok-text)}
+.ah-school-2km{background:var(--warn-bg);color:var(--warn-text)}
+.ah-childcare{background:#F0EBF8;color:#4A1B7A}
+.amenity-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.amenity-item:last-child{border-bottom:none}
+.amenity-name{color:var(--text);font-weight:500;font-size:12px;line-height:1.3;flex:1}
+.amenity-meta{text-align:right;flex-shrink:0;margin-left:8px}
+.amenity-dist{font-size:12px;color:var(--text);font-weight:500}
+.amenity-walk{font-size:10px;color:var(--text3)}
+.amenity-none{font-size:13px;color:var(--text3);padding:0.5rem 0}
+/* Value signals */
 .signal-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0;border-bottom:0.5px solid var(--border)}
 .signal-item:last-child{border-bottom:none}
 .signal-left{display:flex;align-items:flex-start;gap:10px}
@@ -144,24 +145,64 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .sb-neg{background:var(--err-bg);color:var(--err-text)}
 .sb-cau{background:var(--warn-bg);color:var(--warn-text)}
 .summary-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);margin-bottom:1rem;font-size:13px}
-.summary-dots{display:flex;gap:4px}
-.dot{width:10px;height:10px;border-radius:50%}
+.summary-dots{display:flex;gap:4px;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.lease-track{height:10px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:4px}
+.value-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.value-row:last-child{border-bottom:none}
+.value-label{color:var(--text2)}
+.value-val{font-weight:500;color:var(--text);text-align:right}
+/* Misc */
+.status{font-size:13px;color:var(--text2);text-align:center;padding:1.5rem;display:none}
+.kofi-bar{background:var(--bg2);border-radius:var(--radius);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:0.75rem;flex-wrap:wrap}
+.kofi-bar span{font-size:12px;color:var(--text2)}
+.kofi-btn{font-size:12px;padding:5px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer;font-weight:500}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ad-slot{text-align:center;padding:0.5rem;font-size:11px;color:var(--text3);border:0.5px dashed var(--border2);border-radius:var(--radius);margin-bottom:1rem}
+.attribution{font-size:11px;color:var(--text3);margin-top:2rem;padding-top:1rem;border-top:0.5px solid var(--border);line-height:1.7}
+.attribution a{color:#378ADD;text-decoration:none}
+@media(max-width:480px){
+  .quick-metrics{grid-template-columns:repeat(2,1fr)}
+  .form-row{grid-template-columns:1fr}
+  h1{font-size:18px}
+  .page{padding:1rem 0.75rem 2.5rem}
+  .card{padding:0.875rem 1rem}
+  .quick-result{padding:1rem}
+  .quick-price{font-size:24px}
+  /* Hide non-essential table columns on mobile */
+  .tx-table .hide-mobile{display:none}
+  /* Tabs — smaller text */
+  .tab{font-size:12px;padding:6px 2px}
+  /* Signal items stack better */
+  .signal-item{grid-template-columns:1fr}
+  .signal-badge{margin-top:4px;align-self:flex-start}
+  /* Chart height reduction */
+  .chart-wrap-inner{height:160px!important}
+  /* Value row wrap */
+  .value-row{flex-direction:column;align-items:flex-start;gap:2px}
+  .value-val{text-align:left}
+  /* Summary bar wrap */
+  .summary-bar{flex-direction:column;align-items:flex-start;gap:6px}
+  /* Amenity item */
+  .amenity-item{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
 <div class="page">
   <h1>HDB Resale Analyser</h1>
-  <p class="subtitle">Price comparables, nearby primary schools, and value signals for any HDB block</p>
+  <p class="subtitle">Price comparables, nearby amenities, and value signals for any HDB block</p>
+  <div id="ad-slot"><!-- Google AdSense --></div>
 
-  <div id="ad-slot"><!-- Google AdSense banner --></div>
-
-  <div class="card">
-    <div class="steps">
+  <!-- INPUT CARD -->
+  <div class="card" id="inputCard">
+    <div class="steps" id="stepsIndicator">
       <div class="step"><div class="sn active" id="sn1">1</div><div class="sl2 active" id="sl1">Enter block details</div></div>
       <div class="step"><div class="sn" id="sn2">2</div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
-      <div class="step"><div class="sn" id="sn3">3</div><div class="sl2" id="sl3">View analysis</div></div>
+      <div class="step"><div class="sn" id="sn3">3</div><div class="sl2" id="sl3">Full analysis</div></div>
     </div>
 
+    <!-- Step 1 -->
     <div id="step1-panel">
       <div class="form-row">
         <div class="field">
@@ -169,13 +210,17 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
           <input type="text" id="postal" maxlength="6" inputmode="numeric" oninput="onPostalInput()"/>
         </div>
         <div class="field">
-          <label>Floor</label>
-          <input type="number" id="floor_num" min="1" max="50" inputmode="numeric"/>
+          <label>Flat type</label>
+          <select id="quick_flat_type">
+            <option value="">Select type</option>
+            <option>1 ROOM</option><option>2 ROOM</option><option>3 ROOM</option>
+            <option>4 ROOM</option><option>5 ROOM</option><option>EXECUTIVE</option>
+          </select>
         </div>
         <div class="field">
           <label>Compare against price (SGD)</label>
           <input type="number" id="asking" min="0" step="1000" inputmode="numeric"/>
-          <div class="hint">Optional — buyer, seller, or agent</div>
+          <div class="hint">Optional</div>
         </div>
         <div class="field">
           <label>Months of history</label>
@@ -188,16 +233,16 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
         </div>
       </div>
       <div id="resolved-tag"></div>
-      <button class="btn btn-primary" id="lookupBtn" onclick="doLookup()">Look up block</button>
-      <div class="cooldown-msg" id="cooldownMsg">Please wait a moment before searching again</div>
+      <button class="btn btn-primary" id="quickBtn" onclick="doQuickSearch()">Get ballpark price</button>
     </div>
 
+    <!-- Step 2 (full analysis) -->
     <div id="step2-panel" style="display:none">
       <div id="step2-tag"></div>
       <div class="form-row">
         <div class="field">
-          <label>Flat type</label>
-          <select id="flat_type_sel"></select>
+          <label>Floor</label>
+          <input type="number" id="floor_num" min="1" max="50" inputmode="numeric"/>
         </div>
         <div class="field">
           <label>Floor band</label>
@@ -206,29 +251,54 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
       </div>
       <div class="grid-2">
         <button class="btn btn-secondary" onclick="resetToStep1()">Back</button>
-        <button class="btn btn-primary" id="analyseBtn" onclick="doAnalyse()">Find comparables</button>
+        <button class="btn btn-primary" id="analyseBtn" onclick="doFullAnalysis()">Full analysis</button>
       </div>
     </div>
   </div>
 
   <div id="statusMsg" class="status"></div>
 
-  <div id="results" style="display:none">
+  <!-- QUICK RESULT -->
+  <div id="quickResult" style="display:none">
+    <div class="quick-result">
+      <div class="sl">Quick price check — <span id="qr-scope"></span></div>
+      <div class="quick-price" id="qr-median"></div>
+      <div class="quick-range" id="qr-range"></div>
+      <div class="quick-metrics">
+        <div class="qm"><div class="qm-label">Transactions</div><div class="qm-value" id="qr-count"></div></div>
+        <div class="qm"><div class="qm-label">Median PSF</div><div class="qm-value" id="qr-psf"></div></div>
+        <div class="qm"><div class="qm-label">Median lease</div><div class="qm-value" id="qr-lease"></div></div>
+      </div>
+      <div id="qr-verdict" class="quick-verdict" style="display:none"></div>
+      <div class="quick-source" id="qr-source"></div>
+      <button class="btn btn-secondary" onclick="goToFullAnalysis()" style="font-size:13px">
+        Full analysis — schools, MRT, value signals →
+      </button>
+    </div>
+    <div class="kofi-bar">
+      <span>Found the ballpark useful?</span>
+      <button class="kofi-btn" onclick="window.open('https://ko-fi.com','_blank')">Buy me a coffee</button>
+    </div>
+  </div>
+
+  <!-- FULL RESULTS -->
+  <div id="fullResults" style="display:none">
     <div class="tabs">
-      <div class="tab active" id="nav-price"   onclick="showTab('price')">Price analysis</div>
-      <div class="tab"        id="nav-schools" onclick="showTab('schools')">Nearby schools</div>
-      <div class="tab"        id="nav-value"   onclick="showTab('value')">Value signals</div>
+      <div class="tab active" id="nav-price"     onclick="showTab('price')">Price</div>
+      <div class="tab"        id="nav-amenities" onclick="showTab('amenities')">Amenities</div>
+      <div class="tab"        id="nav-value"     onclick="showTab('value')">Value signals</div>
     </div>
 
+    <!-- Price tab -->
     <div id="tab-price">
       <div id="fallbackBanner"></div>
       <div class="metrics" id="metricsRow"></div>
       <div id="verdictBox"></div>
       <div class="card">
-        <p class="sl">Price trend over time</p>
+        <p class="sl">Price trend</p>
         <div id="trendSummary" style="font-size:13px;color:var(--text2);margin-bottom:0.75rem"></div>
-        <div style="position:relative;width:100%;height:210px">
-          <canvas id="trendChart" role="img" aria-label="Price trend chart of comparable HDB transactions"></canvas>
+        <div class="chart-wrap-inner" style="position:relative;width:100%;height:200px">
+          <canvas id="trendChart"></canvas>
         </div>
         <div id="chartLegend" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text2)"></div>
       </div>
@@ -237,16 +307,11 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
         <div style="overflow-x:auto">
           <table class="tx-table">
             <thead><tr>
-              <th style="width:54px">Month</th>
-              <th style="width:38px">Blk</th>
-              <th style="width:62px">Storey</th>
-              <th style="width:40px">sqm</th>
-              <th style="width:78px">Price</th>
-              <th style="width:46px">PSF</th>
-              <th style="width:46px">Lease</th>
-              <th style="width:44px">Remain</th>
-              <th style="width:46px">Band</th>
-              <th style="width:46px">vs med</th>
+              <th style="width:54px">Month</th><th style="width:38px">Blk</th>
+              <th style="width:62px">Storey</th><th style="width:40px" class="hide-mobile">sqm</th>
+              <th style="width:78px">Price</th><th style="width:46px" class="hide-mobile">PSF</th>
+              <th style="width:46px" class="hide-mobile">Lease</th><th style="width:44px">Remain</th>
+              <th style="width:46px" class="hide-mobile">Band</th><th style="width:46px">vs med</th>
             </tr></thead>
             <tbody id="txBody"></tbody>
           </table>
@@ -258,27 +323,26 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
       </div>
     </div>
 
-    <div id="tab-schools" style="display:none">
+    <!-- Amenities tab -->
+    <div id="tab-amenities" style="display:none">
       <div class="card">
-        <p class="sl">P1 registration priority zones</p>
-        <div id="schoolContent"><p style="font-size:13px;color:var(--text2)">Loading school data...</p></div>
+        <p class="sl">Nearby amenities</p>
+        <div id="amenitiesContent">
+          <p style="font-size:13px;color:var(--text2)">Loading amenities...</p>
+        </div>
         <div style="font-size:11px;color:var(--text3);margin-top:0.75rem;line-height:1.7">
-          Distance is straight-line, consistent with MOE's P1 registration balloting method.
-          Within 1km = Phase 2B priority. Within 2km = Phase 2C priority.
-          For definitive eligibility, verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank">MOE e-Registration portal</a>.
+          MRT distances are straight-line. School and childcare distances are straight-line, consistent with MOE's P1 registration balloting method.
+          For definitive P1 eligibility, verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank">MOE e-Registration portal</a>.
         </div>
       </div>
     </div>
 
+    <!-- Value signals tab -->
     <div id="tab-value" style="display:none">
       <div class="card">
         <p class="sl">Valuation signals</p>
         <div id="valueSummary" style="margin-bottom:1rem"></div>
         <div id="valueSignals"></div>
-      </div>
-      <div class="card">
-        <p class="sl">Nearest MRT / LRT stations</p>
-        <div id="mrtContent"></div>
       </div>
       <div class="card">
         <p class="sl">Remaining lease outlook</p>
@@ -295,11 +359,11 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
     Contains information from
     <a href="https://data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view" target="_blank">HDB Resale Flat Prices</a>,
     <a href="https://data.gov.sg/datasets/d_688b934f82c1059ed0a6993d2a829089/view" target="_blank">MOE General Information of Schools</a>, and
-    <a href="https://data.gov.sg/datasets/d_d8faa59f9f2f2e5a7a56fdf17735e618/view" target="_blank">LTA Train Station information</a>
+    <a href="https://data.gov.sg/datasets/d_696c994c50745b079b3684f0e90ffc53/view" target="_blank">ECDA Listing of Centres</a>
     accessed from data.gov.sg, made available under the
     <a href="https://data.gov.sg/open-data-licence" target="_blank">Singapore Open Data Licence version 1.0</a>.
     Postal code data via OneMap, Singapore Land Authority.
-    This tool is not affiliated with or endorsed by HDB, MOE, LTA, SLA, or any Singapore government agency.
+    Not affiliated with or endorsed by HDB, MOE, ECDA, LTA, SLA, or any Singapore government agency.
     Verify all figures independently before making financial decisions.
   </div>
 </div>
@@ -311,178 +375,173 @@ const API_KEY      = ''; // data.gov.sg API key
 const ONEMAP_TOKEN = ''; // OneMap token
 // ============================================================
 
-const API_HDB  = 'https://data.gov.sg/api/action/datastore_search';
-const DS_HDB   = 'd_8b84c4ee58e3cfc0ece0d773c8ca6abc';
-const DS_SCH   = 'd_688b934f82c1059ed0a6993d2a829089';
-// MRT/LRT stations — hardcoded with coordinates (stable data, no API needed)
-const MRT_STATIONS=[
-  {name:'Jurong East',line:'EWL/NSL',lat:1.3332,lng:103.7422},
-  {name:'Buona Vista',line:'EWL/CCL',lat:1.3072,lng:103.7899},
-  {name:'Commonwealth',line:'EWL',lat:1.3023,lng:103.7980},
-  {name:'Queenstown',line:'EWL',lat:1.2942,lng:103.8060},
-  {name:'Redhill',line:'EWL',lat:1.2898,lng:103.8167},
-  {name:'Tiong Bahru',line:'EWL',lat:1.2863,lng:103.8272},
-  {name:'Outram Park',line:'EWL/NEL/TEL',lat:1.2801,lng:103.8395},
-  {name:'Tanjong Pagar',line:'EWL',lat:1.2764,lng:103.8456},
-  {name:'Raffles Place',line:'EWL/NSL',lat:1.2833,lng:103.8514},
-  {name:'City Hall',line:'EWL/NSL',lat:1.2931,lng:103.8520},
-  {name:'Bugis',line:'EWL/DTL',lat:1.3009,lng:103.8559},
-  {name:'Lavender',line:'EWL',lat:1.3073,lng:103.8631},
-  {name:'Kallang',line:'EWL',lat:1.3117,lng:103.8714},
-  {name:'Aljunied',line:'EWL',lat:1.3163,lng:103.8831},
-  {name:'Paya Lebar',line:'EWL/CCL',lat:1.3179,lng:103.8921},
-  {name:'Eunos',line:'EWL',lat:1.3197,lng:103.9033},
-  {name:'Kembangan',line:'EWL',lat:1.3211,lng:103.9128},
-  {name:'Bedok',line:'EWL',lat:1.3240,lng:103.9300},
-  {name:'Tanah Merah',line:'EWL',lat:1.3273,lng:103.9462},
-  {name:'Simei',line:'EWL',lat:1.3435,lng:103.9531},
-  {name:'Tampines',line:'EWL/DTL',lat:1.3535,lng:103.9454},
-  {name:'Pasir Ris',line:'EWL',lat:1.3731,lng:103.9494},
-  {name:'Boon Lay',line:'EWL',lat:1.3387,lng:103.7059},
-  {name:'Pioneer',line:'EWL',lat:1.3378,lng:103.6972},
-  {name:'Joo Koon',line:'EWL',lat:1.3279,lng:103.6786},
-  {name:'Gul Circle',line:'EWL',lat:1.3196,lng:103.6607},
-  {name:'Tuas Crescent',line:'EWL',lat:1.3208,lng:103.6489},
-  {name:'Tuas West Road',line:'EWL',lat:1.3321,lng:103.6395},
-  {name:'Tuas Link',line:'EWL',lat:1.3404,lng:103.6368},
-  {name:'Chinese Garden',line:'EWL',lat:1.3424,lng:103.7322},
-  {name:'Lakeside',line:'EWL',lat:1.3441,lng:103.7206},
-  {name:'Clementi',line:'EWL',lat:1.3151,lng:103.7651},
-  {name:'Dover',line:'EWL',lat:1.3113,lng:103.7786},
-  {name:'Jurong West',line:'JRL',lat:1.3404,lng:103.7057},
-  {name:'Bahar Junction',line:'JRL',lat:1.3481,lng:103.6978},
-  {name:'Tengah',line:'JRL',lat:1.3596,lng:103.7073},
-  {name:'Tengah Plantation',line:'JRL',lat:1.3696,lng:103.7209},
-  {name:'Tengah Park',line:'JRL',lat:1.3771,lng:103.7315},
-  {name:'Bukit Batok West',line:'JRL',lat:1.3682,lng:103.7454},
-  {name:'Toh Guan',line:'JRL',lat:1.3377,lng:103.7386},
-  {name:'Corporation',line:'JRL',lat:1.3293,lng:103.7225},
-  {name:'Pandan Reservoir',line:'JRL',lat:1.3220,lng:103.7108},
-  {name:'Jurong Hill',line:'JRL',lat:1.3141,lng:103.7119},
-  {name:'Jurong Pier',line:'JRL',lat:1.3071,lng:103.7165},
-  {name:'Marina South Pier',line:'NSL',lat:1.2706,lng:103.8630},
-  {name:'Marina Bay',line:'NSL/CEL/TEL',lat:1.2762,lng:103.8545},
-  {name:'Bayfront',line:'CEL/DTL',lat:1.2821,lng:103.8592},
-  {name:'Promenade',line:'CCL/DTL',lat:1.2934,lng:103.8609},
-  {name:'Esplanade',line:'CCL',lat:1.2937,lng:103.8554},
-  {name:'Bras Basah',line:'CCL',lat:1.2966,lng:103.8499},
-  {name:'Dhoby Ghaut',line:'NSL/NEL/CCL',lat:1.2989,lng:103.8455},
-  {name:'Somerset',line:'NSL',lat:1.3006,lng:103.8389},
-  {name:'Orchard',line:'NSL/TEL',lat:1.3041,lng:103.8319},
-  {name:'Newton',line:'NSL/DTL',lat:1.3122,lng:103.8380},
-  {name:'Novena',line:'NSL',lat:1.3203,lng:103.8435},
-  {name:'Toa Payoh',line:'NSL',lat:1.3328,lng:103.8474},
-  {name:'Bishan',line:'NSL/CCL',lat:1.3510,lng:103.8485},
-  {name:'Braddell',line:'NSL',lat:1.3401,lng:103.8468},
-  {name:'Marymount',line:'CCL',lat:1.3494,lng:103.8396},
-  {name:'Caldecott',line:'CCL/TEL',lat:1.3376,lng:103.8393},
-  {name:'Ang Mo Kio',line:'NSL',lat:1.3699,lng:103.8495},
-  {name:'Yio Chu Kang',line:'NSL',lat:1.3816,lng:103.8449},
-  {name:'Khatib',line:'NSL',lat:1.4175,lng:103.8330},
-  {name:'Yishun',line:'NSL',lat:1.4294,lng:103.8354},
-  {name:'Sembawang',line:'NSL',lat:1.4490,lng:103.8199},
-  {name:'Canberra',line:'NSL',lat:1.4432,lng:103.8296},
-  {name:'Admiralty',line:'NSL',lat:1.4407,lng:103.8008},
-  {name:'Woodlands',line:'NSL/TEL',lat:1.4374,lng:103.7866},
-  {name:'Woodlands North',line:'TEL',lat:1.4481,lng:103.7861},
-  {name:'Woodlands South',line:'TEL',lat:1.4243,lng:103.7867},
-  {name:'Marsiling',line:'NSL',lat:1.4327,lng:103.7742},
-  {name:'Kranji',line:'NSL',lat:1.4253,lng:103.7619},
-  {name:'Bukit Panjang',line:'DTL/LRT',lat:1.3784,lng:103.7628},
-  {name:'Cashew',line:'DTL',lat:1.3692,lng:103.7646},
-  {name:'Hillview',line:'DTL',lat:1.3622,lng:103.7676},
-  {name:'Beauty World',line:'DTL',lat:1.3412,lng:103.7760},
-  {name:'King Albert Park',line:'DTL',lat:1.3355,lng:103.7831},
-  {name:'Sixth Avenue',line:'DTL',lat:1.3317,lng:103.7961},
-  {name:'Tan Kah Kee',line:'DTL',lat:1.3259,lng:103.8075},
-  {name:'Botanic Gardens',line:'CCL/DTL',lat:1.3224,lng:103.8154},
-  {name:'Farrer Road',line:'CCL',lat:1.3176,lng:103.8074},
-  {name:'Holland Village',line:'CCL',lat:1.3124,lng:103.7961},
-  {name:'one-north',line:'CCL',lat:1.2991,lng:103.7872},
-  {name:'Kent Ridge',line:'CCL',lat:1.2935,lng:103.7843},
-  {name:'Haw Par Villa',line:'CCL',lat:1.2827,lng:103.7820},
-  {name:'Pasir Panjang',line:'CCL',lat:1.2762,lng:103.7919},
-  {name:'Labrador Park',line:'CCL',lat:1.2722,lng:103.8025},
-  {name:'Telok Blangah',line:'CCL',lat:1.2706,lng:103.8096},
-  {name:'HarbourFront',line:'CCL/NEL',lat:1.2654,lng:103.8219},
-  {name:'Keppel',line:'CEL',lat:1.2712,lng:103.8343},
-  {name:'Cantonment',line:'CEL',lat:1.2742,lng:103.8413},
-  {name:'Prince Edward Road',line:'CEL',lat:1.2778,lng:103.8449},
-  {name:'Harbourfront',line:'NEL',lat:1.2654,lng:103.8219},
-  {name:'Chinatown',line:'NEL/DTL',lat:1.2835,lng:103.8444},
-  {name:'Clarke Quay',line:'NEL',lat:1.2882,lng:103.8464},
-  {name:'Dhoby Ghaut',line:'NEL',lat:1.2989,lng:103.8455},
-  {name:'Little India',line:'NEL/DTL',lat:1.3066,lng:103.8495},
-  {name:'Farrer Park',line:'NEL',lat:1.3124,lng:103.8548},
-  {name:'Boon Keng',line:'NEL',lat:1.3194,lng:103.8619},
-  {name:'Potong Pasir',line:'NEL',lat:1.3313,lng:103.8695},
-  {name:'Woodleigh',line:'NEL',lat:1.3397,lng:103.8705},
-  {name:'Serangoon',line:'NEL/CCL',lat:1.3499,lng:103.8733},
-  {name:'Kovan',line:'NEL',lat:1.3597,lng:103.8851},
-  {name:'Hougang',line:'NEL',lat:1.3714,lng:103.8924},
-  {name:'Buangkok',line:'NEL',lat:1.3832,lng:103.8929},
-  {name:'Sengkang',line:'NEL/LRT',lat:1.3916,lng:103.8954},
-  {name:'Punggol',line:'NEL/LRT',lat:1.4051,lng:103.9021},
-  {name:'Tampines East',line:'DTL',lat:1.3559,lng:103.9555},
-  {name:'Upper Changi',line:'DTL',lat:1.3413,lng:103.9614},
-  {name:'Expo',line:'DTL/CEL',lat:1.3352,lng:103.9615},
-  {name:'Changi Airport',line:'CEL',lat:1.3573,lng:103.9882},
-  {name:'Stadium',line:'CCL',lat:1.3030,lng:103.8750},
-  {name:'Mountbatten',line:'CCL',lat:1.3063,lng:103.8828},
-  {name:'Dakota',line:'CCL',lat:1.3081,lng:103.8882},
-  {name:'MacPherson',line:'CCL/DTL',lat:1.3264,lng:103.8900},
-  {name:'Tai Seng',line:'CCL',lat:1.3355,lng:103.8882},
-  {name:'Bartley',line:'CCL',lat:1.3424,lng:103.8800},
-  {name:'Lorong Chuan',line:'CCL',lat:1.3515,lng:103.8641},
-  {name:'Woodlands North',line:'TEL',lat:1.4481,lng:103.7861},
-  {name:'Springleaf',line:'TEL',lat:1.3993,lng:103.8193},
-  {name:'Lentor',line:'TEL',lat:1.3846,lng:103.8358},
-  {name:'Mayflower',line:'TEL',lat:1.3702,lng:103.8391},
-  {name:'Bright Hill',line:'TEL',lat:1.3606,lng:103.8352},
-  {name:'Upper Thomson',line:'TEL',lat:1.3529,lng:103.8327},
-  {name:'Caldecott',line:'TEL',lat:1.3376,lng:103.8393},
-  {name:'Mount Pleasant',line:'TEL',lat:1.3236,lng:103.8292},
-  {name:'Stevens',line:'TEL/DTL',lat:1.3196,lng:103.8259},
-  {name:'Napier',line:'TEL',lat:1.3061,lng:103.8189},
-  {name:'Orchard Boulevard',line:'TEL',lat:1.3019,lng:103.8240},
-  {name:'Great World',line:'TEL',lat:1.2937,lng:103.8240},
-  {name:'Havelock',line:'TEL',lat:1.2886,lng:103.8359},
-  {name:'Maxwell',line:'TEL',lat:1.2793,lng:103.8445},
-  {name:'Shenton Way',line:'TEL',lat:1.2769,lng:103.8499},
-  {name:'Gardens by the Bay',line:'TEL',lat:1.2821,lng:103.8630},
-  {name:'Tanjong Rhu',line:'TEL',lat:1.2993,lng:103.8716},
-  {name:'Katong Park',line:'TEL',lat:1.3032,lng:103.8812},
-  {name:'Tanjong Katong',line:'TEL',lat:1.3072,lng:103.8933},
-  {name:'Marine Parade',line:'TEL',lat:1.3030,lng:103.9064},
-  {name:'Marine Terrace',line:'TEL',lat:1.3063,lng:103.9198},
-  {name:'Siglap',line:'TEL',lat:1.3121,lng:103.9282},
-  {name:'Bayshore',line:'TEL',lat:1.3145,lng:103.9394},
-  {name:'Bedok South',line:'TEL',lat:1.3216,lng:103.9474}
-];
-const ONEMAP   = 'https://www.onemap.gov.sg/api/common/elastic/search';
-
+const API_HDB = 'https://data.gov.sg/api/action/datastore_search';
+const DS_HDB  = 'd_8b84c4ee58e3cfc0ece0d773c8ca6abc';
+const DS_SCH  = 'd_688b934f82c1059ed0a6993d2a829089';
+const DS_CC   = 'd_696c994c50745b079b3684f0e90ffc53';
+const ONEMAP  = 'https://www.onemap.gov.sg/api/common/elastic/search';
 const ALL_FLAT_TYPES = ['1 ROOM','2 ROOM','3 ROOM','4 ROOM','5 ROOM','EXECUTIVE'];
-
 const BANDS = [
-  {label:'Low (1–6)',   min:1,  max:6 },
-  {label:'Mid-low (7–12)', min:7,  max:12},
-  {label:'Mid-high (13–18)',min:13, max:18},
-  {label:'High (19–24)',   min:19, max:24},
-  {label:'Very high (25+)',min:25, max:99}
+  {label:'Low (1–6)',min:1,max:6},
+  {label:'Mid-low (7–12)',min:7,max:12},
+  {label:'Mid-high (13–18)',min:13,max:18},
+  {label:'High (19–24)',min:19,max:24},
+  {label:'Very high (25+)',min:25,max:99}
 ];
 
-let resolvedBlock='', resolvedStreet='', resolvedTown='';
-let resolvedLat=null, resolvedLng=null;
-let allBlockRecs=[], allStreetRecs=[];
-let selectedFlatType='', selectedBand=null, adjBands=[];
+// MRT/LRT hardcoded stations
+const MRT_STATIONS=[
+  {n:'Jurong East',l:'EWL/NSL',lat:1.3332,lng:103.7422},
+  {n:'Buona Vista',l:'EWL/CCL',lat:1.3072,lng:103.7899},
+  {n:'Commonwealth',l:'EWL',lat:1.3023,lng:103.7980},
+  {n:'Queenstown',l:'EWL',lat:1.2942,lng:103.8060},
+  {n:'Redhill',l:'EWL',lat:1.2898,lng:103.8167},
+  {n:'Tiong Bahru',l:'EWL',lat:1.2863,lng:103.8272},
+  {n:'Outram Park',l:'EWL/NEL/TEL',lat:1.2801,lng:103.8395},
+  {n:'Tanjong Pagar',l:'EWL',lat:1.2764,lng:103.8456},
+  {n:'Raffles Place',l:'EWL/NSL',lat:1.2833,lng:103.8514},
+  {n:'City Hall',l:'EWL/NSL',lat:1.2931,lng:103.8520},
+  {n:'Bugis',l:'EWL/DTL',lat:1.3009,lng:103.8559},
+  {n:'Lavender',l:'EWL',lat:1.3073,lng:103.8631},
+  {n:'Kallang',l:'EWL',lat:1.3117,lng:103.8714},
+  {n:'Aljunied',l:'EWL',lat:1.3163,lng:103.8831},
+  {n:'Paya Lebar',l:'EWL/CCL',lat:1.3179,lng:103.8921},
+  {n:'Eunos',l:'EWL',lat:1.3197,lng:103.9033},
+  {n:'Kembangan',l:'EWL',lat:1.3211,lng:103.9128},
+  {n:'Bedok',l:'EWL',lat:1.3240,lng:103.9300},
+  {n:'Tanah Merah',l:'EWL',lat:1.3273,lng:103.9462},
+  {n:'Simei',l:'EWL',lat:1.3435,lng:103.9531},
+  {n:'Tampines',l:'EWL/DTL',lat:1.3535,lng:103.9454},
+  {n:'Pasir Ris',l:'EWL',lat:1.3731,lng:103.9494},
+  {n:'Boon Lay',l:'EWL',lat:1.3387,lng:103.7059},
+  {n:'Pioneer',l:'EWL',lat:1.3378,lng:103.6972},
+  {n:'Joo Koon',l:'EWL',lat:1.3279,lng:103.6786},
+  {n:'Chinese Garden',l:'EWL',lat:1.3424,lng:103.7322},
+  {n:'Lakeside',l:'EWL',lat:1.3441,lng:103.7206},
+  {n:'Clementi',l:'EWL',lat:1.3151,lng:103.7651},
+  {n:'Dover',l:'EWL',lat:1.3113,lng:103.7786},
+  {n:'Toh Guan',l:'JRL',lat:1.3377,lng:103.7386},
+  {n:'Corporation',l:'JRL',lat:1.3293,lng:103.7225},
+  {n:'Jurong Hill',l:'JRL',lat:1.3141,lng:103.7119},
+  {n:'Jurong Pier',l:'JRL',lat:1.3071,lng:103.7165},
+  {n:'Pandan Reservoir',l:'JRL',lat:1.3220,lng:103.7108},
+  {n:'Bukit Batok West',l:'JRL',lat:1.3682,lng:103.7454},
+  {n:'Tengah Park',l:'JRL',lat:1.3771,lng:103.7315},
+  {n:'Tengah Plantation',l:'JRL',lat:1.3696,lng:103.7209},
+  {n:'Tengah',l:'JRL',lat:1.3596,lng:103.7073},
+  {n:'Bahar Junction',l:'JRL',lat:1.3481,lng:103.6978},
+  {n:'Jurong West',l:'JRL',lat:1.3404,lng:103.7057},
+  {n:'Marina Bay',l:'NSL/CEL/TEL',lat:1.2762,lng:103.8545},
+  {n:'Bayfront',l:'CEL/DTL',lat:1.2821,lng:103.8592},
+  {n:'Dhoby Ghaut',l:'NSL/NEL/CCL',lat:1.2989,lng:103.8455},
+  {n:'Somerset',l:'NSL',lat:1.3006,lng:103.8389},
+  {n:'Orchard',l:'NSL/TEL',lat:1.3041,lng:103.8319},
+  {n:'Newton',l:'NSL/DTL',lat:1.3122,lng:103.8380},
+  {n:'Novena',l:'NSL',lat:1.3203,lng:103.8435},
+  {n:'Toa Payoh',l:'NSL',lat:1.3328,lng:103.8474},
+  {n:'Braddell',l:'NSL',lat:1.3401,lng:103.8468},
+  {n:'Bishan',l:'NSL/CCL',lat:1.3510,lng:103.8485},
+  {n:'Ang Mo Kio',l:'NSL',lat:1.3699,lng:103.8495},
+  {n:'Yio Chu Kang',l:'NSL',lat:1.3816,lng:103.8449},
+  {n:'Khatib',l:'NSL',lat:1.4175,lng:103.8330},
+  {n:'Yishun',l:'NSL',lat:1.4294,lng:103.8354},
+  {n:'Sembawang',l:'NSL',lat:1.4490,lng:103.8199},
+  {n:'Canberra',l:'NSL',lat:1.4432,lng:103.8296},
+  {n:'Admiralty',l:'NSL',lat:1.4407,lng:103.8008},
+  {n:'Woodlands',l:'NSL/TEL',lat:1.4374,lng:103.7866},
+  {n:'Woodlands North',l:'TEL',lat:1.4481,lng:103.7861},
+  {n:'Woodlands South',l:'TEL',lat:1.4243,lng:103.7867},
+  {n:'Marsiling',l:'NSL',lat:1.4327,lng:103.7742},
+  {n:'Kranji',l:'NSL',lat:1.4253,lng:103.7619},
+  {n:'Bukit Panjang',l:'DTL/LRT',lat:1.3784,lng:103.7628},
+  {n:'Cashew',l:'DTL',lat:1.3692,lng:103.7646},
+  {n:'Hillview',l:'DTL',lat:1.3622,lng:103.7676},
+  {n:'Beauty World',l:'DTL',lat:1.3412,lng:103.7760},
+  {n:'King Albert Park',l:'DTL',lat:1.3355,lng:103.7831},
+  {n:'Sixth Avenue',l:'DTL',lat:1.3317,lng:103.7961},
+  {n:'Tan Kah Kee',l:'DTL',lat:1.3259,lng:103.8075},
+  {n:'Botanic Gardens',l:'CCL/DTL',lat:1.3224,lng:103.8154},
+  {n:'Farrer Road',l:'CCL',lat:1.3176,lng:103.8074},
+  {n:'Holland Village',l:'CCL',lat:1.3124,lng:103.7961},
+  {n:'one-north',l:'CCL',lat:1.2991,lng:103.7872},
+  {n:'Kent Ridge',l:'CCL',lat:1.2935,lng:103.7843},
+  {n:'Haw Par Villa',l:'CCL',lat:1.2827,lng:103.7820},
+  {n:'Pasir Panjang',l:'CCL',lat:1.2762,lng:103.7919},
+  {n:'Labrador Park',l:'CCL',lat:1.2722,lng:103.8025},
+  {n:'Telok Blangah',l:'CCL',lat:1.2706,lng:103.8096},
+  {n:'HarbourFront',l:'CCL/NEL',lat:1.2654,lng:103.8219},
+  {n:'Keppel',l:'CEL',lat:1.2712,lng:103.8343},
+  {n:'Cantonment',l:'CEL',lat:1.2742,lng:103.8413},
+  {n:'Prince Edward Road',l:'CEL',lat:1.2778,lng:103.8449},
+  {n:'Chinatown',l:'NEL/DTL',lat:1.2835,lng:103.8444},
+  {n:'Clarke Quay',l:'NEL',lat:1.2882,lng:103.8464},
+  {n:'Little India',l:'NEL/DTL',lat:1.3066,lng:103.8495},
+  {n:'Farrer Park',l:'NEL',lat:1.3124,lng:103.8548},
+  {n:'Boon Keng',l:'NEL',lat:1.3194,lng:103.8619},
+  {n:'Potong Pasir',l:'NEL',lat:1.3313,lng:103.8695},
+  {n:'Woodleigh',l:'NEL',lat:1.3397,lng:103.8705},
+  {n:'Serangoon',l:'NEL/CCL',lat:1.3499,lng:103.8733},
+  {n:'Kovan',l:'NEL',lat:1.3597,lng:103.8851},
+  {n:'Hougang',l:'NEL',lat:1.3714,lng:103.8924},
+  {n:'Buangkok',l:'NEL',lat:1.3832,lng:103.8929},
+  {n:'Sengkang',l:'NEL/LRT',lat:1.3916,lng:103.8954},
+  {n:'Punggol',l:'NEL/LRT',lat:1.4051,lng:103.9021},
+  {n:'Tampines East',l:'DTL',lat:1.3559,lng:103.9555},
+  {n:'Upper Changi',l:'DTL',lat:1.3413,lng:103.9614},
+  {n:'Expo',l:'DTL/CEL',lat:1.3352,lng:103.9615},
+  {n:'Changi Airport',l:'CEL',lat:1.3573,lng:103.9882},
+  {n:'Stadium',l:'CCL',lat:1.3030,lng:103.8750},
+  {n:'Mountbatten',l:'CCL',lat:1.3063,lng:103.8828},
+  {n:'Dakota',l:'CCL',lat:1.3081,lng:103.8882},
+  {n:'MacPherson',l:'CCL/DTL',lat:1.3264,lng:103.8900},
+  {n:'Tai Seng',l:'CCL',lat:1.3355,lng:103.8882},
+  {n:'Bartley',l:'CCL',lat:1.3424,lng:103.8800},
+  {n:'Lorong Chuan',l:'CCL',lat:1.3515,lng:103.8641},
+  {n:'Marymount',l:'CCL',lat:1.3494,lng:103.8396},
+  {n:'Caldecott',l:'CCL/TEL',lat:1.3376,lng:103.8393},
+  {n:'Springleaf',l:'TEL',lat:1.3993,lng:103.8193},
+  {n:'Lentor',l:'TEL',lat:1.3846,lng:103.8358},
+  {n:'Mayflower',l:'TEL',lat:1.3702,lng:103.8391},
+  {n:'Bright Hill',l:'TEL',lat:1.3606,lng:103.8352},
+  {n:'Upper Thomson',l:'TEL',lat:1.3529,lng:103.8327},
+  {n:'Mount Pleasant',l:'TEL',lat:1.3236,lng:103.8292},
+  {n:'Stevens',l:'TEL/DTL',lat:1.3196,lng:103.8259},
+  {n:'Napier',l:'TEL',lat:1.3061,lng:103.8189},
+  {n:'Orchard Boulevard',l:'TEL',lat:1.3019,lng:103.8240},
+  {n:'Great World',l:'TEL',lat:1.2937,lng:103.8240},
+  {n:'Havelock',l:'TEL',lat:1.2886,lng:103.8359},
+  {n:'Maxwell',l:'TEL',lat:1.2793,lng:103.8445},
+  {n:'Shenton Way',l:'TEL',lat:1.2769,lng:103.8499},
+  {n:'Gardens by the Bay',l:'TEL',lat:1.2821,lng:103.8630},
+  {n:'Tanjong Rhu',l:'TEL',lat:1.2993,lng:103.8716},
+  {n:'Katong Park',l:'TEL',lat:1.3032,lng:103.8812},
+  {n:'Tanjong Katong',l:'TEL',lat:1.3072,lng:103.8933},
+  {n:'Marine Parade',l:'TEL',lat:1.3030,lng:103.9064},
+  {n:'Marine Terrace',l:'TEL',lat:1.3063,lng:103.9198},
+  {n:'Siglap',l:'TEL',lat:1.3121,lng:103.9282},
+  {n:'Bayshore',l:'TEL',lat:1.3145,lng:103.9394},
+  {n:'Bedok South',l:'TEL',lat:1.3216,lng:103.9474},
+  {n:'Promenade',l:'CCL/DTL',lat:1.2934,lng:103.8609},
+  {n:'Esplanade',l:'CCL',lat:1.2937,lng:103.8554},
+  {n:'Bras Basah',l:'CCL',lat:1.2966,lng:103.8499},
+  {n:'Paya Lebar',l:'EWL/CCL',lat:1.3179,lng:103.8921},
+  {n:'Tampines West',l:'DTL',lat:1.3463,lng:103.9380}
+];
+
+// State
+let resolvedBlock='',resolvedStreet='',resolvedTown='';
+let resolvedLat=null,resolvedLng=null;
+let allBlockRecs=[],allStreetRecs=[];
+let selectedFlatType='',selectedBand=null,adjBands=[];
+let quickFlatType='',quickRecords=[];
 let chartInstance=null;
-let lastSearchTime=0, sessionSearchCount=0;
-const COOLDOWN_MS=3000, SESSION_CAP=20;
+let lastSearchTime=0,sessionSearchCount=0;
+const COOLDOWN_MS=3000,SESSION_CAP=20;
 
 // ── Utilities ──────────────────────────────────────────────
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function buildHeaders(){return API_KEY?{'x-api-key':API_KEY}:{};}
-function buildOneMapHeaders(){return ONEMAP_TOKEN?{'Authorization':`Bearer ${ONEMAP_TOKEN}`}:{};}
+function buildOMH(){return ONEMAP_TOKEN?{'Authorization':`Bearer ${ONEMAP_TOKEN}`}:{};}
 function sgd(n){return'S$'+Math.round(n).toLocaleString();}
 function psfCalc(p,s){return Math.round(p/(s*10.764));}
 function pct(arr,p){
@@ -490,9 +549,9 @@ function pct(arr,p){
   const i=(p/100)*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);
   return s[lo]+(s[hi]-s[lo])*(i-lo);
 }
-function haversineKm(lat1,lng1,lat2,lng2){
-  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+function hkm(la1,lo1,la2,lo2){
+  const R=6371,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 function linReg(xs,ys){
@@ -502,41 +561,39 @@ function linReg(xs,ys){
   const slope=den?num/den:0;
   return{slope,intercept:my-slope*mx};
 }
-function norm(s){
+function normStr(s){
   if(!s)return'';
   return s.toUpperCase()
     .replace(/\bAVENUE\b/g,'AVE').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR')
     .replace(/\bCLOSE\b/g,'CL').replace(/\bCRESCENT\b/g,'CRES').replace(/\bSTREET\b/g,'ST')
     .replace(/\bPLACE\b/g,'PL').replace(/\s+/g,' ').trim();
 }
-function storeyMid(range){
-  if(!range)return 0;
-  const m=range.match(/(\d+)\s*TO\s*(\d+)/i);
+function smid(r){
+  if(!r)return 0;
+  const m=r.match(/(\d+)\s*TO\s*(\d+)/i);
   if(m)return(+m[1]+ +m[2])/2;
-  const s=range.match(/(\d+)/);return s?+s[1]:0;
+  const s=r.match(/(\d+)/);return s?+s[1]:0;
 }
-function getBand(floor){return BANDS.find(b=>floor>=b.min&&floor<=b.max)||BANDS[BANDS.length-1];}
-function getAdj(band){
-  const idx=BANDS.indexOf(band),set=new Set([idx]);
-  if(idx>0)set.add(idx-1);
-  if(idx<BANDS.length-1)set.add(idx+1);
-  return[...set].map(i=>BANDS[i]);
+function getBand(f){return BANDS.find(b=>f>=b.min&&f<=b.max)||BANDS[BANDS.length-1];}
+function getAdj(b){
+  const i=BANDS.indexOf(b),s=new Set([i]);
+  if(i>0)s.add(i-1);
+  if(i<BANDS.length-1)s.add(i+1);
+  return[...s].map(x=>BANDS[x]);
 }
-function remainingLease(leaseYear,txMonth){
-  if(!leaseYear)return null;
-  const[y,m]=txMonth.split('-');
-  return Math.max(0,parseInt(leaseYear)+99-parseInt(y)-(parseInt(m)>6?1:0));
+function remLease(yr,mo){
+  if(!yr)return null;
+  const[y,m]=mo.split('-');
+  return Math.max(0,parseInt(yr)+99-parseInt(y)-(parseInt(m)>6?1:0));
 }
-function leaseFlag(years){
-  if(years===null)return{cls:'p-band',txt:'?'};
-  if(years>=60)return{cls:'p-green',txt:years+'y'};
-  if(years>=30)return{cls:'p-amber',txt:years+'y'};
-  return{cls:'p-red',txt:years+'y'};
+function leaseFlag(y){
+  if(y===null)return{cls:'p-band',txt:'?'};
+  if(y>=60)return{cls:'p-green',txt:y+'y'};
+  if(y>=30)return{cls:'p-amber',txt:y+'y'};
+  return{cls:'p-red',txt:y+'y'};
 }
-function showStatus(msg,vis=true){
-  const e=document.getElementById('statusMsg');
-  e.textContent=msg;e.style.display=vis?'block':'none';
-}
+function cleanStr(v){return(v||'').toString().replace(/^"|"$/g,'').trim();}
+function showStatus(msg,vis=true){const e=document.getElementById('statusMsg');e.textContent=msg;e.style.display=vis?'block':'none';}
 function setStep(n){
   [1,2,3].forEach(i=>{
     const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);
@@ -546,26 +603,25 @@ function setStep(n){
   });
 }
 function showTab(t){
-  ['price','schools','value'].forEach(x=>{
+  ['price','amenities','value'].forEach(x=>{
     document.getElementById('tab-'+x).style.display=x===t?'block':'none';
     document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');
   });
 }
 function onPostalInput(){resolvedBlock='';document.getElementById('resolved-tag').innerHTML='';}
 
-// ── API Fetch ──────────────────────────────────────────────
+// ── Caching ────────────────────────────────────────────────
+function cacheGet(k){try{const v=sessionStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function cacheSet(k,v){try{sessionStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+// ── API ────────────────────────────────────────────────────
 async function fetchRecs(filters,monthsBack,maxOffset=3000){
   const now=new Date();
   const cutoff=new Date(now.getFullYear(),now.getMonth()-monthsBack,1);
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0');
-
-  // Cache key based on filters + period
-  const cacheKey=`hdb_recs_${JSON.stringify(filters)}_${monthsBack}`;
-  try{
-    const cached=sessionStorage.getItem(cacheKey);
-    if(cached)return JSON.parse(cached);
-  }catch(e){}
-
+  const cacheKey=`recs_${JSON.stringify(filters)}_${monthsBack}`;
+  const cached=cacheGet(cacheKey);
+  if(cached)return cached;
   let all=[],offset=0,limit=100;
   while(offset<maxOffset){
     let url=`${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}&sort=month%20desc`;
@@ -573,10 +629,7 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
     if(Object.keys(af).length)url+=`&filters=${encodeURIComponent(JSON.stringify(af))}`;
     const resp=await fetch(url,{headers:buildHeaders()});
     const json=await resp.json();
-    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){
-      showStatus('Rate limit — waiting 12 seconds...');
-      await sleep(12000);showStatus('Retrying...');continue;
-    }
+    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){showStatus('Rate limit — waiting 12s...');await sleep(12000);showStatus('Retrying...');continue;}
     if(!json.result?.records)break;
     const recs=json.result.records.filter(r=>r.month>=cutoffStr);
     all=all.concat(recs);
@@ -586,17 +639,14 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
     offset+=limit;
     if(offset<maxOffset)await sleep(300);
   }
-
-  try{sessionStorage.setItem(cacheKey,JSON.stringify(all));}catch(e){}
+  cacheSet(cacheKey,all);
   return all;
 }
 
 async function fetchDataset(dsId,limit=500){
-  const cacheKey=`hdb_cache_${dsId}`;
-  try{
-    const cached=sessionStorage.getItem(cacheKey);
-    if(cached)return JSON.parse(cached);
-  }catch(e){}
+  const cacheKey=`ds_${dsId}`;
+  const cached=cacheGet(cacheKey);
+  if(cached)return cached;
   let all=[],offset=0;
   while(true){
     const url=`${API_HDB}?resource_id=${dsId}&limit=${limit}&offset=${offset}`;
@@ -610,227 +660,230 @@ async function fetchDataset(dsId,limit=500){
     if(offset>5000)break;
     await sleep(300);
   }
-  try{sessionStorage.setItem(cacheKey,JSON.stringify(all));}catch(e){}
+  cacheSet(cacheKey,all);
   return all;
 }
 
-async function geocodeOneMap(query){
-  const cacheKey=`onemap_${query.toLowerCase().replace(/\s+/g,'_')}`;
+async function geocodeOM(query){
+  const clean=cleanStr(query);
+  const cacheKey=`om_${clean.toLowerCase().replace(/\W+/g,'_').slice(0,60)}`;
+  const cached=cacheGet(cacheKey);
+  if(cached)return cached;
   try{
-    const cached=sessionStorage.getItem(cacheKey);
-    if(cached)return JSON.parse(cached);
-  }catch(e){}
-  try{
-    const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(query)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`,{headers:buildOneMapHeaders()});
+    const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(clean)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`,{headers:buildOMH()});
     const j=await r.json();
     const result=j.results?.length?j.results[0]:null;
-    if(result)try{sessionStorage.setItem(cacheKey,JSON.stringify(result));}catch(e){}
+    if(result)cacheSet(cacheKey,result);
     return result;
-  }catch(e){}
-  return null;
+  }catch(e){return null;}
 }
 
-// ── Step 1: Lookup ─────────────────────────────────────────
-async function doLookup(){
+// ── Step 1: Quick Search ───────────────────────────────────
+async function doQuickSearch(){
   const now=Date.now();
   if(now-lastSearchTime<COOLDOWN_MS){
-    const cm=document.getElementById('cooldownMsg');
-    cm.style.display='block';setTimeout(()=>cm.style.display='none',2000);return;
+    const cm=document.getElementById('cooldownMsg')||document.createElement('div');
+    cm.textContent='Please wait before searching again';
+    cm.style.cssText='font-size:11px;color:var(--text3);text-align:center;margin-top:5px';
+    cm.id='cooldownMsg';
+    document.getElementById('quickBtn').after(cm);
+    setTimeout(()=>cm.remove(),2000);
+    return;
   }
   if(sessionSearchCount>=SESSION_CAP){
     document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';return;
   }
   const postal=document.getElementById('postal').value.trim();
+  const flatType=document.getElementById('quick_flat_type').value;
   if(!/^\d{6}$/.test(postal)){
     document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;
   }
-  const btn=document.getElementById('lookupBtn');
+  if(!flatType){
+    document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Select a flat type</div>';return;
+  }
+  const btn=document.getElementById('quickBtn');
   btn.disabled=true;btn.textContent='Looking up...';
   lastSearchTime=Date.now();sessionSearchCount++;
   showStatus('Resolving postal code...');
   try{
-    const res=await geocodeOneMap(postal);
+    const res=await geocodeOM(postal);
     if(!res){
       document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';
-      showStatus('',false);btn.disabled=false;btn.textContent='Look up block';return;
+      showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';return;
     }
     resolvedBlock=(res.BLK_NO||'').toUpperCase();
     resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);
     resolvedLng=parseFloat(res.LONGITUDE);
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
-    showStatus('Fetching transaction history...');
+    showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
     allBlockRecs=await fetchRecs({block:resolvedBlock},mb,2000);
-    if(allBlockRecs.length){
-      resolvedStreet=allBlockRecs[0]?.street_name||resolvedStreet;
-      allStreetRecs=allBlockRecs;
-    } else {
-      showStatus('No block data — fetching street-level...');
+    if(allBlockRecs.length){resolvedStreet=allBlockRecs[0]?.street_name||resolvedStreet;allStreetRecs=allBlockRecs;}
+    else{
+      showStatus('Fetching street data...');
       const all=await fetchRecs({},mb,5000);
-      allStreetRecs=all.filter(r=>{const s=norm(r.street_name);const n2=norm(resolvedStreet);return s===n2||s.includes(n2)||n2.includes(s);});
+      allStreetRecs=all.filter(r=>{const s=normStr(r.street_name),n=normStr(resolvedStreet);return s===n||s.includes(n)||n.includes(s);});
     }
     showStatus('',false);
-    if(!allStreetRecs.length){
-      document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">No transactions found. Try extending the date range.</div>';
-      btn.disabled=false;btn.textContent='Look up block';return;
-    }
     resolvedTown=allStreetRecs[0]?.town||'';
-    populateStep2();
-    document.getElementById('step1-panel').style.display='none';
-    document.getElementById('step2-panel').style.display='block';
+    quickFlatType=flatType;
+
+    // Run quick fallback chain (blocks only, no town)
+    const qResult=await runQuickFallback(flatType,mb);
+    if(!qResult){
+      document.getElementById('resolved-tag').innerHTML+=' <span class="tag t-warn" style="margin-left:4px">No '+flatType+' data found — try a longer period</span>';
+      btn.disabled=false;btn.textContent='Get ballpark price';return;
+    }
+    quickRecords=qResult.records;
+    renderQuickResult(qResult,+document.getElementById('asking').value||null);
+    document.getElementById('quickResult').style.display='block';
     setStep(2);
   }catch(e){showStatus('Connection error. Try again.');}
-  btn.disabled=false;btn.textContent='Look up block';
+  btn.disabled=false;btn.textContent='Get ballpark price';
 }
 
-function populateStep2(){
-  // Get flat types that have transactions
-  const withTx=new Set(allBlockRecs.map(r=>r.flat_type));
-  const streetTypes=new Set(allStreetRecs.map(r=>r.flat_type));
+async function runQuickFallback(flatType,mb){
+  const tiers=[
+    {id:1,desc:`Block ${resolvedBlock}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)},
+    {id:2,desc:`${resolvedStreet}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)},
+  ];
+  for(const t of tiers){
+    const recs=await t.fn();
+    if(recs.length>=2)return{...t,records:recs};
+  }
+  return null;
+}
 
-  // Build dropdown with all standard types, marking availability
-  const ftSel=document.getElementById('flat_type_sel');
-  ftSel.innerHTML=ALL_FLAT_TYPES.map(t=>{
-    const hasBlock=withTx.has(t);
-    const hasStreet=streetTypes.has(t);
-    if(hasBlock)return`<option value="${t}">${t}</option>`;
-    if(hasStreet)return`<option value="${t}" class="flat-option-unavail">${t} (no block transactions — street data)</option>`;
-    return`<option value="${t}" class="flat-option-unavail" disabled>${t} (no data in period)</option>`;
-  }).join('');
+function renderQuickResult({id,desc,records},asking){
+  const prices=records.map(r=>+r.resale_price);
+  const med=pct(prices,50),p25=pct(prices,25),p75=pct(prices,75);
+  const areas=records.map(r=>+r.floor_area_sqm);
+  const avgArea=areas.reduce((a,b)=>a+b,0)/areas.length;
+  const medPsf=psfCalc(med,avgArea);
+  const leaseYrs=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
+  const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
 
-  // Default to first type that has block transactions, else first with street data
-  const preferred=[...withTx][0]||[...streetTypes][0]||ALL_FLAT_TYPES[0];
-  ftSel.value=preferred;
+  document.getElementById('qr-median').textContent=sgd(med);
+  document.getElementById('qr-range').textContent=`Range: ${sgd(p25)} – ${sgd(p75)} · ${records.length} transactions`;
+  document.getElementById('qr-count').textContent=records.length;
+  document.getElementById('qr-psf').textContent='S$'+medPsf;
+  document.getElementById('qr-lease').textContent=medLease?medLease+'y':'—';
+  document.getElementById('qr-scope').textContent=`${quickFlatType} · ${desc}`;
 
-  const userFloor=+document.getElementById('floor_num').value||1;
-  const userBand=getBand(userFloor);
+  if(asking){
+    const diff=asking-med,p=Math.round((diff/med)*100);
+    let bg,col,txt;
+    if(p<=-10){bg='var(--info-bg)';col='var(--info-text)';txt=`${Math.abs(p)}% below median — looks like a deal`;}
+    else if(p<0){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${Math.abs(p)}% below median — fairly priced`;}
+    else if(p<=8){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${p}% above median — within normal range`;}
+    else if(p<=20){bg='var(--warn-bg)';col='var(--warn-text)';txt=`${p}% above median — elevated`;}
+    else{bg='var(--err-bg)';col='var(--err-text)';txt=`${p}% above median — significantly above market`;}
+    const vEl=document.getElementById('qr-verdict');
+    vEl.style.cssText=`background:${bg};color:${col}`;
+    vEl.textContent=`Your price ${sgd(asking)}: ${txt}`;
+    vEl.style.display='block';
+  } else {
+    document.getElementById('qr-verdict').style.display='none';
+  }
+
+  const sourceNote=id===1?`Block ${resolvedBlock} only`:`Street-level (${desc}) — no block-specific data in this period`;
+  document.getElementById('qr-source').textContent=sourceNote;
+}
+
+function goToFullAnalysis(){
+  document.getElementById('quickResult').style.display='none';
+  document.getElementById('step1-panel').style.display='none';
+  document.getElementById('step2-panel').style.display='block';
+
+  // Pre-fill floor band based on a default of mid-low
   document.getElementById('storey_band_sel').innerHTML=
-    BANDS.map(b=>`<option value="${b.label}"${b.label===userBand.label?' selected':''}>${b.label}</option>`).join('');
+    BANDS.map(b=>`<option value="${b.label}"${b.label==='Mid-low (7–12)'?' selected':''}>${b.label}</option>`).join('');
 
-  const blockCount=allBlockRecs.length;
   document.getElementById('step2-tag').innerHTML=
-    `<div class="tag t-info">${blockCount} transaction${blockCount!==1?'s':''} found at Block ${resolvedBlock}. Select your flat type and floor band below.</div>`;
+    `<div class="tag t-info">Flat type: ${quickFlatType}. Enter your floor for floor band matching, then run full analysis.</div>`;
+  setStep(2);
 }
 
 function resetToStep1(){
   document.getElementById('step1-panel').style.display='block';
   document.getElementById('step2-panel').style.display='none';
-  document.getElementById('results').style.display='none';
+  document.getElementById('quickResult').style.display='none';
+  document.getElementById('fullResults').style.display='none';
   showStatus('',false);setStep(1);
 }
 
-// ── Step 2: Analyse ────────────────────────────────────────
-async function doAnalyse(){
+// ── Step 2: Full Analysis ──────────────────────────────────
+async function doFullAnalysis(){
   const btn=document.getElementById('analyseBtn');
   btn.disabled=true;btn.textContent='Analysing...';
-  selectedFlatType=document.getElementById('flat_type_sel').value;
-  const bandLabel=document.getElementById('storey_band_sel').value;
-  selectedBand=BANDS.find(b=>b.label===bandLabel);
+
+  const userFloor=+document.getElementById('floor_num').value||1;
+  selectedFlatType=quickFlatType;
+  selectedBand=getBand(userFloor);
   adjBands=getAdj(selectedBand);
   const asking=+document.getElementById('asking').value||null;
   const mb=+document.getElementById('months_back').value;
 
   showStatus('Running comparison search...');
-  const result=await runFallbackChain(selectedFlatType,adjBands,mb);
+  const result=await runFullFallback(selectedFlatType,adjBands,mb);
+  if(!result){showStatus('No transactions found. Try a longer date range.');btn.disabled=false;btn.textContent='Full analysis';return;}
 
-  if(!result){
-    showStatus('No transactions found across all fallback levels. Try a longer date range.');
-    btn.disabled=false;btn.textContent='Find comparables';return;
-  }
-
-  showStatus('Loading school data...');
+  showStatus('Loading schools and childcare...');
   let schools=[];
   try{schools=await fetchDataset(DS_SCH);}catch(e){}
+  let centres=[];
+  try{centres=await fetchDataset(DS_CC);}catch(e){}
 
   showStatus('',false);
   renderPriceTab(result,asking);
-  renderSchoolsTab(schools);
+  renderAmenitiesTab(schools,centres);
   renderValueTab(result.records,mb);
 
-  document.getElementById('results').style.display='block';
   document.getElementById('step2-panel').style.display='none';
+  document.getElementById('fullResults').style.display='block';
   showTab('price');setStep(3);
-  btn.disabled=false;btn.textContent='Find comparables';
+  btn.disabled=false;btn.textContent='Full analysis';
 }
 
-// ── 6-Tier Fallback Chain ──────────────────────────────────
-async function runFallbackChain(flatType,bands,mb){
-  // Derive average sqm from block records for size-matching fallback
+async function runFullFallback(flatType,bands,mb){
   const blockSqms=allBlockRecs.filter(r=>r.flat_type===flatType).map(r=>+r.floor_area_sqm);
   const avgSqm=blockSqms.length?blockSqms.reduce((a,b)=>a+b,0)/blockSqms.length:null;
-  const sqmTolerance=15; // ±15 sqm for size matching
-
   const tiers=[
-    {
-      id:1,
-      label:'Same block, same flat type, similar floor',
-      desc:`Block ${resolvedBlock} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,
-      fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=storeyMid(r.storey_range);return m>=b.min&&m<=b.max;}))
-    },
-    {
-      id:2,
-      label:'Same block, same flat type, any floor',
-      desc:`Block ${resolvedBlock} · ${flatType} · all floors`,
-      fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)
-    },
-    {
-      id:3,
-      label:'Nearby blocks, same flat type, similar floor',
-      desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,
-      fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=storeyMid(r.storey_range);return m>=b.min&&m<=b.max;}))
-    },
-    {
-      id:4,
-      label:'Nearby blocks, same flat type, any floor',
-      desc:`${resolvedStreet} · ${flatType} · all floors`,
-      fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)
-    },
-    {
-      id:5,
-      label:'Nearby blocks, similar unit size, any floor',
-      desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'} · all flat types`,
-      fn:()=>avgSqm?allStreetRecs.filter(r=>Math.abs(+r.floor_area_sqm-avgSqm)<=sqmTolerance):[]
-    },
-    {
-      id:6,
-      label:'Same town, same flat type',
-      desc:`${resolvedTown} · ${flatType} · all floors`,
-      fn:async()=>{
-        showStatus(`Fetching town-level data for ${resolvedTown}...`);
-        const recs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);
-        showStatus('',false);return recs;
-      }
-    }
+    {id:1,label:'Same block, same flat type, similar floor',desc:`Block ${resolvedBlock} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,
+     fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
+    {id:2,label:'Same block, same flat type, any floor',desc:`Block ${resolvedBlock} · ${flatType}`,
+     fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)},
+    {id:3,label:'Nearby blocks, same flat type, similar floor',desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,
+     fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
+    {id:4,label:'Nearby blocks, same flat type, any floor',desc:`${resolvedStreet} · ${flatType}`,
+     fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)},
+    {id:5,label:'Nearby blocks, similar unit size',desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'}`,
+     fn:()=>avgSqm?allStreetRecs.filter(r=>Math.abs(+r.floor_area_sqm-avgSqm)<=15):[]},
+    {id:6,label:'Same town, same flat type',desc:`${resolvedTown} · ${flatType}`,
+     fn:async()=>{showStatus(`Fetching town data for ${resolvedTown}...`);const r=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);showStatus('',false);return r;}}
   ];
-
   const attempted=[];
-  for(const tier of tiers){
-    let recs;
-    try{recs=await tier.fn();}catch(e){recs=[];}
-    attempted.push({...tier,count:recs.length,used:false});
-    if(recs.length>=3){
-      attempted[attempted.length-1].used=true;
-      return{tier:tier.id,records:recs,attempted};
-    }
+  for(const t of tiers){
+    let recs;try{recs=await t.fn();}catch(e){recs=[];}
+    attempted.push({...t,count:recs.length,used:false});
+    if(recs.length>=3){attempted[attempted.length-1].used=true;return{tier:t.id,records:recs,attempted};}
   }
   return null;
 }
 
 // ── Price Tab ──────────────────────────────────────────────
 function renderPriceTab({tier,records,attempted},asking){
-  // Fallback banner — plain English
-  const used=attempted.find(t=>t.used);
   const bannerClass=tier<=2?'fb-exact':tier<=4?'fb-block':tier===5?'fb-street':'fb-town';
-  const bannerTitle=tier<=2?`Showing Block ${resolvedBlock} transactions`
-    :tier<=4?`No ${selectedFlatType} transactions at Block ${resolvedBlock} in this period — showing nearby blocks on ${resolvedStreet}`
+  const bannerTitle=tier<=2?`Block ${resolvedBlock} transactions`
+    :tier<=4?`No ${selectedFlatType} at Block ${resolvedBlock} in this period — showing nearby blocks on ${resolvedStreet}`
     :tier===5?`No ${selectedFlatType} data on ${resolvedStreet} — showing similar-sized units nearby`
     :`Limited local data — showing ${resolvedTown} town-level comparables`;
-  const bannerBody=tier<=2?`${used.count} transaction${used.count!==1?'s':''} found. ${tier===1?'Floor band matches your unit.':'All floors included — higher floors typically transact at a premium.'}`
-    :tier<=4?`${used.count} transaction${used.count!==1?'s':''} found across nearby blocks. ${tier===3?'Floor band matched.':'All floors included.'} These are the closest available comparables.`
-    :tier===5?`Matched by unit size (±15 sqm). Use as directional context only.`
-    :`Town-level data only. Use as market context, not unit-specific valuation.`;
-
+  const used=attempted.find(t=>t.used);
+  const bannerBody=tier<=2?`${used.count} transaction${used.count!==1?'s':''} found. ${tier===1?'Floor band matched.':'All floors included — higher floors typically command a premium.'}`
+    :tier<=4?`${used.count} transaction${used.count!==1?'s':''} across nearby blocks. ${tier===3?'Floor band matched.':'All floors included.'}`
+    :tier===5?`Matched by unit size (±15sqm). Use as directional only.`
+    :`Town-level context only. Not unit-specific.`;
   document.getElementById('fallbackBanner').innerHTML=`
     <div class="fallback-banner ${bannerClass}">
       <div class="fb-title">${bannerTitle}</div>
@@ -843,8 +896,8 @@ function renderPriceTab({tier,records,attempted},asking){
   const areas=records.map(r=>+r.floor_area_sqm);
   const avgArea=areas.reduce((a,b)=>a+b,0)/areas.length;
   const medPsf=psfCalc(med,avgArea);
-  const leaseYrs=records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
-  const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
+  const lys=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
+  const medLease=lys.length?Math.round(pct(lys,50)):null;
 
   document.getElementById('metricsRow').innerHTML=`
     <div class="metric"><div class="metric-label">Median price</div><div class="metric-value">${sgd(med)}</div><div class="metric-sub">${records.length} comps</div></div>
@@ -852,22 +905,20 @@ function renderPriceTab({tier,records,attempted},asking){
     <div class="metric"><div class="metric-label">25th pct</div><div class="metric-value">${sgd(p25)}</div></div>
     <div class="metric"><div class="metric-label">75th pct</div><div class="metric-value">${sgd(p75)}</div></div>
     <div class="metric"><div class="metric-label">Median PSF</div><div class="metric-value">S$${medPsf}</div></div>
-    ${medLease!==null?`<div class="metric"><div class="metric-label">Median lease</div><div class="metric-value">${medLease}y</div><div class="metric-sub">${medLease>=60?'Good':'Check CPF'}</div></div>`:''}
-  `;
+    ${medLease!==null?`<div class="metric"><div class="metric-label">Median lease</div><div class="metric-value">${medLease}y</div><div class="metric-sub">${medLease>=60?'Good':'Check CPF'}</div></div>`:''}`;
 
-  // Verdict — neutral framing, no buyer/seller
   let vHtml='';
-  if(!asking){
-    vHtml=`<div class="verdict v-neutral"><div class="verdict-title">Market range</div><div class="verdict-body">Transactions range ${sgd(p25)} – ${sgd(p75)}, median ${sgd(med)}. Enter a price above to compare against this range.</div></div>`;
+  const as=asking;
+  if(!as){
+    vHtml=`<div class="verdict v-neutral"><div class="verdict-title">Market range</div><div class="verdict-body">${sgd(p25)} – ${sgd(p75)}, median ${sgd(med)}. Enter a price above to compare.</div></div>`;
   } else {
-    const diff=asking-med,p=Math.round((diff/med)*100);
+    const diff=as-med,p=Math.round((diff/med)*100);
     let cls,title,body;
-    if(p<=-15){cls='v-below';title=`${Math.abs(p)}% below median`;body=`${sgd(asking)} vs median ${sgd(med)}. Significantly below market — verify condition, remaining lease, and facing.`;}
-    else if(p<0){cls='v-fair';title=`${Math.abs(p)}% below median`;body=`${sgd(asking)} vs median ${sgd(med)}. Below market range — fairly priced.`;}
-    else if(p===0){cls='v-fair';title='At median';body=`${sgd(asking)} is right at the median of comparable transactions.`;}
-    else if(p<=8){cls='v-fair';title=`${p}% above median`;body=`${sgd(asking)} vs median ${sgd(med)}. Within normal range — marginal premium over median.`;}
-    else if(p<=20){cls='v-above';title=`${p}% above median`;body=`${sgd(asking)} vs median ${sgd(med)}. Above market range. Justified only by renovation, high floor, or good facing.`;}
-    else{cls='v-danger';title=`${p}% above median`;body=`${sgd(asking)} vs median ${sgd(med)}. Significantly above market. Strong basis to negotiate down to ~${sgd(Math.round(med*1.05))}.`;}
+    if(p<=-15){cls='v-below';title=`${Math.abs(p)}% below median`;body=`${sgd(as)} vs median ${sgd(med)}. Verify condition, lease, facing.`;}
+    else if(p<0){cls='v-fair';title=`${Math.abs(p)}% below median`;body=`${sgd(as)} vs median ${sgd(med)}. Below market — fairly priced.`;}
+    else if(p<=8){cls='v-fair';title=`${p}% above median`;body=`${sgd(as)} vs median ${sgd(med)}. Within normal range.`;}
+    else if(p<=20){cls='v-above';title=`${p}% above median`;body=`${sgd(as)} vs median ${sgd(med)}. Justified only by renovation, high floor, or facing.`;}
+    else{cls='v-danger';title=`${p}% above median`;body=`${sgd(as)} vs median ${sgd(med)}. Significantly above market. Strong basis to negotiate.`;}
     vHtml=`<div class="verdict ${cls}"><div class="verdict-title">${title}</div><div class="verdict-body">${body}</div></div>`;
   }
   document.getElementById('verdictBox').innerHTML=vHtml;
@@ -876,324 +927,219 @@ function renderPriceTab({tier,records,attempted},asking){
 }
 
 function renderTrendChart(records,asking){
-  const byMonth={};
-  records.forEach(r=>{if(!byMonth[r.month])byMonth[r.month]=[];byMonth[r.month].push(+r.resale_price);});
-  const months=Object.keys(byMonth).sort();
-  const medians=months.map(m=>Math.round(pct(byMonth[m],50)));
-  const trendEl=document.getElementById('trendSummary');
-
-  if(records.length<5||months.length<3){
-    trendEl.textContent=`Not enough data for a trend line (${records.length} transactions, ${months.length} months).`;
-  } else {
+  const bm={};
+  records.forEach(r=>{if(!bm[r.month])bm[r.month]=[];bm[r.month].push(+r.resale_price);});
+  const months=Object.keys(bm).sort();
+  const meds=months.map(m=>Math.round(pct(bm[m],50)));
+  const tEl=document.getElementById('trendSummary');
+  if(records.length<5||months.length<3){tEl.textContent=`Not enough data for trend (${records.length} tx, ${months.length} months).`;}
+  else{
     const xs=months.map((_,i)=>i);
-    const{slope}=linReg(xs,medians);
-    const totalChange=Math.round(slope*(months.length-1));
-    const pctChange=Math.round((totalChange/medians[0])*100);
-    const dir=slope>500?'up':slope<-500?'down':'flat';
-    const arrow={up:'↑',down:'↓',flat:'→'}[dir];
-    const txt={up:'trending up',down:'trending down',flat:'broadly flat'}[dir];
+    const{slope}=linReg(xs,meds);
+    const tc=Math.round(slope*(months.length-1)),pc=Math.round((tc/meds[0])*100);
+    const dir=slope>300?'up':slope<-300?'down':'flat';
     const col={up:'#1D9E75',down:'#E24B4A',flat:'#888780'}[dir];
-    trendEl.innerHTML=`Prices <span style="color:${col};font-weight:500">${arrow} ${txt}</span>${Math.abs(pctChange)>1?` (${pctChange>0?'+':''}${pctChange}%, ${sgd(Math.abs(totalChange))})`:''} over this period.`;
+    const txt={up:'↑ trending up',down:'↓ trending down',flat:'→ broadly flat'}[dir];
+    tEl.innerHTML=`Prices <span style="color:${col};font-weight:500">${txt}</span>${Math.abs(pc)>1?` (${pc>0?'+':''}${pc}%, ${sgd(Math.abs(tc))})`:''} over this period.`;
   }
+  const cMin=Math.min(...meds),cMax=Math.max(...meds);
+  const inRange=asking&&asking>=cMin*0.9&&asking<=cMax*1.1;
+  if(asking&&!inRange)tEl.innerHTML+=` <span style="font-size:11px;color:var(--text3)">Your price ${sgd(asking)} is ${asking>cMax?'above':'below'} chart range.</span>`;
 
-  const chartMin=Math.min(...medians),chartMax=Math.max(...medians);
-  const inRange=asking&&asking>=chartMin*0.9&&asking<=chartMax*1.1;
-  if(asking&&!inRange){
-    trendEl.innerHTML+=` <span style="font-size:11px;color:var(--text3)">Your price ${sgd(asking)} is ${asking>chartMax?'above':'below'} the chart range.</span>`;
-  }
-
-  const labels=months.map(m=>{
-    const[y,mo]=m.split('-');
-    return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);
-  });
-
+  const labels=months.map(m=>{const[y,mo]=m.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);});
   if(chartInstance){chartInstance.destroy();chartInstance=null;}
-  const datasets=[{
-    label:'Monthly median',data:medians,
-    borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.07)',
-    borderWidth:2,pointRadius:3,pointBackgroundColor:'#378ADD',
-    fill:true,tension:0.3,order:2
-  }];
-
+  const datasets=[{label:'Monthly median',data:meds,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.07)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#378ADD',fill:true,tension:0.3,order:2}];
   if(months.length>=3&&records.length>=5){
     const xs=months.map((_,i)=>i);
-    const{slope,intercept}=linReg(xs,medians);
-    const tc=slope>500?'#1D9E75':slope<-500?'#E24B4A':'#888780';
+    const{slope,intercept}=linReg(xs,meds);
+    const tc=slope>300?'#1D9E75':slope<-300?'#E24B4A':'#888780';
     datasets.push({label:'Trend',data:xs.map(x=>Math.round(slope*x+intercept)),borderColor:tc,borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0,order:3});
   }
-  if(inRange){
-    datasets.push({label:`Compare price (${sgd(asking)})`,data:months.map(()=>asking),borderColor:'#EF9F27',borderWidth:1.5,borderDash:[3,3],pointRadius:0,fill:false,tension:0,order:1});
-  }
-
-  chartInstance=new Chart(document.getElementById('trendChart'),{
-    type:'line',data:{labels,datasets},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${sgd(ctx.raw)}`}}},
-      scales:{
-        x:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888',font:{size:10},maxRotation:45,autoSkip:true}},
-        y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888',font:{size:10},callback:v=>'S$'+Math.round(v/1000)+'k'},
-           suggestedMin:Math.min(...medians)*0.97,suggestedMax:Math.max(...medians)*1.03}
-      }
-    }
-  });
-
-  document.getElementById('chartLegend').innerHTML=datasets.map(d=>
-    `<div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:0;border-top:2px ${d.borderDash?'dashed':'solid'} ${d.borderColor}"></div><span>${d.label}</span></div>`
-  ).join('');
+  if(inRange)datasets.push({label:`Compare (${sgd(asking)})`,data:months.map(()=>asking),borderColor:'#EF9F27',borderWidth:1.5,borderDash:[3,3],pointRadius:0,fill:false,tension:0,order:1});
+  chartInstance=new Chart(document.getElementById('trendChart'),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${sgd(ctx.raw)}`}}},scales:{x:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888',font:{size:10},maxRotation:45,autoSkip:true}},y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888',font:{size:10},callback:v=>'S$'+Math.round(v/1000)+'k'},suggestedMin:Math.min(...meds)*0.97,suggestedMax:Math.max(...meds)*1.03}}}});
+  document.getElementById('chartLegend').innerHTML=datasets.map(d=>`<div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:0;border-top:2px ${d.borderDash?'dashed':'solid'} ${d.borderColor}"></div><span>${d.label}</span></div>`).join('');
 }
 
 function renderTable(records,med){
   const sorted=[...records].sort((a,b)=>b.month.localeCompare(a.month));
   document.getElementById('txBody').innerHTML=sorted.map(r=>{
     const price=+r.resale_price,area=+r.floor_area_sqm;
-    const psfVal=psfCalc(price,area);
-    const recBand=getBand(storeyMid(r.storey_range));
-    const isSame=recBand.label===selectedBand.label;
-    const diff=Math.round(((price-med)/med)*100);
-    const tagCls=diff>5?'p-above':diff<-5?'p-below':'p-fair';
-    const tagTxt=diff>0?`+${diff}%`:`${diff}%`;
-    const rl=remainingLease(r.lease_commence_date,r.month);
-    const lf=leaseFlag(rl);
-    return`<tr>
-      <td>${r.month}</td><td>${r.block}</td><td>${r.storey_range}</td><td>${area}</td>
-      <td>${sgd(price)}</td><td>S$${psfVal}</td>
-      <td>${r.lease_commence_date||'—'}</td>
-      <td><span class="pill ${lf.cls}">${lf.txt}</span></td>
-      <td><span class="pill ${isSame?'p-same':'p-band'}">${recBand.label.split('(')[0].trim()}</span></td>
-      <td><span class="pill ${tagCls}">${tagTxt}</span></td>
-    </tr>`;
+    const psfV=psfCalc(price,area),rb=getBand(smid(r.storey_range)),isSame=rb.label===selectedBand?.label;
+    const diff=Math.round(((price-med)/med)*100),tc=diff>5?'p-above':diff<-5?'p-below':'p-fair',tt=diff>0?`+${diff}%`:`${diff}%`;
+    const rl=remLease(r.lease_commence_date,r.month),lf=leaseFlag(rl);
+    return`<tr><td>${r.month}</td><td>${r.block}</td><td>${r.storey_range}</td><td class="hide-mobile">${area}</td><td>${sgd(price)}</td><td class="hide-mobile">S$${psfV}</td><td class="hide-mobile">${r.lease_commence_date||'—'}</td><td><span class="pill ${lf.cls}">${lf.txt}</span></td><td class="hide-mobile"><span class="pill ${isSame?'p-same':'p-band'}">${rb.label.split('(')[0].trim()}</span></td><td><span class="pill ${tc}">${tt}</span></td></tr>`;
   }).join('');
 }
 
-// ── Schools Tab ────────────────────────────────────────────
-async function renderSchoolsTab(schools){
+// ── Amenities Tab ──────────────────────────────────────────
+async function renderAmenitiesTab(schools,centres){
   if(!resolvedLat||!resolvedLng){
-    document.getElementById('schoolContent').innerHTML='<p class="school-none">Location coordinates unavailable.</p>';return;
+    document.getElementById('amenitiesContent').innerHTML='<p style="color:var(--text2);font-size:13px">Location unavailable.</p>';return;
   }
 
-  const primarySchools=schools.filter(s=>s.mainlevel_code==='PRIMARY');
-  document.getElementById('schoolContent').innerHTML=
-    `<p style="font-size:13px;color:var(--text2)">Finding nearby schools (${primarySchools.length} to check)...</p>`;
+  // MRT — instant from hardcoded list
+  const mrtNearby=MRT_STATIONS
+    .map(s=>({...s,km:hkm(resolvedLat,resolvedLng,s.lat,s.lng)}))
+    .filter(s=>s.km<=1.5).sort((a,b)=>a.km-b.km).slice(0,5);
 
-  const nearby=[];
+  // Render MRT immediately
+  const mrtHtml=mrtNearby.length
+    ?mrtNearby.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n} <span style="font-size:10px;font-weight:400;color:var(--text3)">${s.l}</span></div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div><div class="amenity-walk">~${Math.round(s.km*1000/80)} min walk</div></div></div>`).join('')
+    :'<p class="amenity-none">No MRT/LRT stations within 1.5km</p>';
+
+  document.getElementById('amenitiesContent').innerHTML=`
+    <div class="amenity-section">
+      <span class="amenity-header ah-mrt">🚇 MRT / LRT stations within 1.5km</span>
+      ${mrtHtml}
+    </div>
+    <div class="amenity-section" id="schoolsSection">
+      <span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span>
+      <p style="font-size:12px;color:var(--text2)">Geocoding schools...</p>
+    </div>
+    <div class="amenity-section" id="childcareSection">
+      <span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>
+      <p style="font-size:12px;color:var(--text2)">Loading childcare centres...</p>
+    </div>`;
+
+  // Schools — geocode in background
+  const primarySchools=schools.filter(s=>s.mainlevel_code==='PRIMARY');
+  const schoolNearby=[];
   const BATCH=15;
   for(let i=0;i<primarySchools.length;i+=BATCH){
     const batch=primarySchools.slice(i,i+BATCH);
     const results=await Promise.all(batch.map(async s=>{
-      const query=s.postal_code||s.address||s.school_name;
-      const res=await geocodeOneMap(query);
+      const postal=cleanStr(s.postal_code);
+      const name=cleanStr(s.school_name);
+      const query=/^\d{6}$/.test(postal)?postal:name;
+      const res=await geocodeOM(query);
       if(!res)return null;
       const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
       if(isNaN(lat)||isNaN(lng))return null;
-      const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
+      const km=hkm(resolvedLat,resolvedLng,lat,lng);
       if(km>2.1)return null;
-      return{...s,lat,lng,km};
+      return{name,km};
     }));
-    results.forEach(s=>{if(s)nearby.push(s);});
-    // Update progress
-    document.getElementById('schoolContent').innerHTML=
-      `<p style="font-size:13px;color:var(--text2)">Finding nearby schools... (${Math.min(i+BATCH,primarySchools.length)}/${primarySchools.length} checked, ${nearby.length} found so far)</p>`;
-    // Only sleep if we actually made uncached API calls this batch
+    results.forEach(s=>{if(s)schoolNearby.push(s);});
     await sleep(50);
   }
+  schoolNearby.sort((a,b)=>a.km-b.km);
+  const s1km=schoolNearby.filter(s=>s.km<=1.0);
+  const s2km=schoolNearby.filter(s=>s.km>1.0&&s.km<=2.0);
 
-  nearby.sort((a,b)=>a.km-b.km);
-  const within1=nearby.filter(s=>s.km<=1.0);
-  const within2=nearby.filter(s=>s.km>1.0&&s.km<=2.0);
-
-  const renderList=arr=>arr.length
-    ?arr.map(s=>`<div class="school-item"><div class="school-name">${s.school_name}</div><div class="school-dist">${Math.round(s.km*1000)}m</div></div>`).join('')
-    :'<p class="school-none">None within this range</p>';
-
-  document.getElementById('schoolContent').innerHTML=`
-    <div class="school-grid">
-      <div>
-        <div class="school-col-title school-1km">Within 1km — Phase 2B priority</div>
-        ${renderList(within1)}
-      </div>
-      <div>
-        <div class="school-col-title school-2km">1–2km — Phase 2C priority</div>
-        ${renderList(within2)}
-      </div>
+  const schHtml=`
+    <div style="margin-bottom:0.75rem">
+      <div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km — Phase 2B priority</div>
+      ${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}
     </div>
-    ${nearby.length===0?'<p style="font-size:13px;color:var(--text2)">No primary schools found within 2km.</p>':''}
-  `;
+    <div>
+      <div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>
+      ${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}
+    </div>`;
+  document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span>${schHtml}`;
 
-  // Update the school signal in Value tab now that we have real data
-  const schoolSignalEl=document.getElementById('school-signal');
-  if(schoolSignalEl){
-    const has1km=within1.length>0,has2km=within2.length>0;
-    const iconCls=has1km?'signal-icon-pos':has2km?'signal-icon-neu':'signal-icon-neu';
-    const badgeCls=has1km?'sb-pos':has2km?'sb-neu':'sb-neu';
-    const badge=has1km?'Positive':has2km?'Neutral':'Neutral';
-    const desc=has1km
-      ?`${within1.length} school${within1.length!==1?'s':''} within 1km (Phase 2B priority): ${within1.slice(0,3).map(s=>s.school_name).join(', ')}${within1.length>3?'…':''}.${has2km?` Plus ${within2.length} within 2km (Phase 2C).`:''}`
-      :has2km
-      ?`No schools within 1km. ${within2.length} within 2km (Phase 2C priority): ${within2.slice(0,3).map(s=>s.school_name).join(', ')}${within2.length>3?'…':''}.`
-      :'No primary schools within 2km. School proximity is not a value driver for this block.';
-    schoolSignalEl.innerHTML=`
-      <div class="signal-left">
-        <div class="signal-icon ${iconCls}">🏫</div>
-        <div>
-          <div class="signal-name">Primary school proximity</div>
-          <div class="signal-desc">${desc}</div>
-        </div>
-      </div>
-      <span class="signal-badge ${badgeCls}">${badge}</span>`;
+  // Update value signals school entry
+  updateSchoolSignal(s1km,s2km);
+
+  // Childcare — geocode in background using postal code
+  const ccNearby=[];
+  const allCC=centres.filter(c=>c.centre_name||c.organisation_name);
+  for(let i=0;i<allCC.length;i+=BATCH){
+    const batch=allCC.slice(i,i+BATCH);
+    const results=await Promise.all(batch.map(async c=>{
+      const postal=cleanStr(c.postal_code||c.postalcode||'');
+      const name=cleanStr(c.centre_name||c.organisation_name||'');
+      const query=/^\d{6}$/.test(postal)?postal:name;
+      if(!query)return null;
+      const res=await geocodeOM(query);
+      if(!res)return null;
+      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
+      if(isNaN(lat)||isNaN(lng))return null;
+      const km=hkm(resolvedLat,resolvedLng,lat,lng);
+      if(km>1.0)return null;
+      return{name:name||postal,km};
+    }));
+    results.forEach(c=>{if(c)ccNearby.push(c);});
+    await sleep(50);
   }
+  ccNearby.sort((a,b)=>a.km-b.km);
+  const ccHtml=ccNearby.length
+    ?ccNearby.slice(0,10).map(c=>`<div class="amenity-item"><div class="amenity-name">${c.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(c.km*1000)}m</div></div></div>`).join('')+(ccNearby.length>10?`<p style="font-size:11px;color:var(--text3);padding:4px 0">+${ccNearby.length-10} more within 1km</p>`:'')
+    :'<p class="amenity-none">No childcare centres found within 1km</p>';
+  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>${ccHtml}`;
 }
 
 // ── Value Tab ──────────────────────────────────────────────
-async function renderValueTab(records,mb){
-  const leaseYrs=records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
-  const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
-  const minLease=leaseYrs.length?Math.min(...leaseYrs):null;
-  const maxLease=leaseYrs.length?Math.max(...leaseYrs):null;
+function renderValueTab(records,mb){
+  const lys=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
+  const medLease=lys.length?Math.round(pct(lys,50)):null;
+  const minLease=lys.length?Math.min(...lys):null;
+  const maxLease=lys.length?Math.max(...lys):null;
 
-  // MRT nearest
-  const mrtNearby=resolvedLat&&resolvedLng?MRT_STATIONS
-    .map(s=>({...s,km:haversineKm(resolvedLat,resolvedLng,s.lat,s.lng)}))
-    .filter(s=>s.km<=3).sort((a,b)=>a.km-b.km):[];
+  const mrtNearby=resolvedLat&&resolvedLng?MRT_STATIONS.map(s=>({...s,km:hkm(resolvedLat,resolvedLng,s.lat,s.lng)})).filter(s=>s.km<=3).sort((a,b)=>a.km-b.km):[];
   const nearestMrt=mrtNearby[0]||null;
 
-  // Price trend slope
-  const byMonth={};
-  records.forEach(r=>{if(!byMonth[r.month])byMonth[r.month]=[];byMonth[r.month].push(+r.resale_price);});
-  const months=Object.keys(byMonth).sort();
+  const bm={};records.forEach(r=>{if(!bm[r.month])bm[r.month]=[];bm[r.month].push(+r.resale_price);});
+  const months=Object.keys(bm).sort();
   let trendSlope=0;
-  if(months.length>=3){
-    const xs=months.map((_,i)=>i);
-    const meds=months.map(m=>Math.round(pct(byMonth[m],50)));
-    trendSlope=linReg(xs,meds).slope;
-  }
+  if(months.length>=3){const xs=months.map((_,i)=>i),ms=months.map(m=>Math.round(pct(bm[m],50)));trendSlope=linReg(xs,ms).slope;}
 
-  // Floor premium — compare high vs low floor transactions in dataset
-  const highFloor=records.filter(r=>storeyMid(r.storey_range)>=13).map(r=>+r.resale_price);
-  const lowFloor=records.filter(r=>storeyMid(r.storey_range)<7).map(r=>+r.resale_price);
-  let floorPremiumPct=null;
-  if(highFloor.length>=2&&lowFloor.length>=2){
-    const highMed=pct(highFloor,50),lowMed=pct(lowFloor,50);
-    floorPremiumPct=Math.round(((highMed-lowMed)/lowMed)*100);
-  }
+  const hf=records.filter(r=>smid(r.storey_range)>=13).map(r=>+r.resale_price);
+  const lf=records.filter(r=>smid(r.storey_range)<7).map(r=>+r.resale_price);
+  let fpPct=null;
+  if(hf.length>=2&&lf.length>=2)fpPct=Math.round(((pct(hf,50)-pct(lf,50))/pct(lf,50))*100);
 
-  // Unit size vs block median
   const allSqm=records.map(r=>+r.floor_area_sqm);
   const medSqm=allSqm.length?Math.round(pct(allSqm,50)):null;
-  const blockSqm=allBlockRecs.filter(r=>r.flat_type===selectedFlatType).map(r=>+r.floor_area_sqm);
-  const medBlockSqm=blockSqm.length?Math.round(pct(blockSqm,50)):null;
+  const bSqm=allBlockRecs.filter(r=>r.flat_type===selectedFlatType).map(r=>+r.floor_area_sqm);
+  const medBSqm=bSqm.length?Math.round(pct(bSqm,50)):null;
+  const userFloor=+document.getElementById('floor_num').value||1;
 
-  // Build signals array
   const signals=[];
 
-  // 1. Remaining lease
   if(medLease!==null){
-    const pos=medLease>=60,neg=medLease<30,cau=medLease>=30&&medLease<60;
-    signals.push({
-      icon:'📋',
-      iconCls:pos?'signal-icon-pos':neg?'signal-icon-neg':'signal-icon-cau',
-      badgeCls:pos?'sb-pos':neg?'sb-neg':'sb-cau',
-      badge:pos?'Positive':neg?'Caution':'Watch',
-      name:'Remaining lease',
-      desc:pos?`${medLease} years remaining — CPF unrestricted, strong resale appeal.`
-        :neg?`${medLease} years remaining — CPF cannot be used, bank loans restricted. Significant resale risk.`
-        :`${medLease} years remaining — CPF may be restricted depending on buyer age. Verify with CPF Board.`
-    });
+    const pos=medLease>=60,neg=medLease<30;
+    signals.push({icon:'📋',iconCls:pos?'signal-icon-pos':neg?'signal-icon-neg':'signal-icon-cau',badgeCls:pos?'sb-pos':neg?'sb-neg':'sb-cau',badge:pos?'Positive':neg?'Caution':'Watch',name:'Remaining lease',
+      desc:pos?`${medLease} years remaining — CPF unrestricted, strong resale appeal.`:neg?`${medLease} years remaining — CPF cannot be used. Bank loan restrictions apply.`:`${medLease} years remaining — CPF may be restricted. Verify with CPF Board.`});
   }
 
-  // 2. MRT proximity
   if(nearestMrt){
-    const km=nearestMrt.km,pos=km<0.5,neu=km<1.0,cau=km<2.0;
-    signals.push({
-      icon:'🚇',
-      iconCls:pos?'signal-icon-pos':neu?'signal-icon-pos':cau?'signal-icon-neu':'signal-icon-neg',
-      badgeCls:pos?'sb-pos':neu?'sb-pos':cau?'sb-neu':'sb-neg',
-      badge:pos?'Strong positive':neu?'Positive':cau?'Neutral':'Negative',
-      name:'MRT proximity',
-      desc:`${nearestMrt.name} (${nearestMrt.line}) is ${Math.round(km*1000)}m away (~${Math.round(km*1000/80)} min walk). ${pos?'Walking distance — strong value driver.':neu?'Within 1km — good connectivity premium.':cau?'1–2km — moderate transit access.':'Beyond 2km — limited MRT premium.'}`
-    });
+    const km=nearestMrt.km,pos=km<0.5,good=km<1.0,neu=km<2.0;
+    signals.push({icon:'🚇',iconCls:pos||good?'signal-icon-pos':neu?'signal-icon-neu':'signal-icon-neg',badgeCls:pos?'sb-pos':good?'sb-pos':neu?'sb-neu':'sb-neg',badge:pos?'Strong positive':good?'Positive':neu?'Neutral':'Negative',name:'MRT proximity',
+      desc:`${nearestMrt.n} (${nearestMrt.l}) is ${Math.round(km*1000)}m away (~${Math.round(km*1000/80)} min walk). ${pos?'Walking distance — strong value driver.':good?'Within 1km — solid connectivity premium.':neu?'1–2km — moderate transit access.':'Beyond 2km.'}`});
   }
 
-  // 3. School proximity (populated after schools load — placeholder for now)
-  signals.push({
-    icon:'🏫',
-    iconCls:'signal-icon-neu',
-    badgeCls:'sb-neu',
-    badge:'Loading',
-    name:'Primary school proximity',
-    desc:'Checking nearby schools for P1 registration priority...',
-    id:'school-signal'
-  });
+  signals.push({icon:'🏫',iconCls:'signal-icon-neu',badgeCls:'sb-neu',badge:'Loading',name:'Primary school proximity',desc:'Checking nearby schools...',id:'school-signal'});
 
-  // 4. Price trend
   if(months.length>=3){
-    const rising=trendSlope>300,falling=trendSlope<-300;
-    signals.push({
-      icon:'📈',
-      iconCls:rising?'signal-icon-pos':falling?'signal-icon-neg':'signal-icon-neu',
-      badgeCls:rising?'sb-pos':falling?'sb-neg':'sb-neu',
-      badge:rising?'Positive':falling?'Negative':'Neutral',
-      name:'Price trend',
-      desc:rising?`Prices trending up over the selected period — sellers' market conditions.`
-        :falling?`Prices trending down — buyers have more negotiating room.`
-        :`Prices broadly stable — balanced market conditions.`
-    });
+    const r=trendSlope>300,f=trendSlope<-300;
+    signals.push({icon:'📈',iconCls:r?'signal-icon-pos':f?'signal-icon-neg':'signal-icon-neu',badgeCls:r?'sb-pos':f?'sb-neg':'sb-neu',badge:r?'Positive':f?'Negative':'Neutral',name:'Price trend',
+      desc:r?`Prices trending up — sellers' market conditions.`:f?`Prices trending down — buyers have negotiating room.`:`Prices broadly stable.`});
   }
 
-  // 5. Floor premium
-  if(floorPremiumPct!==null){
-    const strong=floorPremiumPct>=10,moderate=floorPremiumPct>=5;
-    const userFloor=+document.getElementById('floor_num').value||1;
-    const isHighFloor=userFloor>=13;
-    signals.push({
-      icon:'🏢',
-      iconCls:isHighFloor&&strong?'signal-icon-pos':!isHighFloor&&strong?'signal-icon-neg':'signal-icon-neu',
-      badgeCls:isHighFloor&&strong?'sb-pos':!isHighFloor&&strong?'sb-neg':'sb-neu',
-      badge:strong?`${floorPremiumPct}% floor premium`:moderate?`${floorPremiumPct}% floor premium`:'Minimal floor premium',
-      name:'Floor premium in this area',
-      desc:`High-floor units (13th+) transact ~${floorPremiumPct}% ${floorPremiumPct>=0?'above':'below'} low-floor units in comparable transactions. ${isHighFloor?'Your floor benefits from this premium.':'Lower floors trade at a discount in this area.'}`
-    });
+  if(fpPct!==null){
+    const isHigh=userFloor>=13,strong=Math.abs(fpPct)>=10;
+    signals.push({icon:'🏢',iconCls:isHigh&&strong?'signal-icon-pos':!isHigh&&strong?'signal-icon-neg':'signal-icon-neu',badgeCls:isHigh&&strong?'sb-pos':!isHigh&&strong?'sb-neg':'sb-neu',badge:`${fpPct}% floor premium`,name:'Floor premium',
+      desc:`High-floor units (~13th+) transact ~${fpPct}% ${fpPct>=0?'above':'below'} low-floor in comparable transactions. ${isHigh?'Your floor benefits from this.':'Lower floors trade at a discount here.'}`});
   }
 
-  // 6. Unit size
-  if(medBlockSqm&&medSqm){
-    const diff=medBlockSqm-medSqm;
-    const larger=diff>5,smaller=diff<-5;
-    signals.push({
-      icon:'📐',
-      iconCls:larger?'signal-icon-pos':smaller?'signal-icon-neu':'signal-icon-neu',
-      badgeCls:larger?'sb-pos':smaller?'sb-neu':'sb-neu',
-      badge:larger?'Above median size':smaller?'Below median size':'At median size',
-      name:'Unit size',
-      desc:`This flat type at Block ${resolvedBlock} has a median of ${medBlockSqm} sqm. Comparable transactions average ${medSqm} sqm. ${larger?'Larger units command a size premium.':smaller?'Smaller than area average — modest size discount.':'Typical size for this area.'}`
-    });
+  if(medBSqm&&medSqm){
+    const diff=medBSqm-medSqm,larger=diff>5,smaller=diff<-5;
+    signals.push({icon:'📐',iconCls:larger?'signal-icon-pos':'signal-icon-neu',badgeCls:larger?'sb-pos':'sb-neu',badge:larger?'Above median size':smaller?'Below median size':'At median size',name:'Unit size',
+      desc:`Block ${resolvedBlock} ${selectedFlatType} median: ${medBSqm} sqm. Area average: ${medSqm} sqm. ${larger?'Larger than area average — size premium applies.':smaller?'Smaller than area average.':'Typical size.'}`});
   }
 
-  // 7. URA zoning — always a manual check
-  signals.push({
-    icon:'🗺️',
-    iconCls:'signal-icon-neu',
-    badgeCls:'sb-neu',
-    badge:'Manual check',
-    name:'URA Master Plan zoning',
-    desc:`Check upcoming developments near this block. Nearby commercial, transport, or residential upzoning can significantly affect future value. <a href="https://www.ura.gov.sg/maps" target="_blank" style="color:#378ADD">View URA Master Plan →</a>`
-  });
+  signals.push({icon:'🗺️',iconCls:'signal-icon-neu',badgeCls:'sb-neu',badge:'Manual check',name:'URA Master Plan',
+    desc:`Check upcoming developments that could affect value. <a href="https://www.ura.gov.sg/maps" target="_blank" style="color:#378ADD">View URA Master Plan →</a>`});
 
-  // Count positive / caution / negative
-  const pos=signals.filter(s=>s.badgeCls==='sb-pos'||s.badge==='Strong positive'||s.badge==='Positive').length;
-  const neg=signals.filter(s=>s.badgeCls==='sb-neg'||s.badge==='Negative').length;
-  const cau=signals.filter(s=>s.badgeCls==='sb-cau'||s.badge==='Caution'||s.badge==='Watch').length;
-
-  // Summary bar
+  const pos=signals.filter(s=>s.badgeCls==='sb-pos').length;
+  const neg=signals.filter(s=>s.badgeCls==='sb-neg').length;
+  const cau=signals.filter(s=>s.badgeCls==='sb-cau'||s.badgeCls==='sb-warn').length;
   const summaryCol=neg>=2?'var(--err-bg)':cau>=2?'var(--warn-bg)':'var(--ok-bg)';
-  const summaryTextCol=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':'var(--ok-text)';
-  const summaryMsg=neg>=2?`${neg} negative signal${neg!==1?'s':''} require attention`
-    :cau>=2?`${cau} factor${cau!==1?'s':''} worth checking before committing`
-    :`${pos} positive signal${pos!==1?'s':''} — broadly favourable outlook`;
+  const summaryTCol=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':'var(--ok-text)';
+  const summaryMsg=neg>=2?`${neg} signals requiring attention`:cau>=2?`${cau} factors worth checking`:`${pos} positive signal${pos!==1?'s':''} — broadly favourable`;
 
   document.getElementById('valueSummary').innerHTML=`
-    <div class="summary-bar" style="background:${summaryCol};color:${summaryTextCol}">
+    <div class="summary-bar" style="background:${summaryCol};color:${summaryTCol}">
       <div class="summary-dots">
         ${Array(pos).fill(`<div class="dot" style="background:#1D9E75"></div>`).join('')}
         ${Array(cau).fill(`<div class="dot" style="background:#BA7517"></div>`).join('')}
@@ -1202,42 +1148,27 @@ async function renderValueTab(records,mb){
       <span style="font-weight:500">${summaryMsg}</span>
     </div>`;
 
-  // Render signals
   document.getElementById('valueSignals').innerHTML=signals.map(s=>`
-    <div class="signal-item" ${s.id?`id="${s.id}"`:''}>
+    <div class="signal-item"${s.id?` id="${s.id}"`:''}>
       <div class="signal-left">
         <div class="signal-icon ${s.iconCls}">${s.icon}</div>
-        <div>
-          <div class="signal-name">${s.name}</div>
-          <div class="signal-desc">${s.desc}</div>
-        </div>
+        <div><div class="signal-name">${s.name}</div><div class="signal-desc">${s.desc}</div></div>
       </div>
       <span class="signal-badge ${s.badgeCls}">${s.badge}</span>
     </div>`).join('');
 
-  // MRT detail card
-  document.getElementById('mrtContent').innerHTML=mrtNearby.slice(0,5).map(s=>`
-    <div class="mrt-item">
-      <div class="mrt-name">${s.name} <span style="font-size:11px;font-weight:400;color:var(--text2)">(${s.line})</span></div>
-      <div class="mrt-detail"><div>${Math.round(s.km*1000)}m</div><div>~${Math.round(s.km*1000/80)} min walk</div></div>
-    </div>`).join('')||'<p style="font-size:13px;color:var(--text2)">No stations within 2.5km.</p>';
-
-  // Lease detail card
-  let leaseHtml='<p style="font-size:13px;color:var(--text2)">No lease data available.</p>';
+  // Lease detail
+  let leaseHtml='<p style="font-size:13px;color:var(--text2)">No lease data.</p>';
   if(medLease!==null){
     const f10=Math.max(0,medLease-10),f20=Math.max(0,medLease-20);
     const lc=medLease>=60?'#1D9E75':medLease>=30?'#BA7517':'#E24B4A';
-    const pct100=Math.round((medLease/99)*100);
-    const cpfNote=medLease<30?'CPF cannot be used. Bank loan restrictions apply.'
-      :medLease<60?'CPF usage may be restricted. Verify with CPF Board.'
-      :'CPF usage unrestricted for most buyers.';
-    const noteClass=medLease<30?'t-err':medLease<60?'t-warn':'t-ok';
+    const p100=Math.round((medLease/99)*100);
+    const cpf=medLease<30?'CPF cannot be used. Bank loan restrictions apply.':medLease<60?'CPF may be restricted. Verify with CPF Board.':'CPF unrestricted for most buyers.';
+    const nc=medLease<30?'t-err':medLease<60?'t-warn':'t-ok';
     leaseHtml=`
       <div style="margin-bottom:0.875rem">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
-          <span>Median remaining lease</span><span style="font-weight:500;color:${lc}">${medLease} years</span>
-        </div>
-        <div class="lease-track"><div style="height:100%;width:${pct100}%;background:${lc};border-radius:5px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px"><span>Median remaining lease</span><span style="font-weight:500;color:${lc}">${medLease} years</span></div>
+        <div class="lease-track"><div style="height:100%;width:${p100}%;background:${lc};border-radius:5px"></div></div>
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:3px"><span>0y</span><span>99y</span></div>
       </div>
       <div class="metrics" style="margin-bottom:0.75rem">
@@ -1245,47 +1176,45 @@ async function renderValueTab(records,mb){
         <div class="metric"><div class="metric-label">In 20 years</div><div class="metric-value" style="color:${f20>=60?'#1D9E75':f20>=30?'#BA7517':'#E24B4A'}">${f20}y</div></div>
         <div class="metric"><div class="metric-label">Range in data</div><div class="metric-value" style="font-size:13px">${minLease}–${maxLease}y</div></div>
       </div>
-      <div class="tag ${noteClass}" style="margin-bottom:0">${cpfNote}</div>`;
+      <div class="tag ${nc}" style="margin-bottom:0">${cpf}</div>`;
   }
   document.getElementById('leaseContent').innerHTML=leaseHtml;
 
-  // Price appreciation card
+  // Appreciation
   const sorted=[...records].sort((a,b)=>a.month.localeCompare(b.month));
-  let appHtml='<p style="font-size:13px;color:var(--text2)">Insufficient data for appreciation analysis.</p>';
+  let appHtml='<p style="font-size:13px;color:var(--text2)">Insufficient data.</p>';
   if(sorted.length>=6){
-    const cutOld=Math.ceil(sorted.length*0.2),cutNew=Math.floor(sorted.length*0.8);
-    const oldMed=Math.round(pct(sorted.slice(0,cutOld).map(r=>+r.resale_price),50));
-    const newMed=Math.round(pct(sorted.slice(cutNew).map(r=>+r.resale_price),50));
-    const change=Math.round(((newMed-oldMed)/oldMed)*100);
-    const ann=Math.round((change/mb)*12);
-    appHtml=`
-      <div class="metrics" style="margin-bottom:0.75rem">
-        <div class="metric"><div class="metric-label">Earliest median</div><div class="metric-value">${sgd(oldMed)}</div><div class="metric-sub">${sorted[0]?.month}</div></div>
-        <div class="metric"><div class="metric-label">Recent median</div><div class="metric-value">${sgd(newMed)}</div><div class="metric-sub">${sorted[sorted.length-1]?.month}</div></div>
-        <div class="metric"><div class="metric-label">Period change</div><div class="metric-value" style="color:${change>=0?'#1D9E75':'#E24B4A'}">${change>=0?'+':''}${change}%</div></div>
-        <div class="metric"><div class="metric-label">Annualised</div><div class="metric-value" style="color:${ann>=0?'#1D9E75':'#E24B4A'}">${ann>=0?'+':''}${ann}%</div></div>
-      </div>
-      <p style="font-size:11px;color:var(--text3)">Based on comparable transactions in this search. Past performance does not indicate future results.</p>`;
+    const co=Math.ceil(sorted.length*0.2),cn=Math.floor(sorted.length*0.8);
+    const om=Math.round(pct(sorted.slice(0,co).map(r=>+r.resale_price),50));
+    const nm=Math.round(pct(sorted.slice(cn).map(r=>+r.resale_price),50));
+    const ch=Math.round(((nm-om)/om)*100),an=Math.round((ch/mb)*12);
+    appHtml=`<div class="metrics" style="margin-bottom:0.75rem">
+      <div class="metric"><div class="metric-label">Earliest median</div><div class="metric-value">${sgd(om)}</div><div class="metric-sub">${sorted[0]?.month}</div></div>
+      <div class="metric"><div class="metric-label">Recent median</div><div class="metric-value">${sgd(nm)}</div><div class="metric-sub">${sorted[sorted.length-1]?.month}</div></div>
+      <div class="metric"><div class="metric-label">Period change</div><div class="metric-value" style="color:${ch>=0?'#1D9E75':'#E24B4A'}">${ch>=0?'+':''}${ch}%</div></div>
+      <div class="metric"><div class="metric-label">Annualised</div><div class="metric-value" style="color:${an>=0?'#1D9E75':'#E24B4A'}">${an>=0?'+':''}${an}%</div></div>
+    </div>
+    <p style="font-size:11px;color:var(--text3)">Past performance does not indicate future results.</p>`;
   }
   document.getElementById('appreciationContent').innerHTML=appHtml;
 }
 
-function renderMRT(){
-  if(!resolvedLat||!resolvedLng)return'<p style="font-size:13px;color:var(--text2)">Location unavailable.</p>';
-  const nearby=MRT_STATIONS
-    .map(s=>({...s,km:haversineKm(resolvedLat,resolvedLng,s.lat,s.lng)}))
-    .filter(s=>s.km<=2.5)
-    .sort((a,b)=>a.km-b.km)
-    .slice(0,5);
-  if(!nearby.length)return'<p style="font-size:13px;color:var(--text2)">No MRT/LRT stations within 2.5km.</p>';
-  return nearby.map(s=>`
-    <div class="mrt-item">
-      <div class="mrt-name">${s.name} <span style="font-size:11px;font-weight:400;color:var(--text2)">(${s.line})</span></div>
-      <div class="mrt-detail">
-        <div>${Math.round(s.km*1000)}m</div>
-        <div>~${Math.round(s.km*1000/80)} min walk</div>
-      </div>
-    </div>`).join('');
+function updateSchoolSignal(s1km,s2km){
+  const el=document.getElementById('school-signal');
+  if(!el)return;
+  const has1=s1km.length>0,has2=s2km.length>0;
+  const iconCls=has1?'signal-icon-pos':'signal-icon-neu';
+  const badgeCls=has1?'sb-pos':'sb-neu';
+  const badge=has1?'Positive':'Neutral';
+  const desc=has1?`${s1km.length} school${s1km.length!==1?'s':''} within 1km (Phase 2B): ${s1km.slice(0,3).map(s=>s.name).join(', ')}${s1km.length>3?'…':''}.${has2?` Plus ${s2km.length} within 2km (Phase 2C).`:''}`
+    :has2?`No schools within 1km. ${s2km.length} within 2km (Phase 2C): ${s2km.slice(0,3).map(s=>s.name).join(', ')}${s2km.length>3?'…':''}.`
+    :'No primary schools within 2km.';
+  el.innerHTML=`
+    <div class="signal-left">
+      <div class="signal-icon ${iconCls}">🏫</div>
+      <div><div class="signal-name">Primary school proximity</div><div class="signal-desc">${desc}</div></div>
+    </div>
+    <span class="signal-badge ${badgeCls}">${badge}</span>`;
 }
 </script>
 </body>
