@@ -622,14 +622,21 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
   const cacheKey=`recs_${JSON.stringify(filters)}_${monthsBack}`;
   const cached=cacheGet(cacheKey);
   if(cached)return cached;
-  let all=[],offset=0,limit=100;
+  let all=[],offset=0,limit=100,retryWait=12000;
   while(offset<maxOffset){
     let url=`${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}&sort=month%20desc`;
     const af=Object.fromEntries(Object.entries(filters).filter(([k,v])=>v));
     if(Object.keys(af).length)url+=`&filters=${encodeURIComponent(JSON.stringify(af))}`;
     const resp=await fetch(url,{headers:buildHeaders()});
     const json=await resp.json();
-    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){showStatus('Rate limit — waiting 12s...');await sleep(12000);showStatus('Retrying...');continue;}
+    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){
+      showStatus(`Rate limit — waiting ${retryWait/1000}s...`);
+      await sleep(retryWait);
+      retryWait=Math.min(retryWait*1.5,30000); // exponential backoff, cap at 30s
+      showStatus('Retrying...');
+      continue;
+    }
+    retryWait=12000; // reset on success
     if(!json.result?.records)break;
     const recs=json.result.records.filter(r=>r.month>=cutoffStr);
     all=all.concat(recs);
@@ -637,7 +644,7 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
     const last=json.result.records[json.result.records.length-1]?.month;
     if(last&&last<cutoffStr)break;
     offset+=limit;
-    if(offset<maxOffset)await sleep(300);
+    if(offset<maxOffset)await sleep(600); // increased from 300ms
   }
   cacheSet(cacheKey,all);
   return all;
@@ -718,15 +725,23 @@ async function doQuickSearch(){
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
     showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
+    // Always fetch block first — filtered, fast
     allBlockRecs=await fetchRecs({block:resolvedBlock},mb,2000);
-    if(allBlockRecs.length){resolvedStreet=allBlockRecs[0]?.street_name||resolvedStreet;allStreetRecs=allBlockRecs;}
-    else{
-      showStatus('Fetching street data...');
-      const all=await fetchRecs({},mb,5000);
-      allStreetRecs=all.filter(r=>{const s=normStr(r.street_name),n=normStr(resolvedStreet);return s===n||s.includes(n)||n.includes(s);});
+    if(allBlockRecs.length){
+      resolvedStreet=allBlockRecs[0]?.street_name||resolvedStreet;
+      resolvedTown=allBlockRecs[0]?.town||'';
+      allStreetRecs=allBlockRecs;
+    } else {
+      // No block data — resolve town from OneMap address field, then fetch town+flat_type
+      // Never do an unfiltered fetch — too many calls
+      resolvedTown=res.ADDRESS?.match(/\b(ANG MO KIO|BEDOK|BISHAN|BUKIT BATOK|BUKIT MERAH|BUKIT PANJANG|BUKIT TIMAH|CENTRAL AREA|CHOA CHU KANG|CLEMENTI|GEYLANG|HOUGANG|JURONG EAST|JURONG WEST|KALLANG|MARINE PARADE|PASIR RIS|PUNGGOL|QUEENSTOWN|SEMBAWANG|SENGKANG|SERANGOON|TAMPINES|TOA PAYOH|WOODLANDS|YISHUN)\b/i)?.[0]?.toUpperCase()||'';
+      if(resolvedTown){
+        showStatus(`No block data — fetching ${resolvedTown} data...`);
+        allStreetRecs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,3000);
+      }
     }
     showStatus('',false);
-    resolvedTown=allStreetRecs[0]?.town||'';
+    if(!resolvedTown&&allStreetRecs.length)resolvedTown=allStreetRecs[0]?.town||'';
     quickFlatType=flatType;
 
     // Run quick fallback chain (blocks only, no town)
