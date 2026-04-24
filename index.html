@@ -4,365 +4,145 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HDB Resale Analyser — Price, Schools & Value Signals</title>
-<meta name="description" content="Free tool for Singapore HDB buyers and sellers. Compare resale prices, check nearby primary schools for P1 registration, and assess value signals including remaining lease."/>
+<meta name="description" content="Free tool to research HDB resale prices, nearby primary schools for P1 registration, and value signals for any Singapore HDB block."/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #ffffff;
-    --bg2: #f5f5f3;
-    --bg3: #eeede8;
-    --text: #1a1a18;
-    --text2: #6b6b67;
-    --text3: #9b9b96;
-    --border: rgba(0,0,0,0.12);
-    --border2: rgba(0,0,0,0.22);
-    --radius: 8px;
-    --radius-lg: 12px;
-    --success-bg: #EAF3DE; --success-text: #27500A;
-    --warning-bg: #FAEEDA; --warning-text: #633806;
-    --danger-bg:  #FCEBEB; --danger-text:  #791F1F;
-    --info-bg:    #E6F1FB; --info-text:    #0C447C;
-    --neutral-bg: #f5f5f3;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#eeede8;
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+  --radius:8px;--radius-lg:12px;
+  --ok-bg:#EAF3DE;--ok-text:#27500A;
+  --warn-bg:#FAEEDA;--warn-text:#633806;
+  --err-bg:#FCEBEB;--err-text:#791F1F;
+  --info-bg:#E6F1FB;--info-text:#0C447C;
+  --neu-bg:#f5f5f3;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1e1e1c;--bg2:#2a2a28;--bg3:#333330;
+    --text:#f0efe8;--text2:#a0a09a;--text3:#6b6b65;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+    --ok-bg:#173404;--ok-text:#C0DD97;
+    --warn-bg:#412402;--warn-text:#FAC775;
+    --err-bg:#501313;--err-text:#F7C1C1;
+    --info-bg:#042C53;--info-text:#B5D4F4;
+    --neu-bg:#2a2a28;
   }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1e1e1c;
-      --bg2: #2a2a28;
-      --bg3: #333330;
-      --text: #f0efe8;
-      --text2: #a0a09a;
-      --text3: #6b6b65;
-      --border: rgba(255,255,255,0.1);
-      --border2: rgba(255,255,255,0.2);
-      --success-bg: #173404; --success-text: #C0DD97;
-      --warning-bg: #412402; --warning-text: #FAC775;
-      --danger-bg:  #501313; --danger-text:  #F7C1C1;
-      --info-bg:    #042C53; --info-text:    #B5D4F4;
-      --neutral-bg: #2a2a28;
-    }
-  }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg3);
-    color: var(--text);
-    font-size: 15px;
-    line-height: 1.6;
-  }
-
-  .page {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 1.5rem 1rem 3rem;
-  }
-
-  .app-header {
-    margin-bottom: 1.5rem;
-  }
-  .app-header h1 {
-    font-size: 20px;
-    font-weight: 500;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-  .app-header p {
-    font-size: 13px;
-    color: var(--text2);
-  }
-
-  .card {
-    background: var(--bg);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
-  }
-
-  .sl {
-    font-size: 11px;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
-    font-weight: 500;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 12px;
-    margin-bottom: 1rem;
-  }
-
-  .field label {
-    display: block;
-    font-size: 12px;
-    color: var(--text2);
-    margin-bottom: 5px;
-  }
-
-  .field select,
-  .field input {
-    width: 100%;
-    font-size: 14px;
-    padding: 7px 10px;
-    background: var(--bg2);
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .field select:focus, .field input:focus {
-    border-color: #378ADD;
-    box-shadow: 0 0 0 3px rgba(55,138,221,0.15);
-  }
-
-  .hint { font-size: 11px; color: var(--text3); margin-top: 3px; }
-
-  .btn {
-    border-radius: var(--radius);
-    padding: 9px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    width: 100%;
-    border: none;
-    transition: opacity 0.15s, transform 0.1s;
-  }
-  .btn:active { transform: scale(0.98); }
-  .btn-primary { background: var(--text); color: var(--bg); }
-  .btn-primary:hover { opacity: 0.88; }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .btn-secondary {
-    background: var(--bg2);
-    color: var(--text);
-    border: 0.5px solid var(--border2);
-  }
-  .btn-secondary:hover { background: var(--bg3); }
-
-  .tabs { display: flex; gap: 6px; margin-bottom: 1rem; }
-  .tab {
-    flex: 1;
-    padding: 7px 4px;
-    font-size: 13px;
-    font-weight: 500;
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius);
-    background: var(--bg2);
-    color: var(--text2);
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.15s;
-  }
-  .tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-  .tab:hover:not(.active) { background: var(--bg3); }
-
-  .steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.25rem; }
-  .step { display: flex; align-items: center; gap: 10px; }
-  .sn {
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    background: var(--bg2);
-    border: 0.5px solid var(--border2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 500; color: var(--text2);
-    flex-shrink: 0;
-    transition: all 0.2s;
-  }
-  .sn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-  .sn.done { background: var(--success-bg); color: var(--success-text); border-color: transparent; }
-  .sl2 { font-size: 13px; color: var(--text2); }
-  .sl2.active { color: var(--text); font-weight: 500; }
-
-  .tag {
-    display: inline-block;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: var(--radius);
-    font-weight: 500;
-    margin-bottom: 0.75rem;
-  }
-  .t-ok  { background: var(--success-bg); color: var(--success-text); }
-  .t-err { background: var(--danger-bg);  color: var(--danger-text);  }
-  .t-info{ background: var(--info-bg);    color: var(--info-text);    }
-  .t-warn{ background: var(--warning-bg); color: var(--warning-text); }
-
-  .tier-badge {
-    display: inline-flex; align-items: center;
-    padding: 5px 10px; border-radius: var(--radius);
-    font-size: 13px; font-weight: 500;
-    margin-bottom: 4px;
-  }
-  .tier1 { background: var(--success-bg); color: var(--success-text); }
-  .tier2 { background: var(--info-bg);    color: var(--info-text);    }
-  .tier3 { background: var(--warning-bg); color: var(--warning-text); }
-  .tier4 { background: var(--neutral-bg); color: var(--text2); border: 0.5px solid var(--border2); }
-
-  .fallback-item {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding: 5px 0;
-    border-bottom: 0.5px solid var(--border);
-    font-size: 12px;
-  }
-  .fallback-item:last-child { border-bottom: none; }
-  .fi-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
-  .fi-used { background: var(--success-text); }
-  .fi-skip { background: var(--border2); }
-
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 8px;
-    margin-bottom: 1rem;
-  }
-  .metric {
-    background: var(--bg2);
-    border-radius: var(--radius);
-    padding: 0.65rem 0.875rem;
-  }
-  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
-  .metric-value { font-size: 17px; font-weight: 500; color: var(--text); }
-  .metric-sub   { font-size: 10px; color: var(--text3); margin-top: 2px; }
-
-  .verdict { border-radius: var(--radius); padding: 0.875rem 1rem; margin-bottom: 1rem; }
-  .verdict-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
-  .verdict-body  { font-size: 13px; opacity: 0.9; line-height: 1.5; }
-  .v-fair    { background: var(--success-bg); color: var(--success-text); }
-  .v-above   { background: var(--warning-bg); color: var(--warning-text); }
-  .v-below   { background: var(--info-bg);    color: var(--info-text);    }
-  .v-danger  { background: var(--danger-bg);  color: var(--danger-text);  }
-  .v-neutral { background: var(--neutral-bg); color: var(--text); border: 0.5px solid var(--border2); }
-
-  .bar-wrap { margin-bottom: 0.4rem; }
-  .bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-bottom: 2px; }
-  .bar-track { height: 7px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
-  .bar-fill  { height: 100%; border-radius: 4px; }
-
-  .tx-table { width: 100%; font-size: 12px; border-collapse: collapse; table-layout: fixed; }
-  .tx-table th {
-    text-align: left; font-weight: 500; font-size: 11px;
-    color: var(--text2); padding: 5px 4px;
-    border-bottom: 0.5px solid var(--border);
-  }
-  .tx-table td {
-    padding: 5px 4px;
-    border-bottom: 0.5px solid var(--border);
-    color: var(--text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .tx-table tr:last-child td { border-bottom: none; }
-
-  .pill {
-    display: inline-block; font-size: 10px;
-    padding: 2px 5px; border-radius: 3px; font-weight: 500;
-  }
-  .p-above  { background: var(--warning-bg); color: var(--warning-text); }
-  .p-fair   { background: var(--success-bg); color: var(--success-text); }
-  .p-below  { background: var(--info-bg);    color: var(--info-text);    }
-  .p-band   { background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); }
-  .p-same   { background: var(--success-bg); color: var(--success-text); }
-  .p-green  { background: #EAF3DE; color: #27500A; }
-  .p-amber  { background: #FAEEDA; color: #633806; }
-  .p-red    { background: #FCEBEB; color: #791F1F; }
-
-  .school-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
-  @media (max-width: 480px) { .school-grid { grid-template-columns: 1fr; } }
-  .school-col-title {
-    font-size: 12px; font-weight: 500; margin-bottom: 8px;
-    padding: 4px 8px; border-radius: var(--radius);
-  }
-  .school-1km { background: #EAF3DE; color: #27500A; }
-  .school-2km { background: #FAEEDA; color: #633806; }
-  .school-item {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 6px 0; border-bottom: 0.5px solid var(--border);
-  }
-  .school-item:last-child { border-bottom: none; }
-  .school-name { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.3; }
-  .school-dist { font-size: 11px; color: var(--text2); white-space: nowrap; margin-left: 8px; padding-top: 1px; }
-  .school-none { font-size: 13px; color: var(--text3); padding: 0.5rem 0; }
-
-  .value-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 7px 0; border-bottom: 0.5px solid var(--border);
-    font-size: 13px;
-  }
-  .value-row:last-child { border-bottom: none; }
-  .value-label { color: var(--text2); }
-  .value-val   { font-weight: 500; color: var(--text); text-align: right; }
-
-  .lease-track { height: 10px; background: var(--bg2); border-radius: 5px; overflow: hidden; margin-top: 4px; }
-
-  .status {
-    font-size: 13px; color: var(--text2);
-    text-align: center; padding: 1.5rem;
-    display: none;
-  }
-
-  .kofi-bar {
-    background: var(--bg2);
-    border-radius: var(--radius);
-    padding: 0.6rem 1rem;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 8px; margin-top: 0.75rem; flex-wrap: wrap;
-  }
-  .kofi-bar span { font-size: 12px; color: var(--text2); }
-  .kofi-btn {
-    font-size: 12px; padding: 5px 14px;
-    border-radius: var(--radius);
-    border: 0.5px solid var(--border2);
-    background: var(--bg); color: var(--text);
-    cursor: pointer; font-weight: 500;
-  }
-  .kofi-btn:hover { background: var(--bg2); }
-
-  .attribution {
-    font-size: 11px; color: var(--text3);
-    margin-top: 2rem; padding-top: 1rem;
-    border-top: 0.5px solid var(--border);
-    line-height: 1.7;
-  }
-  .attribution a { color: #378ADD; text-decoration: none; }
-  .attribution a:hover { text-decoration: underline; }
-
-  .cooldown-msg { font-size: 11px; color: var(--text3); text-align: center; margin-top: 5px; display: none; }
-
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-  #ad-slot {
-    text-align: center; padding: 0.5rem;
-    font-size: 11px; color: var(--text3);
-    border: 0.5px dashed var(--border2);
-    border-radius: var(--radius);
-    margin-bottom: 1rem;
-  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg3);color:var(--text);font-size:15px;line-height:1.6}
+.page{max-width:720px;margin:0 auto;padding:1.5rem 1rem 3rem}
+h1{font-size:20px;font-weight:500;margin-bottom:4px}
+.subtitle{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1rem}
+.sl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;font-weight:500}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:1rem}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
+.field select,.field input{width:100%;font-size:14px;padding:7px 10px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);outline:none}
+.field select:focus,.field input:focus{border-color:#378ADD;box-shadow:0 0 0 3px rgba(55,138,221,0.15)}
+.field select:disabled{opacity:0.45;cursor:not-allowed}
+.hint{font-size:11px;color:var(--text3);margin-top:3px}
+.btn{border-radius:var(--radius);padding:9px 20px;font-size:14px;font-weight:500;cursor:pointer;width:100%;border:none;transition:opacity 0.15s,transform 0.1s}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:var(--text);color:var(--bg)}
+.btn-primary:hover{opacity:0.88}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--bg2);color:var(--text);border:0.5px solid var(--border2)}
+.btn-secondary:hover{background:var(--bg3)}
+.tabs{display:flex;gap:6px;margin-bottom:1rem}
+.tab{flex:1;padding:7px 4px;font-size:13px;font-weight:500;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);cursor:pointer;text-align:center;transition:all 0.15s}
+.tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.tab:hover:not(.active){background:var(--bg3)}
+.steps{display:flex;flex-direction:column;gap:6px;margin-bottom:1.25rem}
+.step{display:flex;align-items:center;gap:10px}
+.sn{width:24px;height:24px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text2);flex-shrink:0;transition:all 0.2s}
+.sn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.sn.done{background:var(--ok-bg);color:var(--ok-text);border-color:transparent}
+.sl2{font-size:13px;color:var(--text2)}
+.sl2.active{color:var(--text);font-weight:500}
+.tag{display:inline-block;font-size:12px;padding:4px 10px;border-radius:var(--radius);font-weight:500;margin-bottom:0.75rem}
+.t-ok{background:var(--ok-bg);color:var(--ok-text)}
+.t-err{background:var(--err-bg);color:var(--err-text)}
+.t-info{background:var(--info-bg);color:var(--info-text)}
+.t-warn{background:var(--warn-bg);color:var(--warn-text)}
+.fallback-banner{border-radius:var(--radius);padding:10px 14px;margin-bottom:1rem;font-size:13px;line-height:1.5}
+.fb-exact{background:var(--ok-bg);color:var(--ok-text)}
+.fb-block{background:var(--info-bg);color:var(--info-text)}
+.fb-street{background:var(--warn-bg);color:var(--warn-text)}
+.fb-town{background:var(--neu-bg);color:var(--text2);border:0.5px solid var(--border2)}
+.fb-title{font-weight:500;margin-bottom:2px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem}
+.metric{background:var(--bg2);border-radius:var(--radius);padding:0.65rem 0.875rem}
+.metric-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.metric-value{font-size:17px;font-weight:500;color:var(--text)}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.verdict{border-radius:var(--radius);padding:0.875rem 1rem;margin-bottom:1rem}
+.verdict-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.verdict-body{font-size:13px;opacity:0.9;line-height:1.5}
+.v-fair{background:var(--ok-bg);color:var(--ok-text)}
+.v-above{background:var(--warn-bg);color:var(--warn-text)}
+.v-below{background:var(--info-bg);color:var(--info-text)}
+.v-danger{background:var(--err-bg);color:var(--err-text)}
+.v-neutral{background:var(--neu-bg);color:var(--text);border:0.5px solid var(--border2)}
+.tx-table{width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed}
+.tx-table th{text-align:left;font-weight:500;font-size:11px;color:var(--text2);padding:5px 4px;border-bottom:0.5px solid var(--border)}
+.tx-table td{padding:5px 4px;border-bottom:0.5px solid var(--border);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-table tr:last-child td{border-bottom:none}
+.pill{display:inline-block;font-size:10px;padding:2px 5px;border-radius:3px;font-weight:500}
+.p-above{background:var(--warn-bg);color:var(--warn-text)}
+.p-fair{background:var(--ok-bg);color:var(--ok-text)}
+.p-below{background:var(--info-bg);color:var(--info-text)}
+.p-band{background:var(--bg2);color:var(--text2);border:0.5px solid var(--border)}
+.p-same{background:var(--ok-bg);color:var(--ok-text)}
+.p-green{background:#EAF3DE;color:#27500A}
+.p-amber{background:#FAEEDA;color:#633806}
+.p-red{background:#FCEBEB;color:#791F1F}
+.school-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+@media(max-width:480px){.school-grid{grid-template-columns:1fr}}
+.school-col-title{font-size:12px;font-weight:500;margin-bottom:8px;padding:4px 8px;border-radius:var(--radius)}
+.school-1km{background:#EAF3DE;color:#27500A}
+.school-2km{background:#FAEEDA;color:#633806}
+.school-item{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid var(--border)}
+.school-item:last-child{border-bottom:none}
+.school-name{font-size:12px;font-weight:500;color:var(--text);line-height:1.3}
+.school-dist{font-size:11px;color:var(--text2);white-space:nowrap;margin-left:8px;padding-top:1px}
+.school-none{font-size:13px;color:var(--text3);padding:0.5rem 0}
+.mrt-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.mrt-item:last-child{border-bottom:none}
+.mrt-name{color:var(--text);font-weight:500}
+.mrt-detail{text-align:right;font-size:12px;color:var(--text2)}
+.value-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.value-row:last-child{border-bottom:none}
+.value-label{color:var(--text2)}
+.value-val{font-weight:500;color:var(--text);text-align:right}
+.lease-track{height:10px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-top:4px}
+.status{font-size:13px;color:var(--text2);text-align:center;padding:1.5rem;display:none}
+.kofi-bar{background:var(--bg2);border-radius:var(--radius);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:0.75rem;flex-wrap:wrap}
+.kofi-bar span{font-size:12px;color:var(--text2)}
+.kofi-btn{font-size:12px;padding:5px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer;font-weight:500}
+.kofi-btn:hover{background:var(--bg2)}
+.attribution{font-size:11px;color:var(--text3);margin-top:2rem;padding-top:1rem;border-top:0.5px solid var(--border);line-height:1.7}
+.attribution a{color:#378ADD;text-decoration:none}
+.attribution a:hover{text-decoration:underline}
+.cooldown-msg{font-size:11px;color:var(--text3);text-align:center;margin-top:5px;display:none}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ad-slot{text-align:center;padding:0.5rem;font-size:11px;color:var(--text3);border:0.5px dashed var(--border2);border-radius:var(--radius);margin-bottom:1rem}
+.flat-option-unavail{color:var(--text3)}
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="app-header">
-    <h1>HDB Resale Analyser</h1>
-    <p>Price comparables, nearby primary schools, and value signals for any HDB block</p>
-  </div>
+  <h1>HDB Resale Analyser</h1>
+  <p class="subtitle">Price comparables, nearby primary schools, and value signals for any HDB block</p>
 
-  <div id="ad-slot"><!-- Google AdSense banner 728x90 --></div>
+  <div id="ad-slot"><!-- Google AdSense banner --></div>
 
   <div class="card">
-    <p class="sl">I am a</p>
-    <div class="tabs" style="margin-bottom:1.25rem">
-      <div class="tab active" id="tab-buyer"   onclick="setRole('buyer')">Potential buyer</div>
-      <div class="tab"        id="tab-seller"  onclick="setRole('seller')">Flat owner / seller</div>
-      <div class="tab"        id="tab-curious" onclick="setRole('curious')">Just curious</div>
-    </div>
-
     <div class="steps">
-      <div class="step"><div class="sn active" id="sn1">1</div><div class="sl2 active" id="sl1">Enter unit details</div></div>
-      <div class="step"><div class="sn"        id="sn2">2</div><div class="sl2"        id="sl2">Confirm flat type &amp; floor</div></div>
-      <div class="step"><div class="sn"        id="sn3">3</div><div class="sl2"        id="sl3">View analysis</div></div>
+      <div class="step"><div class="sn active" id="sn1">1</div><div class="sl2 active" id="sl1">Enter block details</div></div>
+      <div class="step"><div class="sn" id="sn2">2</div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
+      <div class="step"><div class="sn" id="sn3">3</div><div class="sl2" id="sl3">View analysis</div></div>
     </div>
 
     <div id="step1-panel">
@@ -375,10 +155,10 @@
           <label>Floor</label>
           <input type="number" id="floor_num" min="1" max="50" inputmode="numeric"/>
         </div>
-        <div class="field" id="asking-field">
-          <label id="asking-label">Asking price (SGD)</label>
+        <div class="field">
+          <label>Compare against price (SGD)</label>
           <input type="number" id="asking" min="0" step="1000" inputmode="numeric"/>
-          <div class="hint">Optional — leave blank for market data only</div>
+          <div class="hint">Optional — buyer, seller, or agent</div>
         </div>
         <div class="field">
           <label>Months of history</label>
@@ -399,11 +179,11 @@
       <div id="step2-tag"></div>
       <div class="form-row">
         <div class="field">
-          <label>Flat type at this block</label>
+          <label>Flat type</label>
           <select id="flat_type_sel"></select>
         </div>
         <div class="field">
-          <label>Your floor band</label>
+          <label>Floor band</label>
           <select id="storey_band_sel"></select>
         </div>
       </div>
@@ -417,15 +197,14 @@
   <div id="statusMsg" class="status"></div>
 
   <div id="results" style="display:none">
-    <div class="tabs" id="result-tabs">
+    <div class="tabs">
       <div class="tab active" id="nav-price"   onclick="showTab('price')">Price analysis</div>
       <div class="tab"        id="nav-schools" onclick="showTab('schools')">Nearby schools</div>
       <div class="tab"        id="nav-value"   onclick="showTab('value')">Value signals</div>
     </div>
 
     <div id="tab-price">
-      <div id="tierBadge"></div>
-      <div id="fallbackChain" class="card" style="padding:0.875rem 1.25rem"></div>
+      <div id="fallbackBanner"></div>
       <div class="metrics" id="metricsRow"></div>
       <div id="verdictBox"></div>
       <div class="card">
@@ -456,7 +235,7 @@
           </table>
         </div>
         <div class="kofi-bar">
-          <span>Found this useful? Helped you price right?</span>
+          <span>Found this useful?</span>
           <button class="kofi-btn" onclick="window.open('https://ko-fi.com','_blank')">Buy me a coffee</button>
         </div>
       </div>
@@ -465,14 +244,11 @@
     <div id="tab-schools" style="display:none">
       <div class="card">
         <p class="sl">P1 registration priority zones</p>
-        <div id="schoolContent">
-          <p style="font-size:13px;color:var(--text2)">Loading school data...</p>
-        </div>
+        <div id="schoolContent"><p style="font-size:13px;color:var(--text2)">Loading school data...</p></div>
         <div style="font-size:11px;color:var(--text3);margin-top:0.75rem;line-height:1.7">
           Distance is straight-line, consistent with MOE's P1 registration balloting method.
           Within 1km = Phase 2B priority. Within 2km = Phase 2C priority.
           For definitive eligibility, verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank">MOE e-Registration portal</a>.
-          School list sourced from MOE via data.gov.sg.
         </div>
       </div>
     </div>
@@ -481,6 +257,10 @@
       <div class="card">
         <p class="sl">Remaining lease outlook</p>
         <div id="leaseContent"></div>
+      </div>
+      <div class="card">
+        <p class="sl">Nearest MRT / LRT stations</p>
+        <div id="mrtContent"><p style="font-size:13px;color:var(--text2)">Loading station data...</p></div>
       </div>
       <div class="card">
         <p class="sl">Historical price appreciation</p>
@@ -495,424 +275,393 @@
 
   <div class="attribution">
     Contains information from
-    <a href="https://data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view" target="_blank">HDB Resale Flat Prices</a> and
-    <a href="https://data.gov.sg/datasets/d_688b934f82c1059ed0a6993d2a829089/view" target="_blank">MOE General Information of Schools</a>
+    <a href="https://data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view" target="_blank">HDB Resale Flat Prices</a>,
+    <a href="https://data.gov.sg/datasets/d_688b934f82c1059ed0a6993d2a829089/view" target="_blank">MOE General Information of Schools</a>, and
+    <a href="https://data.gov.sg/datasets/d_d8faa59f9f2f2e5a7a56fdf17735e618/view" target="_blank">LTA Train Station information</a>
     accessed from data.gov.sg, made available under the
     <a href="https://data.gov.sg/open-data-licence" target="_blank">Singapore Open Data Licence version 1.0</a>.
     Postal code data via OneMap, Singapore Land Authority.
-    This tool is not affiliated with or endorsed by HDB, MOE, SLA, or any Singapore government agency.
-    Data provided on an as-is basis — verify all figures independently before making financial decisions.
+    This tool is not affiliated with or endorsed by HDB, MOE, LTA, SLA, or any Singapore government agency.
+    Verify all figures independently before making financial decisions.
   </div>
 </div>
 
 <script>
-const API_HDB = 'https://data.gov.sg/api/action/datastore_search';
-const DS_HDB  = 'd_8b84c4ee58e3cfc0ece0d773c8ca6abc';
-const DS_SCH  = 'd_688b934f82c1059ed0a6993d2a829089';
-const ONEMAP  = 'https://www.onemap.gov.sg/api/common/elastic/search';
+// ============================================================
+// KEYS — PASTE YOUR VALUES HERE, NOWHERE ELSE NEEDED
+const API_KEY      = ''; // data.gov.sg API key
+const ONEMAP_TOKEN = ''; // OneMap token
+// ============================================================
 
-let role = 'buyer';
-let resolvedBlock = '', resolvedStreet = '', resolvedTown = '';
-let resolvedLat = null, resolvedLng = null;
-let allBlockRecs = [], allStreetRecs = [];
-let selectedFlatType = '', selectedBand = null, adjBands = [];
-let chartInstance = null;
-let lastSearchTime = 0;
-let sessionSearchCount = 0;
-const COOLDOWN_MS = 3000;
-const SESSION_CAP = 20;
+const API_HDB  = 'https://data.gov.sg/api/action/datastore_search';
+const DS_HDB   = 'd_8b84c4ee58e3cfc0ece0d773c8ca6abc';
+const DS_SCH   = 'd_688b934f82c1059ed0a6993d2a829089';
+const DS_MRT   = 'd_d8faa59f9f2f2e5a7a56fdf17735e618';
+const ONEMAP   = 'https://www.onemap.gov.sg/api/common/elastic/search';
+
+const ALL_FLAT_TYPES = ['1 ROOM','2 ROOM','3 ROOM','4 ROOM','5 ROOM','EXECUTIVE'];
 
 const BANDS = [
-  { label: 'Low (1–6)',       min: 1,  max: 6  },
-  { label: 'Mid-low (7–12)',  min: 7,  max: 12 },
-  { label: 'Mid-high (13–18)',min: 13, max: 18 },
-  { label: 'High (19–24)',    min: 19, max: 24 },
-  { label: 'Very high (25+)', min: 25, max: 99 }
+  {label:'Low (1–6)',   min:1,  max:6 },
+  {label:'Mid-low (7–12)', min:7,  max:12},
+  {label:'Mid-high (13–18)',min:13, max:18},
+  {label:'High (19–24)',   min:19, max:24},
+  {label:'Very high (25+)',min:25, max:99}
 ];
 
-function setRole(r) {
-  role = r;
-  ['buyer','seller','curious'].forEach(x =>
-    document.getElementById('tab-'+x).className = 'tab' + (r===x ? ' active' : '')
-  );
-  const af = document.getElementById('asking-field');
-  const al = document.getElementById('asking-label');
-  if (r === 'seller') { al.textContent = 'Your target price (SGD)'; af.style.display = 'block'; }
-  else if (r === 'buyer') { al.textContent = 'Asking price (SGD)'; af.style.display = 'block'; }
-  else { af.style.display = 'none'; }
-}
+let resolvedBlock='', resolvedStreet='', resolvedTown='';
+let resolvedLat=null, resolvedLng=null;
+let allBlockRecs=[], allStreetRecs=[];
+let selectedFlatType='', selectedBand=null, adjBands=[];
+let chartInstance=null;
+let lastSearchTime=0, sessionSearchCount=0;
+const COOLDOWN_MS=3000, SESSION_CAP=20;
 
-function showTab(t) {
-  ['price','schools','value'].forEach(x => {
-    document.getElementById('tab-'+x).style.display = x===t ? 'block' : 'none';
-    document.getElementById('nav-'+x).className = 'tab' + (x===t ? ' active' : '');
-  });
+// ── Utilities ──────────────────────────────────────────────
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function buildHeaders(){return API_KEY?{'x-api-key':API_KEY}:{};}
+function buildOneMapHeaders(){return ONEMAP_TOKEN?{'Authorization':`Bearer ${ONEMAP_TOKEN}`}:{};}
+function sgd(n){return'S$'+Math.round(n).toLocaleString();}
+function psfCalc(p,s){return Math.round(p/(s*10.764));}
+function pct(arr,p){
+  const s=[...arr].sort((a,b)=>a-b);
+  const i=(p/100)*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);
+  return s[lo]+(s[hi]-s[lo])*(i-lo);
 }
-
-function onPostalInput() {
-  resolvedBlock = '';
-  document.getElementById('resolved-tag').innerHTML = '';
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-
-function showStatus(msg, vis=true) {
-  const e = document.getElementById('statusMsg');
-  e.textContent = msg;
-  e.style.display = vis ? 'block' : 'none';
+function linReg(xs,ys){
+  const n=xs.length,mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;
+  const num=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+  const den=xs.reduce((s,x)=>s+(x-mx)**2,0);
+  const slope=den?num/den:0;
+  return{slope,intercept:my-slope*mx};
 }
-
-function setStep(n) {
-  [1,2,3].forEach(i => {
-    const num = document.getElementById('sn'+i);
-    const lbl = document.getElementById('sl'+i);
-    if (i < n)      { num.className = 'sn done';   num.textContent = '✓'; lbl.className = 'sl2'; }
-    else if (i === n){ num.className = 'sn active'; num.textContent = i;   lbl.className = 'sl2 active'; }
-    else             { num.className = 'sn';        num.textContent = i;   lbl.className = 'sl2'; }
-  });
-}
-
-function norm(s) {
-  if (!s) return '';
+function norm(s){
+  if(!s)return'';
   return s.toUpperCase()
     .replace(/\bAVENUE\b/g,'AVE').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR')
     .replace(/\bCLOSE\b/g,'CL').replace(/\bCRESCENT\b/g,'CRES').replace(/\bSTREET\b/g,'ST')
     .replace(/\bPLACE\b/g,'PL').replace(/\s+/g,' ').trim();
 }
-
-function storeyMid(range) {
-  if (!range) return 0;
-  const m = range.match(/(\d+)\s*TO\s*(\d+)/i);
-  if (m) return (+m[1] + +m[2]) / 2;
-  const s = range.match(/(\d+)/);
-  return s ? +s[1] : 0;
+function storeyMid(range){
+  if(!range)return 0;
+  const m=range.match(/(\d+)\s*TO\s*(\d+)/i);
+  if(m)return(+m[1]+ +m[2])/2;
+  const s=range.match(/(\d+)/);return s?+s[1]:0;
 }
-
-function getBand(floor) {
-  return BANDS.find(b => floor >= b.min && floor <= b.max) || BANDS[BANDS.length-1];
+function getBand(floor){return BANDS.find(b=>floor>=b.min&&floor<=b.max)||BANDS[BANDS.length-1];}
+function getAdj(band){
+  const idx=BANDS.indexOf(band),set=new Set([idx]);
+  if(idx>0)set.add(idx-1);
+  if(idx<BANDS.length-1)set.add(idx+1);
+  return[...set].map(i=>BANDS[i]);
 }
-
-function getAdj(band) {
-  const idx = BANDS.indexOf(band);
-  const set = new Set([idx]);
-  if (idx > 0) set.add(idx-1);
-  if (idx < BANDS.length-1) set.add(idx+1);
-  return [...set].map(i => BANDS[i]);
+function remainingLease(leaseYear,txMonth){
+  if(!leaseYear)return null;
+  const[y,m]=txMonth.split('-');
+  return Math.max(0,parseInt(leaseYear)+99-parseInt(y)-(parseInt(m)>6?1:0));
 }
-
-function sgd(n) { return 'S$' + Math.round(n).toLocaleString(); }
-function psfCalc(p, s) { return Math.round(p / (s * 10.764)); }
-
-function pct(arr, p) {
-  const s = [...arr].sort((a,b) => a-b);
-  const i = (p/100) * (s.length-1);
-  const lo = Math.floor(i), hi = Math.ceil(i);
-  return s[lo] + (s[hi] - s[lo]) * (i - lo);
+function leaseFlag(years){
+  if(years===null)return{cls:'p-band',txt:'?'};
+  if(years>=60)return{cls:'p-green',txt:years+'y'};
+  if(years>=30)return{cls:'p-amber',txt:years+'y'};
+  return{cls:'p-red',txt:years+'y'};
 }
-
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2-lat1) * Math.PI/180;
-  const dLng = (lng2-lng1) * Math.PI/180;
-  const a = Math.sin(dLat/2)**2 +
-            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function showStatus(msg,vis=true){
+  const e=document.getElementById('statusMsg');
+  e.textContent=msg;e.style.display=vis?'block':'none';
 }
-
-function remainingLease(leaseYear, txMonth) {
-  if (!leaseYear) return null;
-  const txYear = parseInt(txMonth.split('-')[0]);
-  const txMon  = parseInt(txMonth.split('-')[1]);
-  return Math.max(0, parseInt(leaseYear) + 99 - txYear - (txMon > 6 ? 1 : 0));
+function setStep(n){
+  [1,2,3].forEach(i=>{
+    const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);
+    if(i<n){num.className='sn done';num.textContent='✓';lbl.className='sl2';}
+    else if(i===n){num.className='sn active';num.textContent=i;lbl.className='sl2 active';}
+    else{num.className='sn';num.textContent=i;lbl.className='sl2';}
+  });
 }
-
-function leaseFlag(years) {
-  if (years === null) return { cls:'p-band', txt:'?' };
-  if (years >= 60)    return { cls:'p-green', txt: years+'y' };
-  if (years >= 30)    return { cls:'p-amber', txt: years+'y' };
-  return                     { cls:'p-red',   txt: years+'y' };
+function showTab(t){
+  ['price','schools','value'].forEach(x=>{
+    document.getElementById('tab-'+x).style.display=x===t?'block':'none';
+    document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');
+  });
 }
+function onPostalInput(){resolvedBlock='';document.getElementById('resolved-tag').innerHTML='';}
 
-function linearRegression(xs, ys) {
-  const n=xs.length, mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
-  const num = xs.reduce((s,x,i) => s+(x-mx)*(ys[i]-my), 0);
-  const den = xs.reduce((s,x)   => s+(x-mx)**2, 0);
-  const slope = den ? num/den : 0;
-  return { slope, intercept: my - slope*mx };
-}
-
-const API_KEY = 'v2:ebc47ef4f68900ca3990ac0f5732a6be30e58b34e98bd72a0787404738e28b48:-g2ntzRlvEOPUPW2yYmMGuZrPtfL_O92';       // PASTE YOUR data.gov.sg API KEY HERE
-const ONEMAP_TOKEN = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMjgxOCwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc3NjY1MzQ4NCwibmJmIjoxNzc2NjUzNDg0LCJleHAiOjE3NzY5MTI2ODQsImp0aSI6IjBjN2M0OTA4LWZlNWMtNDY2OS05OGIwLWI2NGQ1OTM2MzdkZCJ9.b3xMO0adTBi1Z570v4qhEYxFNgvbjJdd7nHVNxxFvHtuiBx2hYlealCNqJW5GhceHhSCqN-QUKsIZTyCzzHgBt7w73Fd3xqQjLHHzkjd5f4bFEi2zzQGziA01iKgFzQ3DGlPYdUlytLCYulxWBGu7RGC48t7WC1cpk1MznlcnrV2rlyO45K_0-_omfZDeqSUD0WnpkwoKFjrasGea4uioJLxPyvzrnKELXu-yb6Rrr3yzMd7EWsAXKzBRGEbRO37hgIPyUJcjSzAEjXS7oyub1HKuvhd_J6snD_x0cCJ7_JrKF2JeVBOj8DZXOd7NmCPb3BkxrcYg9fauv-Y8KdXzQ'; // PASTE YOUR OneMap TOKEN HERE
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function buildHeaders() {
-  return API_KEY ? { 'x-api-key': API_KEY } : {};
-}
-
-async function fetchRecs(filters, monthsBack, maxOffset=5000) {
-  const now = new Date();
-  const cutoff = new Date(now.getFullYear(), now.getMonth()-monthsBack, 1);
-  const cutoffStr = cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0');
-  let all=[], offset=0, limit=100;
-  while (offset < maxOffset) {
-    let url = `${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}&sort=month%20desc`;
-    const activeFilters = Object.fromEntries(Object.entries(filters).filter(([k,v]) => v));
-    if (Object.keys(activeFilters).length) url += `&filters=${encodeURIComponent(JSON.stringify(activeFilters))}`;
-    const resp = await fetch(url, { headers: buildHeaders() });
-    const json = await resp.json();
-    if (json.code === 24 || json.name === 'TOO_MANY_REQUESTS') {
-      showStatus('Rate limit hit — waiting 12 seconds before retrying...');
-      await sleep(12000);
-      showStatus('Retrying...');
-      continue;
+// ── API Fetch ──────────────────────────────────────────────
+async function fetchRecs(filters,monthsBack,maxOffset=3000){
+  const now=new Date();
+  const cutoff=new Date(now.getFullYear(),now.getMonth()-monthsBack,1);
+  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0');
+  let all=[],offset=0,limit=100;
+  while(offset<maxOffset){
+    let url=`${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}&sort=month%20desc`;
+    const af=Object.fromEntries(Object.entries(filters).filter(([k,v])=>v));
+    if(Object.keys(af).length)url+=`&filters=${encodeURIComponent(JSON.stringify(af))}`;
+    const resp=await fetch(url,{headers:buildHeaders()});
+    const json=await resp.json();
+    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){
+      showStatus('Rate limit — waiting 12 seconds...');
+      await sleep(12000);showStatus('Retrying...');continue;
     }
-    if (!json.result?.records) break;
-    const recs = json.result.records.filter(r => r.month >= cutoffStr);
-    all = all.concat(recs);
-    if (json.result.records.length < limit) break;
-    const last = json.result.records[json.result.records.length-1]?.month;
-    if (last && last < cutoffStr) break;
-    offset += limit;
-    if (offset < maxOffset) await sleep(600);
+    if(!json.result?.records)break;
+    const recs=json.result.records.filter(r=>r.month>=cutoffStr);
+    all=all.concat(recs);
+    if(json.result.records.length<limit)break;
+    const last=json.result.records[json.result.records.length-1]?.month;
+    if(last&&last<cutoffStr)break;
+    offset+=limit;
+    if(offset<maxOffset)await sleep(500);
   }
   return all;
 }
 
-async function fetchAllSchools() {
-  let all=[], offset=0, limit=500;
-  while (true) {
-    const url = `${API_HDB}?resource_id=${DS_SCH}&limit=${limit}&offset=${offset}`;
-    const resp = await fetch(url, { headers: buildHeaders() });
-    const json = await resp.json();
-    if (json.code === 24 || json.name === 'TOO_MANY_REQUESTS') { await sleep(12000); continue; }
-    if (!json.result?.records?.length) break;
-    all = all.concat(json.result.records);
-    if (json.result.records.length < limit) break;
-    offset += limit;
-    if (offset > 2000) break;
-    await sleep(300);
+async function fetchDataset(dsId,limit=500){
+  let all=[],offset=0;
+  while(true){
+    const url=`${API_HDB}?resource_id=${dsId}&limit=${limit}&offset=${offset}`;
+    const resp=await fetch(url,{headers:buildHeaders()});
+    const json=await resp.json();
+    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){await sleep(12000);continue;}
+    if(!json.result?.records?.length)break;
+    all=all.concat(json.result.records);
+    if(json.result.records.length<limit)break;
+    offset+=limit;
+    if(offset>5000)break;
+    await sleep(400);
   }
-  return all.filter(s => s.mainlevel_code === 'PRIMARY');
+  return all;
 }
 
-async function geocodeSchool(s) {
-  const query = encodeURIComponent(s.postal_code || s.address || s.school_name);
-  try {
-    const r = await fetch(`${ONEMAP}?searchVal=${query}&returnGeom=Y&getAddrDetails=N&pageNum=1`, { headers: ONEMAP_TOKEN ? { 'Authorization': `Bearer ${ONEMAP_TOKEN}` } : {} });
-    const j = await r.json();
-    if (j.results?.length) {
-      return { ...s, lat: parseFloat(j.results[0].LATITUDE), lng: parseFloat(j.results[0].LONGITUDE) };
-    }
-  } catch(e) {}
+async function geocodeOneMap(query){
+  try{
+    const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(query)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`,{headers:buildOneMapHeaders()});
+    const j=await r.json();
+    if(j.results?.length)return j.results[0];
+  }catch(e){}
   return null;
 }
 
-function filterByStreet(recs, street) {
-  const n = norm(street);
-  return recs.filter(r => { const s = norm(r.street_name); return s===n || s.includes(n) || n.includes(s); });
-}
-
-function filterByBands(recs, bands) {
-  return recs.filter(r => { const m = storeyMid(r.storey_range); return bands.some(b => m>=b.min && m<=b.max); });
-}
-
-async function doLookup() {
-  const now = Date.now();
-  if (now - lastSearchTime < COOLDOWN_MS) {
-    const cm = document.getElementById('cooldownMsg');
-    cm.style.display = 'block';
-    setTimeout(() => cm.style.display='none', 2000);
-    return;
+// ── Step 1: Lookup ─────────────────────────────────────────
+async function doLookup(){
+  const now=Date.now();
+  if(now-lastSearchTime<COOLDOWN_MS){
+    const cm=document.getElementById('cooldownMsg');
+    cm.style.display='block';setTimeout(()=>cm.style.display='none',2000);return;
   }
-  if (sessionSearchCount >= SESSION_CAP) {
-    document.getElementById('resolved-tag').innerHTML = '<div class="tag t-warn">Too many searches this session. Please refresh the page.</div>';
-    return;
+  if(sessionSearchCount>=SESSION_CAP){
+    document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';return;
   }
-
-  const postal = document.getElementById('postal').value.trim();
-  if (!/^\d{6}$/.test(postal)) {
-    document.getElementById('resolved-tag').innerHTML = '<div class="tag t-err">Enter a valid 6-digit postal code</div>';
-    return;
+  const postal=document.getElementById('postal').value.trim();
+  if(!/^\d{6}$/.test(postal)){
+    document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;
   }
-
-  const btn = document.getElementById('lookupBtn');
-  btn.disabled = true; btn.textContent = 'Looking up...';
-  lastSearchTime = Date.now();
-  sessionSearchCount++;
-  showStatus('Resolving postal code via OneMap...');
-
-  try {
-    const r = await fetch(`${ONEMAP}?searchVal=${postal}&returnGeom=Y&getAddrDetails=Y&pageNum=1`, { headers: ONEMAP_TOKEN ? { 'Authorization': `Bearer ${ONEMAP_TOKEN}` } : {} });
-    const j = await r.json();
-    if (!j.results?.length) {
-      document.getElementById('resolved-tag').innerHTML = '<div class="tag t-err">Postal code not found.</div>';
-      showStatus('', false); btn.disabled=false; btn.textContent='Look up block'; return;
+  const btn=document.getElementById('lookupBtn');
+  btn.disabled=true;btn.textContent='Looking up...';
+  lastSearchTime=Date.now();sessionSearchCount++;
+  showStatus('Resolving postal code...');
+  try{
+    const res=await geocodeOneMap(postal);
+    if(!res){
+      document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';
+      showStatus('',false);btn.disabled=false;btn.textContent='Look up block';return;
     }
-    const res = j.results[0];
-    resolvedBlock  = (res.BLK_NO   || '').toUpperCase();
-    resolvedStreet = (res.ROAD_NAME || '').toUpperCase();
-    resolvedLat    = parseFloat(res.LATITUDE);
-    resolvedLng    = parseFloat(res.LONGITUDE);
-    document.getElementById('resolved-tag').innerHTML =
-      `<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
-
-    showStatus('Fetching HDB transaction history...');
-    const mb = +document.getElementById('months_back').value;
-    allBlockRecs = await fetchRecs({block:resolvedBlock}, mb, 3000);
-    if (allBlockRecs.length) {
-      const hdbStreet = allBlockRecs[0]?.street_name || '';
-      resolvedStreet = hdbStreet || resolvedStreet;
-      allStreetRecs = allBlockRecs;
+    resolvedBlock=(res.BLK_NO||'').toUpperCase();
+    resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
+    resolvedLat=parseFloat(res.LATITUDE);
+    resolvedLng=parseFloat(res.LONGITUDE);
+    document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
+    showStatus('Fetching transaction history...');
+    const mb=+document.getElementById('months_back').value;
+    allBlockRecs=await fetchRecs({block:resolvedBlock},mb,2000);
+    if(allBlockRecs.length){
+      resolvedStreet=allBlockRecs[0]?.street_name||resolvedStreet;
+      allStreetRecs=allBlockRecs;
     } else {
-      showStatus('No block data — fetching street-level transactions...');
-      const streetRecs = await fetchRecs({}, mb, 8000);
-      allStreetRecs = filterByStreet(streetRecs, resolvedStreet);
+      showStatus('No block data — fetching street-level...');
+      const all=await fetchRecs({},mb,5000);
+      allStreetRecs=all.filter(r=>{const s=norm(r.street_name);const n2=norm(resolvedStreet);return s===n2||s.includes(n2)||n2.includes(s);});
     }
-    showStatus('', false);
-
-    if (!allStreetRecs.length) {
-      document.getElementById('resolved-tag').innerHTML =
-        '<div class="tag t-err">No transactions found. Try extending the date range.</div>';
-      btn.disabled=false; btn.textContent='Look up block'; return;
+    showStatus('',false);
+    if(!allStreetRecs.length){
+      document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">No transactions found. Try extending the date range.</div>';
+      btn.disabled=false;btn.textContent='Look up block';return;
     }
-    resolvedTown = allStreetRecs[0]?.town || '';
-    populateStep2(allStreetRecs);
-    document.getElementById('step1-panel').style.display = 'none';
-    document.getElementById('step2-panel').style.display = 'block';
+    resolvedTown=allStreetRecs[0]?.town||'';
+    populateStep2();
+    document.getElementById('step1-panel').style.display='none';
+    document.getElementById('step2-panel').style.display='block';
     setStep(2);
-  } catch(e) {
-    showStatus('Connection error. Check your internet connection and try again.');
-  }
-  btn.disabled=false; btn.textContent='Look up block';
+  }catch(e){showStatus('Connection error. Try again.');}
+  btn.disabled=false;btn.textContent='Look up block';
 }
 
-function populateStep2(recs) {
-  const types = [...new Set(recs.map(r => r.flat_type))].sort();
-  document.getElementById('flat_type_sel').innerHTML =
-    types.map(t => `<option value="${t}">${t}</option>`).join('');
-  const userFloor = +document.getElementById('floor_num').value || 1;
-  const userBand  = getBand(userFloor);
-  document.getElementById('storey_band_sel').innerHTML =
-    BANDS.map(b => `<option value="${b.label}"${b.label===userBand.label?' selected':''}>${b.label}</option>`).join('');
-  document.getElementById('step2-tag').innerHTML =
-    `<div class="tag t-info">${recs.length} transactions found. Confirm your flat type and floor band.</div>`;
+function populateStep2(){
+  // Get flat types that have transactions
+  const withTx=new Set(allBlockRecs.map(r=>r.flat_type));
+  const streetTypes=new Set(allStreetRecs.map(r=>r.flat_type));
+
+  // Build dropdown with all standard types, marking availability
+  const ftSel=document.getElementById('flat_type_sel');
+  ftSel.innerHTML=ALL_FLAT_TYPES.map(t=>{
+    const hasBlock=withTx.has(t);
+    const hasStreet=streetTypes.has(t);
+    if(hasBlock)return`<option value="${t}">${t}</option>`;
+    if(hasStreet)return`<option value="${t}" class="flat-option-unavail">${t} (no block transactions — street data)</option>`;
+    return`<option value="${t}" class="flat-option-unavail" disabled>${t} (no data in period)</option>`;
+  }).join('');
+
+  // Default to first type that has block transactions, else first with street data
+  const preferred=[...withTx][0]||[...streetTypes][0]||ALL_FLAT_TYPES[0];
+  ftSel.value=preferred;
+
+  const userFloor=+document.getElementById('floor_num').value||1;
+  const userBand=getBand(userFloor);
+  document.getElementById('storey_band_sel').innerHTML=
+    BANDS.map(b=>`<option value="${b.label}"${b.label===userBand.label?' selected':''}>${b.label}</option>`).join('');
+
+  const blockCount=allBlockRecs.length;
+  document.getElementById('step2-tag').innerHTML=
+    `<div class="tag t-info">${blockCount} transaction${blockCount!==1?'s':''} found at Block ${resolvedBlock}. Select your flat type and floor band below.</div>`;
 }
 
-function resetToStep1() {
-  document.getElementById('step1-panel').style.display = 'block';
-  document.getElementById('step2-panel').style.display = 'none';
-  document.getElementById('results').style.display = 'none';
-  showStatus('', false);
-  setStep(1);
+function resetToStep1(){
+  document.getElementById('step1-panel').style.display='block';
+  document.getElementById('step2-panel').style.display='none';
+  document.getElementById('results').style.display='none';
+  showStatus('',false);setStep(1);
 }
 
-async function doAnalyse() {
-  const btn = document.getElementById('analyseBtn');
-  btn.disabled=true; btn.textContent='Analysing...';
-
-  selectedFlatType = document.getElementById('flat_type_sel').value;
-  const bandLabel  = document.getElementById('storey_band_sel').value;
-  selectedBand     = BANDS.find(b => b.label === bandLabel);
-  adjBands         = getAdj(selectedBand);
-  const asking     = role !== 'curious' ? (+document.getElementById('asking').value || null) : null;
-  const mb         = +document.getElementById('months_back').value;
+// ── Step 2: Analyse ────────────────────────────────────────
+async function doAnalyse(){
+  const btn=document.getElementById('analyseBtn');
+  btn.disabled=true;btn.textContent='Analysing...';
+  selectedFlatType=document.getElementById('flat_type_sel').value;
+  const bandLabel=document.getElementById('storey_band_sel').value;
+  selectedBand=BANDS.find(b=>b.label===bandLabel);
+  adjBands=getAdj(selectedBand);
+  const asking=+document.getElementById('asking').value||null;
+  const mb=+document.getElementById('months_back').value;
 
   showStatus('Running comparison search...');
-  const result = await runFallbackChain(selectedFlatType, adjBands, mb);
+  const result=await runFallbackChain(selectedFlatType,adjBands,mb);
 
-  if (!result) {
+  if(!result){
     showStatus('No transactions found across all fallback levels. Try a longer date range.');
-    btn.disabled=false; btn.textContent='Find comparables'; return;
+    btn.disabled=false;btn.textContent='Find comparables';return;
   }
 
-  showStatus('Loading school data...');
-  let schools = [];
-  try { schools = await fetchAllSchools(); } catch(e) {}
+  showStatus('Loading schools and station data...');
+  let schools=[],stations=[];
+  try{schools=await fetchDataset(DS_SCH);}catch(e){}
+  try{stations=await fetchDataset(DS_MRT);}catch(e){}
 
-  showStatus('', false);
-  renderPriceTab(result, asking);
+  showStatus('',false);
+  renderPriceTab(result,asking);
   renderSchoolsTab(schools);
-  renderValueTab(result.records, mb);
+  renderValueTab(result.records,mb,stations);
 
-  document.getElementById('results').style.display = 'block';
-  showTab('price');
-  setStep(3);
-  btn.disabled=false; btn.textContent='Find comparables';
+  document.getElementById('results').style.display='block';
+  showTab('price');setStep(3);
+  btn.disabled=false;btn.textContent='Find comparables';
 }
 
-async function runFallbackChain(flatType, bands, mb) {
-  const tiers = [
-    { id:1, label:'Exact match',
+// ── 6-Tier Fallback Chain ──────────────────────────────────
+async function runFallbackChain(flatType,bands,mb){
+  // Derive average sqm from block records for size-matching fallback
+  const blockSqms=allBlockRecs.filter(r=>r.flat_type===flatType).map(r=>+r.floor_area_sqm);
+  const avgSqm=blockSqms.length?blockSqms.reduce((a,b)=>a+b,0)/blockSqms.length:null;
+  const sqmTolerance=15; // ±15 sqm for size matching
+
+  const tiers=[
+    {
+      id:1,
+      label:'Same block, same flat type, similar floor',
       desc:`Block ${resolvedBlock} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,
-      fn: () => allBlockRecs.filter(r => r.flat_type===flatType &&
-               bands.some(b => { const m=storeyMid(r.storey_range); return m>=b.min&&m<=b.max; })) },
-    { id:2, label:'Same street, same floor band',
-      desc:`${resolvedStreet} · ${flatType}`,
-      fn: async () => {
-        if (allStreetRecs.length) return filterByBands(allStreetRecs.filter(r => r.flat_type===flatType), bands);
-        const recs = await fetchRecs({}, mb, 8000);
-        return filterByBands(filterByStreet(recs, resolvedStreet).filter(r => r.flat_type===flatType), bands);
-      }},
-    { id:3, label:'Same street, any floor',
+      fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=storeyMid(r.storey_range);return m>=b.min&&m<=b.max;}))
+    },
+    {
+      id:2,
+      label:'Same block, same flat type, any floor',
+      desc:`Block ${resolvedBlock} · ${flatType} · all floors`,
+      fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)
+    },
+    {
+      id:3,
+      label:'Nearby blocks, same flat type, similar floor',
+      desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,
+      fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=storeyMid(r.storey_range);return m>=b.min&&m<=b.max;}))
+    },
+    {
+      id:4,
+      label:'Nearby blocks, same flat type, any floor',
       desc:`${resolvedStreet} · ${flatType} · all floors`,
-      fn: async () => {
-        if (allStreetRecs.length) return allStreetRecs.filter(r => r.flat_type===flatType);
-        const recs = await fetchRecs({}, mb, 8000);
-        return filterByStreet(recs, resolvedStreet).filter(r => r.flat_type===flatType);
-      }},
-    { id:4, label:'Same town, same flat type',
-      desc:`${resolvedTown} · ${flatType}`,
-      fn: async () => {
+      fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)
+    },
+    {
+      id:5,
+      label:'Nearby blocks, similar unit size, any floor',
+      desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'} · all flat types`,
+      fn:()=>avgSqm?allStreetRecs.filter(r=>Math.abs(+r.floor_area_sqm-avgSqm)<=sqmTolerance):[]
+    },
+    {
+      id:6,
+      label:'Same town, same flat type',
+      desc:`${resolvedTown} · ${flatType} · all floors`,
+      fn:async()=>{
         showStatus(`Fetching town-level data for ${resolvedTown}...`);
-        const recs = await fetchRecs({town:resolvedTown, flat_type:flatType}, mb, 8000);
-        showStatus('', false);
-        return recs;
-      }}
+        const recs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);
+        showStatus('',false);return recs;
+      }
+    }
   ];
-  const attempted = [];
-  for (const tier of tiers) {
+
+  const attempted=[];
+  for(const tier of tiers){
     let recs;
-    try { recs = await tier.fn(); } catch(e) { recs = []; }
-    attempted.push({...tier, count:recs.length, used:false});
-    if (recs.length >= 3) {
-      attempted[attempted.length-1].used = true;
-      return { tier:tier.id, records:recs, attempted };
+    try{recs=await tier.fn();}catch(e){recs=[];}
+    attempted.push({...tier,count:recs.length,used:false});
+    if(recs.length>=3){
+      attempted[attempted.length-1].used=true;
+      return{tier:tier.id,records:recs,attempted};
     }
   }
   return null;
 }
 
-function renderPriceTab({tier, records, attempted}, asking) {
-  const tcls = {1:'tier1',2:'tier2',3:'tier3',4:'tier4'};
-  const tlbl = {1:'Tier 1 — exact match',2:'Tier 2 — street + floor band',3:'Tier 3 — street, all floors',4:'Tier 4 — town level'};
-  const tconf= {1:'High confidence — direct comparables.',2:'Good confidence — same street, similar floor.',3:'Medium confidence — floor premium not isolated.',4:'Low confidence — town context only.'};
+// ── Price Tab ──────────────────────────────────────────────
+function renderPriceTab({tier,records,attempted},asking){
+  // Fallback banner — plain English
+  const used=attempted.find(t=>t.used);
+  const bannerClass=tier<=2?'fb-exact':tier<=4?'fb-block':tier===5?'fb-street':'fb-town';
+  const bannerTitle=tier<=2?`Showing Block ${resolvedBlock} transactions`
+    :tier<=4?`No ${selectedFlatType} transactions at Block ${resolvedBlock} in this period — showing nearby blocks on ${resolvedStreet}`
+    :tier===5?`No ${selectedFlatType} data on ${resolvedStreet} — showing similar-sized units nearby`
+    :`Limited local data — showing ${resolvedTown} town-level comparables`;
+  const bannerBody=tier<=2?`${used.count} transaction${used.count!==1?'s':''} found. ${tier===1?'Floor band matches your unit.':'All floors included — higher floors typically transact at a premium.'}`
+    :tier<=4?`${used.count} transaction${used.count!==1?'s':''} found across nearby blocks. ${tier===3?'Floor band matched.':'All floors included.'} These are the closest available comparables.`
+    :tier===5?`Matched by unit size (±15 sqm). Use as directional context only.`
+    :`Town-level data only. Use as market context, not unit-specific valuation.`;
 
-  document.getElementById('tierBadge').innerHTML =
-    `<div class="tier-badge ${tcls[tier]}">${tlbl[tier]}</div>
-     <p style="font-size:12px;color:var(--text2);margin-bottom:0.75rem">${tconf[tier]}</p>`;
+  document.getElementById('fallbackBanner').innerHTML=`
+    <div class="fallback-banner ${bannerClass}">
+      <div class="fb-title">${bannerTitle}</div>
+      <div style="font-size:12px;opacity:0.85;margin-top:2px">${bannerBody}</div>
+    </div>`;
 
-  document.getElementById('fallbackChain').innerHTML =
-    `<p class="sl" style="margin-bottom:0.5rem">How we found your comparables</p>` +
-    attempted.map(t =>
-      `<div class="fallback-item">
-        <div class="fi-dot ${t.used?'fi-used':'fi-skip'}"></div>
-        <div style="color:${t.used?'var(--text)':'var(--text3)'}">
-          <span style="font-weight:${t.used?'500':'400'}">${t.label}</span> — ${t.desc}
-          <span style="color:${t.used?'var(--success-text)':'var(--text3)'}">
-            ${t.used ? `· ${t.count} used` : t.count ? `· ${t.count}, skipped` : '· 0 found'}
-          </span>
-        </div>
-      </div>`).join('');
+  const prices=records.map(r=>+r.resale_price);
+  const med=pct(prices,50),p25=pct(prices,25),p75=pct(prices,75);
+  const avg=prices.reduce((a,b)=>a+b,0)/prices.length;
+  const areas=records.map(r=>+r.floor_area_sqm);
+  const avgArea=areas.reduce((a,b)=>a+b,0)/areas.length;
+  const medPsf=psfCalc(med,avgArea);
+  const leaseYrs=records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
+  const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
 
-  const prices  = records.map(r => +r.resale_price);
-  const med     = pct(prices,50), p25=pct(prices,25), p75=pct(prices,75);
-  const avg     = prices.reduce((a,b)=>a+b,0) / prices.length;
-  const areas   = records.map(r => +r.floor_area_sqm);
-  const avgArea = areas.reduce((a,b)=>a+b,0) / areas.length;
-  const medPsf  = psfCalc(med, avgArea);
-  const leaseYrs= records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
-  const medLease= leaseYrs.length ? Math.round(pct(leaseYrs,50)) : null;
-
-  document.getElementById('metricsRow').innerHTML = `
+  document.getElementById('metricsRow').innerHTML=`
     <div class="metric"><div class="metric-label">Median price</div><div class="metric-value">${sgd(med)}</div><div class="metric-sub">${records.length} comps</div></div>
     <div class="metric"><div class="metric-label">Average</div><div class="metric-value">${sgd(avg)}</div></div>
     <div class="metric"><div class="metric-label">25th pct</div><div class="metric-value">${sgd(p25)}</div></div>
@@ -921,130 +670,108 @@ function renderPriceTab({tier, records, attempted}, asking) {
     ${medLease!==null?`<div class="metric"><div class="metric-label">Median lease</div><div class="metric-value">${medLease}y</div><div class="metric-sub">${medLease>=60?'Good':'Check CPF'}</div></div>`:''}
   `;
 
-  let vHtml = '';
-  if (role==='curious' || !asking) {
-    vHtml = `<div class="verdict v-neutral"><div class="verdict-title">Market range for ${selectedFlatType}</div><div class="verdict-body">Transactions range ${sgd(p25)} – ${sgd(p75)}, median ${sgd(med)}.</div></div>`;
-  } else if (role==='seller') {
-    const note = asking>p75 ? 'above 75th pct — expect slower sale unless unit stands out'
-               : asking<p25 ? 'below 25th pct — expect fast interest, consider pricing higher'
-               : 'within the normal market range';
-    vHtml = `<div class="verdict v-neutral"><div class="verdict-title">Pricing outlook</div><div class="verdict-body">Your target ${sgd(asking)} is ${note}. Range: ${sgd(p25)} – ${sgd(p75)}, median ${sgd(med)}.</div></div>`;
+  // Verdict — neutral framing, no buyer/seller
+  let vHtml='';
+  if(!asking){
+    vHtml=`<div class="verdict v-neutral"><div class="verdict-title">Market range</div><div class="verdict-body">Transactions range ${sgd(p25)} – ${sgd(p75)}, median ${sgd(med)}. Enter a price above to compare against this range.</div></div>`;
   } else {
-    const diff=asking-med, p=Math.round((diff/med)*100);
+    const diff=asking-med,p=Math.round((diff/med)*100);
     let cls,title,body;
-    if      (p<=-15){ cls='v-below';  title=`${Math.abs(p)}% below median — potential deal`;          body=`${sgd(asking)} vs median ${sgd(med)}. Verify lease, condition, facing.`; }
-    else if (p<0)   { cls='v-fair';   title=`${Math.abs(p)}% below median — fairly priced`;           body=`${sgd(asking)} vs median ${sgd(med)}. Try countering at ${sgd(Math.round(asking*0.97))}.`; }
-    else if (p<=8)  { cls='v-fair';   title=`${p}% above median — within range`;                      body=`${sgd(asking)} vs median ${sgd(med)}. Counter at ${sgd(Math.round(med*1.02))}.`; }
-    else if (p<=20) { cls='v-above';  title=`${p}% above median — elevated`;                          body=`${sgd(asking)} vs median ${sgd(med)}. Push back to ${sgd(Math.round(med*1.05))}.`; }
-    else            { cls='v-danger'; title=`${p}% above median — significantly overpriced`;          body=`${sgd(asking)} vs median ${sgd(med)}. Counter at ${sgd(Math.round(med*1.05))} or walk away.`; }
-    vHtml = `<div class="verdict ${cls}"><div class="verdict-title">${title}</div><div class="verdict-body">${body}</div></div>`;
+    if(p<=-15){cls='v-below';title=`${Math.abs(p)}% below median`;body=`${sgd(asking)} vs median ${sgd(med)}. Significantly below market — verify condition, remaining lease, and facing.`;}
+    else if(p<0){cls='v-fair';title=`${Math.abs(p)}% below median`;body=`${sgd(asking)} vs median ${sgd(med)}. Below market range — fairly priced.`;}
+    else if(p===0){cls='v-fair';title='At median';body=`${sgd(asking)} is right at the median of comparable transactions.`;}
+    else if(p<=8){cls='v-fair';title=`${p}% above median`;body=`${sgd(asking)} vs median ${sgd(med)}. Within normal range — marginal premium over median.`;}
+    else if(p<=20){cls='v-above';title=`${p}% above median`;body=`${sgd(asking)} vs median ${sgd(med)}. Above market range. Justified only by renovation, high floor, or good facing.`;}
+    else{cls='v-danger';title=`${p}% above median`;body=`${sgd(asking)} vs median ${sgd(med)}. Significantly above market. Strong basis to negotiate down to ~${sgd(Math.round(med*1.05))}.`;}
+    vHtml=`<div class="verdict ${cls}"><div class="verdict-title">${title}</div><div class="verdict-body">${body}</div></div>`;
   }
-  document.getElementById('verdictBox').innerHTML = vHtml;
-
-  renderTrendChart(records, asking);
-  renderTable(records, med);
+  document.getElementById('verdictBox').innerHTML=vHtml;
+  renderTrendChart(records,asking);
+  renderTable(records,med);
 }
 
-function renderTrendChart(records, asking) {
-  const byMonth = {};
-  records.forEach(r => { if(!byMonth[r.month]) byMonth[r.month]=[]; byMonth[r.month].push(+r.resale_price); });
-  const months  = Object.keys(byMonth).sort();
-  const medians = months.map(m => Math.round(pct(byMonth[m],50)));
-  const trendEl = document.getElementById('trendSummary');
+function renderTrendChart(records,asking){
+  const byMonth={};
+  records.forEach(r=>{if(!byMonth[r.month])byMonth[r.month]=[];byMonth[r.month].push(+r.resale_price);});
+  const months=Object.keys(byMonth).sort();
+  const medians=months.map(m=>Math.round(pct(byMonth[m],50)));
+  const trendEl=document.getElementById('trendSummary');
 
-  if (records.length < 5 || months.length < 3) {
-    trendEl.textContent = `Insufficient data for a trend line (${records.length} transactions, ${months.length} months).`;
+  if(records.length<5||months.length<3){
+    trendEl.textContent=`Not enough data for a trend line (${records.length} transactions, ${months.length} months).`;
   } else {
-    const xs = months.map((_,i) => i);
-    const {slope} = linearRegression(xs, medians);
-    const totalChange = Math.round(slope*(months.length-1));
-    const pctChange   = Math.round((totalChange/medians[0])*100);
-    const dir  = slope>500 ? 'up' : slope<-500 ? 'down' : 'flat';
-    const arrow= {up:'↑',down:'↓',flat:'→'}[dir];
-    const txt  = {up:'trending up',down:'trending down',flat:'broadly flat'}[dir];
-    const col  = {up:'#1D9E75',down:'#E24B4A',flat:'#888780'}[dir];
-    const tip  = dir==='up'&&role==='buyer' ? ' Consider moving quickly.'
-               : dir==='down'&&role==='seller' ? ' Price competitively.'
-               : dir==='up'&&role==='seller' ? ' Market favours sellers.' : '';
-    trendEl.innerHTML = `Prices <span style="color:${col};font-weight:500">${arrow} ${txt}</span>${Math.abs(pctChange)>1?` (${pctChange>0?'+':''}${pctChange}%, ${sgd(Math.abs(totalChange))})`:''}.${tip}`;
+    const xs=months.map((_,i)=>i);
+    const{slope}=linReg(xs,medians);
+    const totalChange=Math.round(slope*(months.length-1));
+    const pctChange=Math.round((totalChange/medians[0])*100);
+    const dir=slope>500?'up':slope<-500?'down':'flat';
+    const arrow={up:'↑',down:'↓',flat:'→'}[dir];
+    const txt={up:'trending up',down:'trending down',flat:'broadly flat'}[dir];
+    const col={up:'#1D9E75',down:'#E24B4A',flat:'#888780'}[dir];
+    trendEl.innerHTML=`Prices <span style="color:${col};font-weight:500">${arrow} ${txt}</span>${Math.abs(pctChange)>1?` (${pctChange>0?'+':''}${pctChange}%, ${sgd(Math.abs(totalChange))})`:''} over this period.`;
   }
 
-  const chartMin=Math.min(...medians), chartMax=Math.max(...medians);
-  const inRange = asking && asking>=chartMin*0.9 && asking<=chartMax*1.1;
-  if (asking && !inRange) {
-    trendEl.innerHTML += ` <span style="font-size:11px;color:var(--text3)">Your price ${sgd(asking)} is ${asking>chartMax?'above':'below'} chart range — line not shown.</span>`;
+  const chartMin=Math.min(...medians),chartMax=Math.max(...medians);
+  const inRange=asking&&asking>=chartMin*0.9&&asking<=chartMax*1.1;
+  if(asking&&!inRange){
+    trendEl.innerHTML+=` <span style="font-size:11px;color:var(--text3)">Your price ${sgd(asking)} is ${asking>chartMax?'above':'below'} the chart range.</span>`;
   }
 
-  const labels = months.map(m => {
-    const [y,mo] = m.split('-');
-    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);
+  const labels=months.map(m=>{
+    const[y,mo]=m.split('-');
+    return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);
   });
 
-  if (chartInstance) { chartInstance.destroy(); chartInstance=null; }
-
-  const datasets = [{
-    label:'Monthly median', data:medians,
-    borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,0.07)',
-    borderWidth:2, pointRadius:3, pointBackgroundColor:'#378ADD',
-    fill:true, tension:0.3, order:2
+  if(chartInstance){chartInstance.destroy();chartInstance=null;}
+  const datasets=[{
+    label:'Monthly median',data:medians,
+    borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.07)',
+    borderWidth:2,pointRadius:3,pointBackgroundColor:'#378ADD',
+    fill:true,tension:0.3,order:2
   }];
 
-  if (months.length>=3 && records.length>=5) {
-    const xs = months.map((_,i)=>i);
-    const {slope,intercept} = linearRegression(xs,medians);
-    const trendData = xs.map(x => Math.round(slope*x+intercept));
-    const tc = slope>500 ? '#1D9E75' : slope<-500 ? '#E24B4A' : '#888780';
-    datasets.push({
-      label:'Trend', data:trendData, borderColor:tc,
-      borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false, tension:0, order:3
-    });
+  if(months.length>=3&&records.length>=5){
+    const xs=months.map((_,i)=>i);
+    const{slope,intercept}=linReg(xs,medians);
+    const tc=slope>500?'#1D9E75':slope<-500?'#E24B4A':'#888780';
+    datasets.push({label:'Trend',data:xs.map(x=>Math.round(slope*x+intercept)),borderColor:tc,borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0,order:3});
+  }
+  if(inRange){
+    datasets.push({label:`Compare price (${sgd(asking)})`,data:months.map(()=>asking),borderColor:'#EF9F27',borderWidth:1.5,borderDash:[3,3],pointRadius:0,fill:false,tension:0,order:1});
   }
 
-  if (inRange) {
-    datasets.push({
-      label:`Your price (${sgd(asking)})`, data:months.map(()=>asking),
-      borderColor:'#EF9F27', borderWidth:1.5, borderDash:[3,3],
-      pointRadius:0, fill:false, tension:0, order:1
-    });
-  }
-
-  chartInstance = new Chart(document.getElementById('trendChart'), {
-    type:'line', data:{labels,datasets},
+  chartInstance=new Chart(document.getElementById('trendChart'),{
+    type:'line',data:{labels,datasets},
     options:{
-      responsive:true, maintainAspectRatio:false,
+      responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${sgd(ctx.raw)}`}}
-      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${sgd(ctx.raw)}`}}},
       scales:{
         x:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888',font:{size:10},maxRotation:45,autoSkip:true}},
         y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{color:'#888',font:{size:10},callback:v=>'S$'+Math.round(v/1000)+'k'},
-           suggestedMin:Math.min(...medians)*0.97, suggestedMax:Math.max(...medians)*1.03}
+           suggestedMin:Math.min(...medians)*0.97,suggestedMax:Math.max(...medians)*1.03}
       }
     }
   });
 
-  document.getElementById('chartLegend').innerHTML = datasets.map(d =>
-    `<div style="display:flex;align-items:center;gap:4px">
-      <div style="width:16px;height:0;border-top:2px ${d.borderDash?'dashed':'solid'} ${d.borderColor}"></div>
-      <span>${d.label}</span>
-    </div>`).join('');
+  document.getElementById('chartLegend').innerHTML=datasets.map(d=>
+    `<div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:0;border-top:2px ${d.borderDash?'dashed':'solid'} ${d.borderColor}"></div><span>${d.label}</span></div>`
+  ).join('');
 }
 
-function renderTable(records, med) {
-  const sorted = [...records].sort((a,b) => b.month.localeCompare(a.month));
-  document.getElementById('txBody').innerHTML = sorted.map(r => {
-    const price=+r.resale_price, area=+r.floor_area_sqm;
-    const psfVal  = psfCalc(price,area);
-    const recBand = getBand(storeyMid(r.storey_range));
-    const isSame  = recBand.label === selectedBand.label;
-    const diff    = Math.round(((price-med)/med)*100);
-    const tagCls  = diff>5?'p-above':diff<-5?'p-below':'p-fair';
-    const tagTxt  = diff>0?`+${diff}%`:`${diff}%`;
-    const rl = remainingLease(r.lease_commence_date, r.month);
-    const lf = leaseFlag(rl);
-    return `<tr>
+function renderTable(records,med){
+  const sorted=[...records].sort((a,b)=>b.month.localeCompare(a.month));
+  document.getElementById('txBody').innerHTML=sorted.map(r=>{
+    const price=+r.resale_price,area=+r.floor_area_sqm;
+    const psfVal=psfCalc(price,area);
+    const recBand=getBand(storeyMid(r.storey_range));
+    const isSame=recBand.label===selectedBand.label;
+    const diff=Math.round(((price-med)/med)*100);
+    const tagCls=diff>5?'p-above':diff<-5?'p-below':'p-fair';
+    const tagTxt=diff>0?`+${diff}%`:`${diff}%`;
+    const rl=remainingLease(r.lease_commence_date,r.month);
+    const lf=leaseFlag(rl);
+    return`<tr>
       <td>${r.month}</td><td>${r.block}</td><td>${r.storey_range}</td><td>${area}</td>
       <td>${sgd(price)}</td><td>S$${psfVal}</td>
       <td>${r.lease_commence_date||'—'}</td>
@@ -1055,35 +782,45 @@ function renderTable(records, med) {
   }).join('');
 }
 
-async function renderSchoolsTab(schools) {
-  if (!resolvedLat || !resolvedLng) {
-    document.getElementById('schoolContent').innerHTML = '<p class="school-none">Location coordinates unavailable.</p>';
-    return;
+// ── Schools Tab ────────────────────────────────────────────
+async function renderSchoolsTab(schools){
+  if(!resolvedLat||!resolvedLng){
+    document.getElementById('schoolContent').innerHTML='<p class="school-none">Location coordinates unavailable.</p>';return;
   }
-  document.getElementById('schoolContent').innerHTML =
-    '<p style="font-size:13px;color:var(--text2)">Geocoding schools — this takes a few seconds...</p>';
 
-  const nearby = [];
-  const batchSize = 10;
-  for (let i=0; i<Math.min(schools.length,300); i+=batchSize) {
-    const batch   = schools.slice(i, i+batchSize);
-    const geocoded= await Promise.all(batch.map(s => geocodeSchool(s)));
-    geocoded.forEach(s => {
-      if (!s) return;
-      const km = haversineKm(resolvedLat, resolvedLng, s.lat, s.lng);
-      if (km <= 2.1) nearby.push({...s, km});
-    });
+  // Filter schools to rough bounding box first (±0.03 degrees ≈ 3km) to reduce geocoding calls
+  const primarySchools=schools.filter(s=>s.mainlevel_code==='PRIMARY');
+  document.getElementById('schoolContent').innerHTML=
+    `<p style="font-size:13px;color:var(--text2)">Geocoding ${primarySchools.length} primary schools...</p>`;
+
+  const nearby=[];
+  const BATCH=8;
+  for(let i=0;i<primarySchools.length;i+=BATCH){
+    const batch=primarySchools.slice(i,i+BATCH);
+    const results=await Promise.all(batch.map(async s=>{
+      const query=s.postal_code||s.address||s.school_name;
+      const res=await geocodeOneMap(query);
+      if(!res)return null;
+      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
+      // Bounding box pre-filter before haversine
+      if(Math.abs(lat-resolvedLat)>0.025||Math.abs(lng-resolvedLng)>0.025)return null;
+      const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
+      if(km>2.1)return null;
+      return{...s,lat,lng,km};
+    }));
+    results.forEach(s=>{if(s)nearby.push(s);});
+    await sleep(200);
   }
-  nearby.sort((a,b) => a.km-b.km);
 
-  const within1 = nearby.filter(s => s.km <= 1.0);
-  const within2 = nearby.filter(s => s.km > 1.0 && s.km <= 2.0);
+  nearby.sort((a,b)=>a.km-b.km);
+  const within1=nearby.filter(s=>s.km<=1.0);
+  const within2=nearby.filter(s=>s.km>1.0&&s.km<=2.0);
 
-  const renderList = arr => arr.length
-    ? arr.map(s => `<div class="school-item"><div class="school-name">${s.school_name}</div><div class="school-dist">${Math.round(s.km*1000)}m</div></div>`).join('')
-    : '<p class="school-none">None within this range</p>';
+  const renderList=arr=>arr.length
+    ?arr.map(s=>`<div class="school-item"><div class="school-name">${s.school_name}</div><div class="school-dist">${Math.round(s.km*1000)}m</div></div>`).join('')
+    :'<p class="school-none">None within this range</p>';
 
-  document.getElementById('schoolContent').innerHTML = `
+  document.getElementById('schoolContent').innerHTML=`
     <div class="school-grid">
       <div>
         <div class="school-col-title school-1km">Within 1km — Phase 2B priority</div>
@@ -1094,86 +831,141 @@ async function renderSchoolsTab(schools) {
         ${renderList(within2)}
       </div>
     </div>
-    ${nearby.length===0 ? '<p style="font-size:13px;color:var(--text2)">No primary schools found within 2km.</p>' : ''}
+    ${nearby.length===0?'<p style="font-size:13px;color:var(--text2)">No primary schools found within 2km.</p>':''}
   `;
 }
 
-function renderValueTab(records, mb) {
-  const leaseYrs = records.map(r => remainingLease(r.lease_commence_date, r.month)).filter(x=>x!==null);
-  const medLease = leaseYrs.length ? Math.round(pct(leaseYrs,50)) : null;
-  const minLease = leaseYrs.length ? Math.min(...leaseYrs) : null;
-  const maxLease = leaseYrs.length ? Math.max(...leaseYrs) : null;
+// ── Value Tab ──────────────────────────────────────────────
+async function renderValueTab(records,mb,stations){
+  // Remaining lease
+  const leaseYrs=records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
+  const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
+  const minLease=leaseYrs.length?Math.min(...leaseYrs):null;
+  const maxLease=leaseYrs.length?Math.max(...leaseYrs):null;
 
-  let leaseHtml = '<p style="font-size:13px;color:var(--text2)">No lease data available.</p>';
-  if (medLease !== null) {
-    const f10 = Math.max(0,medLease-10), f20 = Math.max(0,medLease-20);
-    const lc  = medLease>=60 ? '#1D9E75' : medLease>=30 ? '#BA7517' : '#E24B4A';
-    const pct100 = Math.round((medLease/99)*100);
-    const cpfNote = medLease<30 ? 'CPF cannot be used. Bank loan restrictions apply.'
-                  : medLease<60 ? 'CPF usage may be restricted depending on buyer age. Verify with CPF Board.'
-                  : 'CPF usage unrestricted for most buyers.';
-    const noteClass = medLease<30?'t-err':medLease<60?'t-warn':'t-ok';
-    leaseHtml = `
+  let leaseHtml='<p style="font-size:13px;color:var(--text2)">No lease data available.</p>';
+  if(medLease!==null){
+    const f10=Math.max(0,medLease-10),f20=Math.max(0,medLease-20);
+    const lc=medLease>=60?'#1D9E75':medLease>=30?'#BA7517':'#E24B4A';
+    const pct100=Math.round((medLease/99)*100);
+    const cpfNote=medLease<30?'CPF cannot be used. Bank loan restrictions apply.'
+      :medLease<60?'CPF usage may be restricted depending on buyer age. Verify with CPF Board.'
+      :'CPF usage unrestricted for most buyers.';
+    const noteClass=medLease<30?'t-err':medLease<60?'t-warn':'t-ok';
+    leaseHtml=`
       <div style="margin-bottom:0.875rem">
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
-          <span>Median remaining lease</span>
-          <span style="font-weight:500;color:${lc}">${medLease} years</span>
+          <span>Median remaining lease</span><span style="font-weight:500;color:${lc}">${medLease} years</span>
         </div>
-        <div class="lease-track">
-          <div style="height:100%;width:${pct100}%;background:${lc};border-radius:5px"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:3px">
-          <span>0y</span><span>99y</span>
-        </div>
+        <div class="lease-track"><div style="height:100%;width:${pct100}%;background:${lc};border-radius:5px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:3px"><span>0y</span><span>99y</span></div>
       </div>
       <div class="metrics" style="margin-bottom:0.75rem">
         <div class="metric"><div class="metric-label">In 10 years</div><div class="metric-value" style="color:${f10>=60?'#1D9E75':f10>=30?'#BA7517':'#E24B4A'}">${f10}y</div></div>
         <div class="metric"><div class="metric-label">In 20 years</div><div class="metric-value" style="color:${f20>=60?'#1D9E75':f20>=30?'#BA7517':'#E24B4A'}">${f20}y</div></div>
         <div class="metric"><div class="metric-label">Range in data</div><div class="metric-value" style="font-size:13px">${minLease}–${maxLease}y</div></div>
       </div>
-      <div class="tag ${noteClass}" style="margin-bottom:0">${cpfNote}</div>
-    `;
+      <div class="tag ${noteClass}" style="margin-bottom:0">${cpfNote}</div>`;
   }
-  document.getElementById('leaseContent').innerHTML = leaseHtml;
+  document.getElementById('leaseContent').innerHTML=leaseHtml;
 
-  const sorted = [...records].sort((a,b) => a.month.localeCompare(b.month));
-  let appHtml = '<p style="font-size:13px;color:var(--text2)">Insufficient data for appreciation analysis.</p>';
-  if (sorted.length >= 6) {
-    const cutOld = Math.ceil(sorted.length*0.2);
-    const cutNew = Math.floor(sorted.length*0.8);
-    const oldest = sorted.slice(0, cutOld);
-    const newest = sorted.slice(cutNew);
-    const oldMed = Math.round(pct(oldest.map(r=>+r.resale_price),50));
-    const newMed = Math.round(pct(newest.map(r=>+r.resale_price),50));
-    const change = Math.round(((newMed-oldMed)/oldMed)*100);
-    const ann    = Math.round((change/mb)*12);
-    appHtml = `
+  // MRT stations — geocode and sort by distance
+  const mrtHtml=await renderMRT(stations);
+  document.getElementById('mrtContent').innerHTML=mrtHtml;
+
+  // Price appreciation
+  const sorted=[...records].sort((a,b)=>a.month.localeCompare(b.month));
+  let appHtml='<p style="font-size:13px;color:var(--text2)">Insufficient data for appreciation analysis.</p>';
+  if(sorted.length>=6){
+    const cutOld=Math.ceil(sorted.length*0.2),cutNew=Math.floor(sorted.length*0.8);
+    const oldMed=Math.round(pct(sorted.slice(0,cutOld).map(r=>+r.resale_price),50));
+    const newMed=Math.round(pct(sorted.slice(cutNew).map(r=>+r.resale_price),50));
+    const change=Math.round(((newMed-oldMed)/oldMed)*100);
+    const ann=Math.round((change/mb)*12);
+    appHtml=`
       <div class="metrics" style="margin-bottom:0.75rem">
-        <div class="metric"><div class="metric-label">Earliest median</div><div class="metric-value">${sgd(oldMed)}</div><div class="metric-sub">${oldest[0]?.month}</div></div>
-        <div class="metric"><div class="metric-label">Recent median</div><div class="metric-value">${sgd(newMed)}</div><div class="metric-sub">${newest[newest.length-1]?.month}</div></div>
+        <div class="metric"><div class="metric-label">Earliest median</div><div class="metric-value">${sgd(oldMed)}</div><div class="metric-sub">${sorted[0]?.month}</div></div>
+        <div class="metric"><div class="metric-label">Recent median</div><div class="metric-value">${sgd(newMed)}</div><div class="metric-sub">${sorted[sorted.length-1]?.month}</div></div>
         <div class="metric"><div class="metric-label">Period change</div><div class="metric-value" style="color:${change>=0?'#1D9E75':'#E24B4A'}">${change>=0?'+':''}${change}%</div></div>
         <div class="metric"><div class="metric-label">Annualised</div><div class="metric-value" style="color:${ann>=0?'#1D9E75':'#E24B4A'}">${ann>=0?'+':''}${ann}%</div></div>
       </div>
-      <p style="font-size:11px;color:var(--text3)">Based on comparable transactions in this search. Past performance does not indicate future results.</p>
-    `;
+      <p style="font-size:11px;color:var(--text3)">Based on comparable transactions in this search. Past performance does not indicate future results.</p>`;
   }
-  document.getElementById('appreciationContent').innerHTML = appHtml;
+  document.getElementById('appreciationContent').innerHTML=appHtml;
 
-  const considerations = [
-    { label:'Remaining lease (median)', value:medLease?`${medLease} years`:'—', note:medLease&&medLease<30?'CPF/loan restricted':medLease&&medLease<60?'Check CPF rules':''},
-    { label:'Lease in 10 years',        value:medLease?`${Math.max(0,medLease-10)} years`:'—', note:'' },
-    { label:'CPF usage',                value:medLease?medLease>=60?'Unrestricted':medLease>=30?'May be restricted':'Not permitted':'—', note:'' },
-    { label:'MRT proximity check',      value:'See OneMap', note:'onemap.gov.sg → search your block' },
-    { label:'URA zoning',               value:'See URA Master Plan', note:'ura.gov.sg/maps' },
-    { label:'Asset decay risk',         value:medLease&&medLease<50?'Elevated':'Lower', note:medLease&&medLease<50?'Sub-50yr leases face steeper depreciation':'' },
+  // Key considerations
+  const considerations=[
+    {label:'Remaining lease (median)',value:medLease?`${medLease} years`:'—',note:medLease&&medLease<30?'CPF/loan restricted':medLease&&medLease<60?'Check CPF Board':''},
+    {label:'Lease in 10 years',value:medLease?`${Math.max(0,medLease-10)} years`:'—',note:''},
+    {label:'CPF usage',value:medLease?medLease>=60?'Unrestricted':medLease>=30?'May be restricted':'Not permitted':'—',note:''},
+    {label:'Asset decay risk',value:medLease&&medLease<50?'Elevated':'Lower',note:medLease&&medLease<50?'Sub-50yr leases face steeper depreciation':''},
+    {label:'URA Master Plan zoning',value:'Check URA',note:'ura.gov.sg/maps → search your block'},
   ];
-
-  document.getElementById('valueConsiderations').innerHTML = considerations.map(c => `
+  document.getElementById('valueConsiderations').innerHTML=considerations.map(c=>`
     <div class="value-row">
       <span class="value-label">${c.label}</span>
       <div style="text-align:right">
         <div class="value-val">${c.value}</div>
         ${c.note?`<div style="font-size:10px;color:var(--text3)">${c.note}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function renderMRT(stations){
+  if(!resolvedLat||!resolvedLng||!stations.length){
+    return'<p style="font-size:13px;color:var(--text2)">Station data unavailable.</p>';
+  }
+
+  // Geocode stations — use stn_name + "MRT" as query, deduplicate by station name
+  const seen=new Set();
+  const nearby=[];
+
+  // First compute rough distance using bounding box to limit geocoding calls
+  // data.gov.sg MRT dataset has latitude/longitude fields directly
+  for(const stn of stations){
+    const lat=parseFloat(stn.lat||stn.latitude||stn.Latitude||0);
+    const lng=parseFloat(stn.lng||stn.longitude||stn.Longitude||0);
+    if(!lat||!lng)continue;
+    const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
+    if(km>2.5)continue;
+    const name=(stn.mrt_station_english||stn.station_name||stn.stn_name||'').trim();
+    if(!name||seen.has(name))continue;
+    seen.add(name);
+    const line=(stn.mrt_line_english||stn.line||'').trim();
+    const walkMins=Math.round(km*1000/80);
+    nearby.push({name,line,km,walkMins});
+  }
+
+  // If no lat/lng fields in dataset, fall back to OneMap geocoding for top candidates
+  if(!nearby.length){
+    // Try geocoding a few station names from dataset
+    const sample=stations.slice(0,30);
+    for(const stn of sample){
+      const name=(stn.mrt_station_english||stn.station_name||stn.stn_name||'').trim();
+      if(!name||seen.has(name))continue;
+      const res=await geocodeOneMap(name+' MRT');
+      if(!res)continue;
+      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
+      const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
+      if(km>2.5)continue;
+      seen.add(name);
+      const line=(stn.mrt_line_english||stn.line||'').trim();
+      nearby.push({name,line,km,walkMins:Math.round(km*1000/80)});
+      await sleep(150);
+    }
+  }
+
+  nearby.sort((a,b)=>a.km-b.km);
+  const top=nearby.slice(0,5);
+
+  if(!top.length)return'<p style="font-size:13px;color:var(--text2)">No MRT/LRT stations found within 2.5km.</p>';
+
+  return top.map(s=>`
+    <div class="mrt-item">
+      <div class="mrt-name">${s.name} ${s.line?`<span style="font-size:11px;font-weight:400;color:var(--text2)">(${s.line})</span>`:''}</div>
+      <div class="mrt-detail">
+        <div>${Math.round(s.km*1000)}m</div>
+        <div>~${s.walkMins} min walk</div>
       </div>
     </div>`).join('');
 }
