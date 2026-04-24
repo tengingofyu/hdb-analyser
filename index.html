@@ -128,7 +128,24 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .cooldown-msg{font-size:11px;color:var(--text3);text-align:center;margin-top:5px;display:none}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #ad-slot{text-align:center;padding:0.5rem;font-size:11px;color:var(--text3);border:0.5px dashed var(--border2);border-radius:var(--radius);margin-bottom:1rem}
-.flat-option-unavail{color:var(--text3)}
+.signal-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0;border-bottom:0.5px solid var(--border)}
+.signal-item:last-child{border-bottom:none}
+.signal-left{display:flex;align-items:flex-start;gap:10px}
+.signal-icon{width:32px;height:32px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.signal-icon-pos{background:var(--ok-bg)}
+.signal-icon-neu{background:var(--neu-bg);border:0.5px solid var(--border2)}
+.signal-icon-neg{background:var(--err-bg)}
+.signal-icon-cau{background:var(--warn-bg)}
+.signal-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.signal-desc{font-size:12px;color:var(--text2);line-height:1.4}
+.signal-badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;white-space:nowrap;align-self:center}
+.sb-pos{background:var(--ok-bg);color:var(--ok-text)}
+.sb-neu{background:var(--neu-bg);color:var(--text2);border:0.5px solid var(--border2)}
+.sb-neg{background:var(--err-bg);color:var(--err-text)}
+.sb-cau{background:var(--warn-bg);color:var(--warn-text)}
+.summary-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);margin-bottom:1rem;font-size:13px}
+.summary-dots{display:flex;gap:4px}
+.dot{width:10px;height:10px;border-radius:50%}
 </style>
 </head>
 <body>
@@ -255,20 +272,21 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 
     <div id="tab-value" style="display:none">
       <div class="card">
+        <p class="sl">Valuation signals</p>
+        <div id="valueSummary" style="margin-bottom:1rem"></div>
+        <div id="valueSignals"></div>
+      </div>
+      <div class="card">
+        <p class="sl">Nearest MRT / LRT stations</p>
+        <div id="mrtContent"></div>
+      </div>
+      <div class="card">
         <p class="sl">Remaining lease outlook</p>
         <div id="leaseContent"></div>
       </div>
       <div class="card">
-        <p class="sl">Nearest MRT / LRT stations</p>
-        <div id="mrtContent"><p style="font-size:13px;color:var(--text2)">Loading station data...</p></div>
-      </div>
-      <div class="card">
         <p class="sl">Historical price appreciation</p>
         <div id="appreciationContent"></div>
-      </div>
-      <div class="card">
-        <p class="sl">Key value considerations</p>
-        <div id="valueConsiderations"></div>
       </div>
     </div>
   </div>
@@ -708,6 +726,7 @@ async function doAnalyse(){
   renderValueTab(result.records,mb);
 
   document.getElementById('results').style.display='block';
+  document.getElementById('step2-panel').style.display='none';
   showTab('price');setStep(3);
   btn.disabled=false;btn.textContent='Find comparables';
 }
@@ -931,13 +950,12 @@ async function renderSchoolsTab(schools){
     document.getElementById('schoolContent').innerHTML='<p class="school-none">Location coordinates unavailable.</p>';return;
   }
 
-  // Filter schools to rough bounding box first (±0.03 degrees ≈ 3km) to reduce geocoding calls
   const primarySchools=schools.filter(s=>s.mainlevel_code==='PRIMARY');
   document.getElementById('schoolContent').innerHTML=
-    `<p style="font-size:13px;color:var(--text2)">Geocoding ${primarySchools.length} primary schools...</p>`;
+    `<p style="font-size:13px;color:var(--text2)">Finding nearby schools (${primarySchools.length} to check)...</p>`;
 
   const nearby=[];
-  const BATCH=8;
+  const BATCH=15;
   for(let i=0;i<primarySchools.length;i+=BATCH){
     const batch=primarySchools.slice(i,i+BATCH);
     const results=await Promise.all(batch.map(async s=>{
@@ -945,14 +963,16 @@ async function renderSchoolsTab(schools){
       const res=await geocodeOneMap(query);
       if(!res)return null;
       const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
-      // Bounding box pre-filter before haversine
-      if(Math.abs(lat-resolvedLat)>0.025||Math.abs(lng-resolvedLng)>0.025)return null;
+      if(isNaN(lat)||isNaN(lng))return null;
       const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
       if(km>2.1)return null;
       return{...s,lat,lng,km};
     }));
     results.forEach(s=>{if(s)nearby.push(s);});
-    await sleep(200);
+    // Update progress
+    document.getElementById('schoolContent').innerHTML=
+      `<p style="font-size:13px;color:var(--text2)">Finding nearby schools... (${Math.min(i+BATCH,primarySchools.length)}/${primarySchools.length} checked, ${nearby.length} found so far)</p>`;
+    await sleep(100);
   }
 
   nearby.sort((a,b)=>a.km-b.km);
@@ -976,23 +996,216 @@ async function renderSchoolsTab(schools){
     </div>
     ${nearby.length===0?'<p style="font-size:13px;color:var(--text2)">No primary schools found within 2km.</p>':''}
   `;
+
+  // Update the school signal in Value tab now that we have real data
+  const schoolSignalEl=document.getElementById('school-signal');
+  if(schoolSignalEl){
+    const has1km=within1.length>0,has2km=within2.length>0;
+    const iconCls=has1km?'signal-icon-pos':has2km?'signal-icon-neu':'signal-icon-neu';
+    const badgeCls=has1km?'sb-pos':has2km?'sb-neu':'sb-neu';
+    const badge=has1km?'Positive':has2km?'Neutral':'Neutral';
+    const desc=has1km
+      ?`${within1.length} school${within1.length!==1?'s':''} within 1km (Phase 2B priority): ${within1.slice(0,3).map(s=>s.school_name).join(', ')}${within1.length>3?'…':''}.${has2km?` Plus ${within2.length} within 2km (Phase 2C).`:''}`
+      :has2km
+      ?`No schools within 1km. ${within2.length} within 2km (Phase 2C priority): ${within2.slice(0,3).map(s=>s.school_name).join(', ')}${within2.length>3?'…':''}.`
+      :'No primary schools within 2km. School proximity is not a value driver for this block.';
+    schoolSignalEl.innerHTML=`
+      <div class="signal-left">
+        <div class="signal-icon ${iconCls}">🏫</div>
+        <div>
+          <div class="signal-name">Primary school proximity</div>
+          <div class="signal-desc">${desc}</div>
+        </div>
+      </div>
+      <span class="signal-badge ${badgeCls}">${badge}</span>`;
+  }
 }
 
 // ── Value Tab ──────────────────────────────────────────────
 async function renderValueTab(records,mb){
-  // Remaining lease
   const leaseYrs=records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
   const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
   const minLease=leaseYrs.length?Math.min(...leaseYrs):null;
   const maxLease=leaseYrs.length?Math.max(...leaseYrs):null;
 
+  // MRT nearest
+  const mrtNearby=resolvedLat&&resolvedLng?MRT_STATIONS
+    .map(s=>({...s,km:haversineKm(resolvedLat,resolvedLng,s.lat,s.lng)}))
+    .filter(s=>s.km<=3).sort((a,b)=>a.km-b.km):[];
+  const nearestMrt=mrtNearby[0]||null;
+
+  // Price trend slope
+  const byMonth={};
+  records.forEach(r=>{if(!byMonth[r.month])byMonth[r.month]=[];byMonth[r.month].push(+r.resale_price);});
+  const months=Object.keys(byMonth).sort();
+  let trendSlope=0;
+  if(months.length>=3){
+    const xs=months.map((_,i)=>i);
+    const meds=months.map(m=>Math.round(pct(byMonth[m],50)));
+    trendSlope=linReg(xs,meds).slope;
+  }
+
+  // Floor premium — compare high vs low floor transactions in dataset
+  const highFloor=records.filter(r=>storeyMid(r.storey_range)>=13).map(r=>+r.resale_price);
+  const lowFloor=records.filter(r=>storeyMid(r.storey_range)<7).map(r=>+r.resale_price);
+  let floorPremiumPct=null;
+  if(highFloor.length>=2&&lowFloor.length>=2){
+    const highMed=pct(highFloor,50),lowMed=pct(lowFloor,50);
+    floorPremiumPct=Math.round(((highMed-lowMed)/lowMed)*100);
+  }
+
+  // Unit size vs block median
+  const allSqm=records.map(r=>+r.floor_area_sqm);
+  const medSqm=allSqm.length?Math.round(pct(allSqm,50)):null;
+  const blockSqm=allBlockRecs.filter(r=>r.flat_type===selectedFlatType).map(r=>+r.floor_area_sqm);
+  const medBlockSqm=blockSqm.length?Math.round(pct(blockSqm,50)):null;
+
+  // Build signals array
+  const signals=[];
+
+  // 1. Remaining lease
+  if(medLease!==null){
+    const pos=medLease>=60,neg=medLease<30,cau=medLease>=30&&medLease<60;
+    signals.push({
+      icon:'📋',
+      iconCls:pos?'signal-icon-pos':neg?'signal-icon-neg':'signal-icon-cau',
+      badgeCls:pos?'sb-pos':neg?'sb-neg':'sb-cau',
+      badge:pos?'Positive':neg?'Caution':'Watch',
+      name:'Remaining lease',
+      desc:pos?`${medLease} years remaining — CPF unrestricted, strong resale appeal.`
+        :neg?`${medLease} years remaining — CPF cannot be used, bank loans restricted. Significant resale risk.`
+        :`${medLease} years remaining — CPF may be restricted depending on buyer age. Verify with CPF Board.`
+    });
+  }
+
+  // 2. MRT proximity
+  if(nearestMrt){
+    const km=nearestMrt.km,pos=km<0.5,neu=km<1.0,cau=km<2.0;
+    signals.push({
+      icon:'🚇',
+      iconCls:pos?'signal-icon-pos':neu?'signal-icon-pos':cau?'signal-icon-neu':'signal-icon-neg',
+      badgeCls:pos?'sb-pos':neu?'sb-pos':cau?'sb-neu':'sb-neg',
+      badge:pos?'Strong positive':neu?'Positive':cau?'Neutral':'Negative',
+      name:'MRT proximity',
+      desc:`${nearestMrt.name} (${nearestMrt.line}) is ${Math.round(km*1000)}m away (~${Math.round(km*1000/80)} min walk). ${pos?'Walking distance — strong value driver.':neu?'Within 1km — good connectivity premium.':cau?'1–2km — moderate transit access.':'Beyond 2km — limited MRT premium.'}`
+    });
+  }
+
+  // 3. School proximity (populated after schools load — placeholder for now)
+  signals.push({
+    icon:'🏫',
+    iconCls:'signal-icon-neu',
+    badgeCls:'sb-neu',
+    badge:'Loading',
+    name:'Primary school proximity',
+    desc:'Checking nearby schools for P1 registration priority...',
+    id:'school-signal'
+  });
+
+  // 4. Price trend
+  if(months.length>=3){
+    const rising=trendSlope>300,falling=trendSlope<-300;
+    signals.push({
+      icon:'📈',
+      iconCls:rising?'signal-icon-pos':falling?'signal-icon-neg':'signal-icon-neu',
+      badgeCls:rising?'sb-pos':falling?'sb-neg':'sb-neu',
+      badge:rising?'Positive':falling?'Negative':'Neutral',
+      name:'Price trend',
+      desc:rising?`Prices trending up over the selected period — sellers' market conditions.`
+        :falling?`Prices trending down — buyers have more negotiating room.`
+        :`Prices broadly stable — balanced market conditions.`
+    });
+  }
+
+  // 5. Floor premium
+  if(floorPremiumPct!==null){
+    const strong=floorPremiumPct>=10,moderate=floorPremiumPct>=5;
+    const userFloor=+document.getElementById('floor_num').value||1;
+    const isHighFloor=userFloor>=13;
+    signals.push({
+      icon:'🏢',
+      iconCls:isHighFloor&&strong?'signal-icon-pos':!isHighFloor&&strong?'signal-icon-neg':'signal-icon-neu',
+      badgeCls:isHighFloor&&strong?'sb-pos':!isHighFloor&&strong?'sb-neg':'sb-neu',
+      badge:strong?`${floorPremiumPct}% floor premium`:moderate?`${floorPremiumPct}% floor premium`:'Minimal floor premium',
+      name:'Floor premium in this area',
+      desc:`High-floor units (13th+) transact ~${floorPremiumPct}% ${floorPremiumPct>=0?'above':'below'} low-floor units in comparable transactions. ${isHighFloor?'Your floor benefits from this premium.':'Lower floors trade at a discount in this area.'}`
+    });
+  }
+
+  // 6. Unit size
+  if(medBlockSqm&&medSqm){
+    const diff=medBlockSqm-medSqm;
+    const larger=diff>5,smaller=diff<-5;
+    signals.push({
+      icon:'📐',
+      iconCls:larger?'signal-icon-pos':smaller?'signal-icon-neu':'signal-icon-neu',
+      badgeCls:larger?'sb-pos':smaller?'sb-neu':'sb-neu',
+      badge:larger?'Above median size':smaller?'Below median size':'At median size',
+      name:'Unit size',
+      desc:`This flat type at Block ${resolvedBlock} has a median of ${medBlockSqm} sqm. Comparable transactions average ${medSqm} sqm. ${larger?'Larger units command a size premium.':smaller?'Smaller than area average — modest size discount.':'Typical size for this area.'}`
+    });
+  }
+
+  // 7. URA zoning — always a manual check
+  signals.push({
+    icon:'🗺️',
+    iconCls:'signal-icon-neu',
+    badgeCls:'sb-neu',
+    badge:'Manual check',
+    name:'URA Master Plan zoning',
+    desc:`Check upcoming developments near this block. Nearby commercial, transport, or residential upzoning can significantly affect future value. <a href="https://www.ura.gov.sg/maps" target="_blank" style="color:#378ADD">View URA Master Plan →</a>`
+  });
+
+  // Count positive / caution / negative
+  const pos=signals.filter(s=>s.badgeCls==='sb-pos'||s.badge==='Strong positive'||s.badge==='Positive').length;
+  const neg=signals.filter(s=>s.badgeCls==='sb-neg'||s.badge==='Negative').length;
+  const cau=signals.filter(s=>s.badgeCls==='sb-cau'||s.badge==='Caution'||s.badge==='Watch').length;
+
+  // Summary bar
+  const summaryCol=neg>=2?'var(--err-bg)':cau>=2?'var(--warn-bg)':'var(--ok-bg)';
+  const summaryTextCol=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':'var(--ok-text)';
+  const summaryMsg=neg>=2?`${neg} negative signal${neg!==1?'s':''} require attention`
+    :cau>=2?`${cau} factor${cau!==1?'s':''} worth checking before committing`
+    :`${pos} positive signal${pos!==1?'s':''} — broadly favourable outlook`;
+
+  document.getElementById('valueSummary').innerHTML=`
+    <div class="summary-bar" style="background:${summaryCol};color:${summaryTextCol}">
+      <div class="summary-dots">
+        ${Array(pos).fill(`<div class="dot" style="background:#1D9E75"></div>`).join('')}
+        ${Array(cau).fill(`<div class="dot" style="background:#BA7517"></div>`).join('')}
+        ${Array(neg).fill(`<div class="dot" style="background:#E24B4A"></div>`).join('')}
+      </div>
+      <span style="font-weight:500">${summaryMsg}</span>
+    </div>`;
+
+  // Render signals
+  document.getElementById('valueSignals').innerHTML=signals.map(s=>`
+    <div class="signal-item" ${s.id?`id="${s.id}"`:''}>
+      <div class="signal-left">
+        <div class="signal-icon ${s.iconCls}">${s.icon}</div>
+        <div>
+          <div class="signal-name">${s.name}</div>
+          <div class="signal-desc">${s.desc}</div>
+        </div>
+      </div>
+      <span class="signal-badge ${s.badgeCls}">${s.badge}</span>
+    </div>`).join('');
+
+  // MRT detail card
+  document.getElementById('mrtContent').innerHTML=mrtNearby.slice(0,5).map(s=>`
+    <div class="mrt-item">
+      <div class="mrt-name">${s.name} <span style="font-size:11px;font-weight:400;color:var(--text2)">(${s.line})</span></div>
+      <div class="mrt-detail"><div>${Math.round(s.km*1000)}m</div><div>~${Math.round(s.km*1000/80)} min walk</div></div>
+    </div>`).join('')||'<p style="font-size:13px;color:var(--text2)">No stations within 2.5km.</p>';
+
+  // Lease detail card
   let leaseHtml='<p style="font-size:13px;color:var(--text2)">No lease data available.</p>';
   if(medLease!==null){
     const f10=Math.max(0,medLease-10),f20=Math.max(0,medLease-20);
     const lc=medLease>=60?'#1D9E75':medLease>=30?'#BA7517':'#E24B4A';
     const pct100=Math.round((medLease/99)*100);
     const cpfNote=medLease<30?'CPF cannot be used. Bank loan restrictions apply.'
-      :medLease<60?'CPF usage may be restricted depending on buyer age. Verify with CPF Board.'
+      :medLease<60?'CPF usage may be restricted. Verify with CPF Board.'
       :'CPF usage unrestricted for most buyers.';
     const noteClass=medLease<30?'t-err':medLease<60?'t-warn':'t-ok';
     leaseHtml=`
@@ -1012,11 +1225,7 @@ async function renderValueTab(records,mb){
   }
   document.getElementById('leaseContent').innerHTML=leaseHtml;
 
-  // MRT stations — geocode and sort by distance
-  const mrtHtml=renderMRT();
-  document.getElementById('mrtContent').innerHTML=mrtHtml;
-
-  // Price appreciation
+  // Price appreciation card
   const sorted=[...records].sort((a,b)=>a.month.localeCompare(b.month));
   let appHtml='<p style="font-size:13px;color:var(--text2)">Insufficient data for appreciation analysis.</p>';
   if(sorted.length>=6){
@@ -1035,23 +1244,6 @@ async function renderValueTab(records,mb){
       <p style="font-size:11px;color:var(--text3)">Based on comparable transactions in this search. Past performance does not indicate future results.</p>`;
   }
   document.getElementById('appreciationContent').innerHTML=appHtml;
-
-  // Key considerations
-  const considerations=[
-    {label:'Remaining lease (median)',value:medLease?`${medLease} years`:'—',note:medLease&&medLease<30?'CPF/loan restricted':medLease&&medLease<60?'Check CPF Board':''},
-    {label:'Lease in 10 years',value:medLease?`${Math.max(0,medLease-10)} years`:'—',note:''},
-    {label:'CPF usage',value:medLease?medLease>=60?'Unrestricted':medLease>=30?'May be restricted':'Not permitted':'—',note:''},
-    {label:'Asset decay risk',value:medLease&&medLease<50?'Elevated':'Lower',note:medLease&&medLease<50?'Sub-50yr leases face steeper depreciation':''},
-    {label:'URA Master Plan zoning',value:'Check URA',note:'ura.gov.sg/maps → search your block'},
-  ];
-  document.getElementById('valueConsiderations').innerHTML=considerations.map(c=>`
-    <div class="value-row">
-      <span class="value-label">${c.label}</span>
-      <div style="text-align:right">
-        <div class="value-val">${c.value}</div>
-        ${c.note?`<div style="font-size:10px;color:var(--text3)">${c.note}</div>`:''}
-      </div>
-    </div>`).join('');
 }
 
 function renderMRT(){
