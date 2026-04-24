@@ -1,0 +1,22 @@
+name: Deploy with keys
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Inject API keys
+        run: |
+          sed -i "s|const API_KEY      = '';|const API_KEY      = '${{ secrets.DATAGOV_API_KEY }}';|g" index.html
+          sed -i "s|const ONEMAP_TOKEN = '';|const ONEMAP_TOKEN = '${{ secrets.ONEMAP_TOKEN }}';|g" index.html
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
