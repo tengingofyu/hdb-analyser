@@ -296,7 +296,151 @@ const ONEMAP_TOKEN = ''; // OneMap token
 const API_HDB  = 'https://data.gov.sg/api/action/datastore_search';
 const DS_HDB   = 'd_8b84c4ee58e3cfc0ece0d773c8ca6abc';
 const DS_SCH   = 'd_688b934f82c1059ed0a6993d2a829089';
-const DS_MRT   = 'd_d8faa59f9f2f2e5a7a56fdf17735e618';
+// MRT/LRT stations — hardcoded with coordinates (stable data, no API needed)
+const MRT_STATIONS=[
+  {name:'Jurong East',line:'EWL/NSL',lat:1.3332,lng:103.7422},
+  {name:'Buona Vista',line:'EWL/CCL',lat:1.3072,lng:103.7899},
+  {name:'Commonwealth',line:'EWL',lat:1.3023,lng:103.7980},
+  {name:'Queenstown',line:'EWL',lat:1.2942,lng:103.8060},
+  {name:'Redhill',line:'EWL',lat:1.2898,lng:103.8167},
+  {name:'Tiong Bahru',line:'EWL',lat:1.2863,lng:103.8272},
+  {name:'Outram Park',line:'EWL/NEL/TEL',lat:1.2801,lng:103.8395},
+  {name:'Tanjong Pagar',line:'EWL',lat:1.2764,lng:103.8456},
+  {name:'Raffles Place',line:'EWL/NSL',lat:1.2833,lng:103.8514},
+  {name:'City Hall',line:'EWL/NSL',lat:1.2931,lng:103.8520},
+  {name:'Bugis',line:'EWL/DTL',lat:1.3009,lng:103.8559},
+  {name:'Lavender',line:'EWL',lat:1.3073,lng:103.8631},
+  {name:'Kallang',line:'EWL',lat:1.3117,lng:103.8714},
+  {name:'Aljunied',line:'EWL',lat:1.3163,lng:103.8831},
+  {name:'Paya Lebar',line:'EWL/CCL',lat:1.3179,lng:103.8921},
+  {name:'Eunos',line:'EWL',lat:1.3197,lng:103.9033},
+  {name:'Kembangan',line:'EWL',lat:1.3211,lng:103.9128},
+  {name:'Bedok',line:'EWL',lat:1.3240,lng:103.9300},
+  {name:'Tanah Merah',line:'EWL',lat:1.3273,lng:103.9462},
+  {name:'Simei',line:'EWL',lat:1.3435,lng:103.9531},
+  {name:'Tampines',line:'EWL/DTL',lat:1.3535,lng:103.9454},
+  {name:'Pasir Ris',line:'EWL',lat:1.3731,lng:103.9494},
+  {name:'Boon Lay',line:'EWL',lat:1.3387,lng:103.7059},
+  {name:'Pioneer',line:'EWL',lat:1.3378,lng:103.6972},
+  {name:'Joo Koon',line:'EWL',lat:1.3279,lng:103.6786},
+  {name:'Gul Circle',line:'EWL',lat:1.3196,lng:103.6607},
+  {name:'Tuas Crescent',line:'EWL',lat:1.3208,lng:103.6489},
+  {name:'Tuas West Road',line:'EWL',lat:1.3321,lng:103.6395},
+  {name:'Tuas Link',line:'EWL',lat:1.3404,lng:103.6368},
+  {name:'Chinese Garden',line:'EWL',lat:1.3424,lng:103.7322},
+  {name:'Lakeside',line:'EWL',lat:1.3441,lng:103.7206},
+  {name:'Clementi',line:'EWL',lat:1.3151,lng:103.7651},
+  {name:'Dover',line:'EWL',lat:1.3113,lng:103.7786},
+  {name:'Jurong West',line:'JRL',lat:1.3404,lng:103.7057},
+  {name:'Bahar Junction',line:'JRL',lat:1.3481,lng:103.6978},
+  {name:'Tengah',line:'JRL',lat:1.3596,lng:103.7073},
+  {name:'Tengah Plantation',line:'JRL',lat:1.3696,lng:103.7209},
+  {name:'Tengah Park',line:'JRL',lat:1.3771,lng:103.7315},
+  {name:'Bukit Batok West',line:'JRL',lat:1.3682,lng:103.7454},
+  {name:'Toh Guan',line:'JRL',lat:1.3377,lng:103.7386},
+  {name:'Corporation',line:'JRL',lat:1.3293,lng:103.7225},
+  {name:'Pandan Reservoir',line:'JRL',lat:1.3220,lng:103.7108},
+  {name:'Jurong Hill',line:'JRL',lat:1.3141,lng:103.7119},
+  {name:'Jurong Pier',line:'JRL',lat:1.3071,lng:103.7165},
+  {name:'Marina South Pier',line:'NSL',lat:1.2706,lng:103.8630},
+  {name:'Marina Bay',line:'NSL/CEL/TEL',lat:1.2762,lng:103.8545},
+  {name:'Bayfront',line:'CEL/DTL',lat:1.2821,lng:103.8592},
+  {name:'Promenade',line:'CCL/DTL',lat:1.2934,lng:103.8609},
+  {name:'Esplanade',line:'CCL',lat:1.2937,lng:103.8554},
+  {name:'Bras Basah',line:'CCL',lat:1.2966,lng:103.8499},
+  {name:'Dhoby Ghaut',line:'NSL/NEL/CCL',lat:1.2989,lng:103.8455},
+  {name:'Somerset',line:'NSL',lat:1.3006,lng:103.8389},
+  {name:'Orchard',line:'NSL/TEL',lat:1.3041,lng:103.8319},
+  {name:'Newton',line:'NSL/DTL',lat:1.3122,lng:103.8380},
+  {name:'Novena',line:'NSL',lat:1.3203,lng:103.8435},
+  {name:'Toa Payoh',line:'NSL',lat:1.3328,lng:103.8474},
+  {name:'Bishan',line:'NSL/CCL',lat:1.3510,lng:103.8485},
+  {name:'Braddell',line:'NSL',lat:1.3401,lng:103.8468},
+  {name:'Marymount',line:'CCL',lat:1.3494,lng:103.8396},
+  {name:'Caldecott',line:'CCL/TEL',lat:1.3376,lng:103.8393},
+  {name:'Ang Mo Kio',line:'NSL',lat:1.3699,lng:103.8495},
+  {name:'Yio Chu Kang',line:'NSL',lat:1.3816,lng:103.8449},
+  {name:'Khatib',line:'NSL',lat:1.4175,lng:103.8330},
+  {name:'Yishun',line:'NSL',lat:1.4294,lng:103.8354},
+  {name:'Sembawang',line:'NSL',lat:1.4490,lng:103.8199},
+  {name:'Canberra',line:'NSL',lat:1.4432,lng:103.8296},
+  {name:'Admiralty',line:'NSL',lat:1.4407,lng:103.8008},
+  {name:'Woodlands',line:'NSL/TEL',lat:1.4374,lng:103.7866},
+  {name:'Woodlands North',line:'TEL',lat:1.4481,lng:103.7861},
+  {name:'Woodlands South',line:'TEL',lat:1.4243,lng:103.7867},
+  {name:'Marsiling',line:'NSL',lat:1.4327,lng:103.7742},
+  {name:'Kranji',line:'NSL',lat:1.4253,lng:103.7619},
+  {name:'Bukit Panjang',line:'DTL/LRT',lat:1.3784,lng:103.7628},
+  {name:'Cashew',line:'DTL',lat:1.3692,lng:103.7646},
+  {name:'Hillview',line:'DTL',lat:1.3622,lng:103.7676},
+  {name:'Beauty World',line:'DTL',lat:1.3412,lng:103.7760},
+  {name:'King Albert Park',line:'DTL',lat:1.3355,lng:103.7831},
+  {name:'Sixth Avenue',line:'DTL',lat:1.3317,lng:103.7961},
+  {name:'Tan Kah Kee',line:'DTL',lat:1.3259,lng:103.8075},
+  {name:'Botanic Gardens',line:'CCL/DTL',lat:1.3224,lng:103.8154},
+  {name:'Farrer Road',line:'CCL',lat:1.3176,lng:103.8074},
+  {name:'Holland Village',line:'CCL',lat:1.3124,lng:103.7961},
+  {name:'one-north',line:'CCL',lat:1.2991,lng:103.7872},
+  {name:'Kent Ridge',line:'CCL',lat:1.2935,lng:103.7843},
+  {name:'Haw Par Villa',line:'CCL',lat:1.2827,lng:103.7820},
+  {name:'Pasir Panjang',line:'CCL',lat:1.2762,lng:103.7919},
+  {name:'Labrador Park',line:'CCL',lat:1.2722,lng:103.8025},
+  {name:'Telok Blangah',line:'CCL',lat:1.2706,lng:103.8096},
+  {name:'HarbourFront',line:'CCL/NEL',lat:1.2654,lng:103.8219},
+  {name:'Keppel',line:'CEL',lat:1.2712,lng:103.8343},
+  {name:'Cantonment',line:'CEL',lat:1.2742,lng:103.8413},
+  {name:'Prince Edward Road',line:'CEL',lat:1.2778,lng:103.8449},
+  {name:'Harbourfront',line:'NEL',lat:1.2654,lng:103.8219},
+  {name:'Chinatown',line:'NEL/DTL',lat:1.2835,lng:103.8444},
+  {name:'Clarke Quay',line:'NEL',lat:1.2882,lng:103.8464},
+  {name:'Dhoby Ghaut',line:'NEL',lat:1.2989,lng:103.8455},
+  {name:'Little India',line:'NEL/DTL',lat:1.3066,lng:103.8495},
+  {name:'Farrer Park',line:'NEL',lat:1.3124,lng:103.8548},
+  {name:'Boon Keng',line:'NEL',lat:1.3194,lng:103.8619},
+  {name:'Potong Pasir',line:'NEL',lat:1.3313,lng:103.8695},
+  {name:'Woodleigh',line:'NEL',lat:1.3397,lng:103.8705},
+  {name:'Serangoon',line:'NEL/CCL',lat:1.3499,lng:103.8733},
+  {name:'Kovan',line:'NEL',lat:1.3597,lng:103.8851},
+  {name:'Hougang',line:'NEL',lat:1.3714,lng:103.8924},
+  {name:'Buangkok',line:'NEL',lat:1.3832,lng:103.8929},
+  {name:'Sengkang',line:'NEL/LRT',lat:1.3916,lng:103.8954},
+  {name:'Punggol',line:'NEL/LRT',lat:1.4051,lng:103.9021},
+  {name:'Tampines East',line:'DTL',lat:1.3559,lng:103.9555},
+  {name:'Upper Changi',line:'DTL',lat:1.3413,lng:103.9614},
+  {name:'Expo',line:'DTL/CEL',lat:1.3352,lng:103.9615},
+  {name:'Changi Airport',line:'CEL',lat:1.3573,lng:103.9882},
+  {name:'Stadium',line:'CCL',lat:1.3030,lng:103.8750},
+  {name:'Mountbatten',line:'CCL',lat:1.3063,lng:103.8828},
+  {name:'Dakota',line:'CCL',lat:1.3081,lng:103.8882},
+  {name:'MacPherson',line:'CCL/DTL',lat:1.3264,lng:103.8900},
+  {name:'Tai Seng',line:'CCL',lat:1.3355,lng:103.8882},
+  {name:'Bartley',line:'CCL',lat:1.3424,lng:103.8800},
+  {name:'Lorong Chuan',line:'CCL',lat:1.3515,lng:103.8641},
+  {name:'Woodlands North',line:'TEL',lat:1.4481,lng:103.7861},
+  {name:'Springleaf',line:'TEL',lat:1.3993,lng:103.8193},
+  {name:'Lentor',line:'TEL',lat:1.3846,lng:103.8358},
+  {name:'Mayflower',line:'TEL',lat:1.3702,lng:103.8391},
+  {name:'Bright Hill',line:'TEL',lat:1.3606,lng:103.8352},
+  {name:'Upper Thomson',line:'TEL',lat:1.3529,lng:103.8327},
+  {name:'Caldecott',line:'TEL',lat:1.3376,lng:103.8393},
+  {name:'Mount Pleasant',line:'TEL',lat:1.3236,lng:103.8292},
+  {name:'Stevens',line:'TEL/DTL',lat:1.3196,lng:103.8259},
+  {name:'Napier',line:'TEL',lat:1.3061,lng:103.8189},
+  {name:'Orchard Boulevard',line:'TEL',lat:1.3019,lng:103.8240},
+  {name:'Great World',line:'TEL',lat:1.2937,lng:103.8240},
+  {name:'Havelock',line:'TEL',lat:1.2886,lng:103.8359},
+  {name:'Maxwell',line:'TEL',lat:1.2793,lng:103.8445},
+  {name:'Shenton Way',line:'TEL',lat:1.2769,lng:103.8499},
+  {name:'Gardens by the Bay',line:'TEL',lat:1.2821,lng:103.8630},
+  {name:'Tanjong Rhu',line:'TEL',lat:1.2993,lng:103.8716},
+  {name:'Katong Park',line:'TEL',lat:1.3032,lng:103.8812},
+  {name:'Tanjong Katong',line:'TEL',lat:1.3072,lng:103.8933},
+  {name:'Marine Parade',line:'TEL',lat:1.3030,lng:103.9064},
+  {name:'Marine Terrace',line:'TEL',lat:1.3063,lng:103.9198},
+  {name:'Siglap',line:'TEL',lat:1.3121,lng:103.9282},
+  {name:'Bayshore',line:'TEL',lat:1.3145,lng:103.9394},
+  {name:'Bedok South',line:'TEL',lat:1.3216,lng:103.9474}
+];
 const ONEMAP   = 'https://www.onemap.gov.sg/api/common/elastic/search';
 
 const ALL_FLAT_TYPES = ['1 ROOM','2 ROOM','3 ROOM','4 ROOM','5 ROOM','EXECUTIVE'];
@@ -554,15 +698,14 @@ async function doAnalyse(){
     btn.disabled=false;btn.textContent='Find comparables';return;
   }
 
-  showStatus('Loading schools and station data...');
-  let schools=[],stations=[];
+  showStatus('Loading school data...');
+  let schools=[];
   try{schools=await fetchDataset(DS_SCH);}catch(e){}
-  try{stations=await fetchDataset(DS_MRT);}catch(e){}
 
   showStatus('',false);
   renderPriceTab(result,asking);
   renderSchoolsTab(schools);
-  renderValueTab(result.records,mb,stations);
+  renderValueTab(result.records,mb);
 
   document.getElementById('results').style.display='block';
   showTab('price');setStep(3);
@@ -836,7 +979,7 @@ async function renderSchoolsTab(schools){
 }
 
 // ── Value Tab ──────────────────────────────────────────────
-async function renderValueTab(records,mb,stations){
+async function renderValueTab(records,mb){
   // Remaining lease
   const leaseYrs=records.map(r=>remainingLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
   const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
@@ -870,7 +1013,7 @@ async function renderValueTab(records,mb,stations){
   document.getElementById('leaseContent').innerHTML=leaseHtml;
 
   // MRT stations — geocode and sort by distance
-  const mrtHtml=await renderMRT(stations);
+  const mrtHtml=renderMRT();
   document.getElementById('mrtContent').innerHTML=mrtHtml;
 
   // Price appreciation
@@ -911,61 +1054,20 @@ async function renderValueTab(records,mb,stations){
     </div>`).join('');
 }
 
-async function renderMRT(stations){
-  if(!resolvedLat||!resolvedLng||!stations.length){
-    return'<p style="font-size:13px;color:var(--text2)">Station data unavailable.</p>';
-  }
-
-  // Geocode stations — use stn_name + "MRT" as query, deduplicate by station name
-  const seen=new Set();
-  const nearby=[];
-
-  // First compute rough distance using bounding box to limit geocoding calls
-  // data.gov.sg MRT dataset has latitude/longitude fields directly
-  for(const stn of stations){
-    const lat=parseFloat(stn.lat||stn.latitude||stn.Latitude||0);
-    const lng=parseFloat(stn.lng||stn.longitude||stn.Longitude||0);
-    if(!lat||!lng)continue;
-    const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
-    if(km>2.5)continue;
-    const name=(stn.mrt_station_english||stn.station_name||stn.stn_name||'').trim();
-    if(!name||seen.has(name))continue;
-    seen.add(name);
-    const line=(stn.mrt_line_english||stn.line||'').trim();
-    const walkMins=Math.round(km*1000/80);
-    nearby.push({name,line,km,walkMins});
-  }
-
-  // If no lat/lng fields in dataset, fall back to OneMap geocoding for top candidates
-  if(!nearby.length){
-    // Try geocoding a few station names from dataset
-    const sample=stations.slice(0,30);
-    for(const stn of sample){
-      const name=(stn.mrt_station_english||stn.station_name||stn.stn_name||'').trim();
-      if(!name||seen.has(name))continue;
-      const res=await geocodeOneMap(name+' MRT');
-      if(!res)continue;
-      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
-      const km=haversineKm(resolvedLat,resolvedLng,lat,lng);
-      if(km>2.5)continue;
-      seen.add(name);
-      const line=(stn.mrt_line_english||stn.line||'').trim();
-      nearby.push({name,line,km,walkMins:Math.round(km*1000/80)});
-      await sleep(150);
-    }
-  }
-
-  nearby.sort((a,b)=>a.km-b.km);
-  const top=nearby.slice(0,5);
-
-  if(!top.length)return'<p style="font-size:13px;color:var(--text2)">No MRT/LRT stations found within 2.5km.</p>';
-
-  return top.map(s=>`
+function renderMRT(){
+  if(!resolvedLat||!resolvedLng)return'<p style="font-size:13px;color:var(--text2)">Location unavailable.</p>';
+  const nearby=MRT_STATIONS
+    .map(s=>({...s,km:haversineKm(resolvedLat,resolvedLng,s.lat,s.lng)}))
+    .filter(s=>s.km<=2.5)
+    .sort((a,b)=>a.km-b.km)
+    .slice(0,5);
+  if(!nearby.length)return'<p style="font-size:13px;color:var(--text2)">No MRT/LRT stations within 2.5km.</p>';
+  return nearby.map(s=>`
     <div class="mrt-item">
-      <div class="mrt-name">${s.name} ${s.line?`<span style="font-size:11px;font-weight:400;color:var(--text2)">(${s.line})</span>`:''}</div>
+      <div class="mrt-name">${s.name} <span style="font-size:11px;font-weight:400;color:var(--text2)">(${s.line})</span></div>
       <div class="mrt-detail">
         <div>${Math.round(s.km*1000)}m</div>
-        <div>~${s.walkMins} min walk</div>
+        <div>~${Math.round(s.km*1000/80)} min walk</div>
       </div>
     </div>`).join('');
 }
