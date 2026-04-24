@@ -558,6 +558,14 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
   const now=new Date();
   const cutoff=new Date(now.getFullYear(),now.getMonth()-monthsBack,1);
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0');
+
+  // Cache key based on filters + period
+  const cacheKey=`hdb_recs_${JSON.stringify(filters)}_${monthsBack}`;
+  try{
+    const cached=sessionStorage.getItem(cacheKey);
+    if(cached)return JSON.parse(cached);
+  }catch(e){}
+
   let all=[],offset=0,limit=100;
   while(offset<maxOffset){
     let url=`${API_HDB}?resource_id=${DS_HDB}&limit=${limit}&offset=${offset}&sort=month%20desc`;
@@ -576,12 +584,19 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
     const last=json.result.records[json.result.records.length-1]?.month;
     if(last&&last<cutoffStr)break;
     offset+=limit;
-    if(offset<maxOffset)await sleep(500);
+    if(offset<maxOffset)await sleep(300);
   }
+
+  try{sessionStorage.setItem(cacheKey,JSON.stringify(all));}catch(e){}
   return all;
 }
 
 async function fetchDataset(dsId,limit=500){
+  const cacheKey=`hdb_cache_${dsId}`;
+  try{
+    const cached=sessionStorage.getItem(cacheKey);
+    if(cached)return JSON.parse(cached);
+  }catch(e){}
   let all=[],offset=0;
   while(true){
     const url=`${API_HDB}?resource_id=${dsId}&limit=${limit}&offset=${offset}`;
@@ -593,16 +608,24 @@ async function fetchDataset(dsId,limit=500){
     if(json.result.records.length<limit)break;
     offset+=limit;
     if(offset>5000)break;
-    await sleep(400);
+    await sleep(300);
   }
+  try{sessionStorage.setItem(cacheKey,JSON.stringify(all));}catch(e){}
   return all;
 }
 
 async function geocodeOneMap(query){
+  const cacheKey=`onemap_${query.toLowerCase().replace(/\s+/g,'_')}`;
+  try{
+    const cached=sessionStorage.getItem(cacheKey);
+    if(cached)return JSON.parse(cached);
+  }catch(e){}
   try{
     const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(query)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`,{headers:buildOneMapHeaders()});
     const j=await r.json();
-    if(j.results?.length)return j.results[0];
+    const result=j.results?.length?j.results[0]:null;
+    if(result)try{sessionStorage.setItem(cacheKey,JSON.stringify(result));}catch(e){}
+    return result;
   }catch(e){}
   return null;
 }
@@ -972,7 +995,8 @@ async function renderSchoolsTab(schools){
     // Update progress
     document.getElementById('schoolContent').innerHTML=
       `<p style="font-size:13px;color:var(--text2)">Finding nearby schools... (${Math.min(i+BATCH,primarySchools.length)}/${primarySchools.length} checked, ${nearby.length} found so far)</p>`;
-    await sleep(100);
+    // Only sleep if we actually made uncached API calls this batch
+    await sleep(50);
   }
 
   nearby.sort((a,b)=>a.km-b.km);
