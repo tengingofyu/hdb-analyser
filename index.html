@@ -406,7 +406,7 @@ async function doQuickSearch(){
 async function runQuickFallback(flatType){
   const tiers=[
     {id:1,desc:`Block ${resolvedBlock}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)},
-    {id:2,desc:resolvedStreet,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)},
+    {id:2,desc:resolvedStreet,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet))},
   ];
   for(const t of tiers){const recs=t.fn();if(recs.length>=2)return{...t,records:recs};}
   return null;
@@ -505,9 +505,9 @@ async function runFullFallback(flatType,bands,mb){
   const tiers=[
     {id:1,label:'Same block, same flat type, similar floor',desc:`Block ${resolvedBlock} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
     {id:2,label:'Same block, same flat type, any floor',desc:`Block ${resolvedBlock} · ${flatType}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)},
-    {id:3,label:'Nearby blocks, same flat type, similar floor',desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
-    {id:4,label:'Nearby blocks, same flat type, any floor',desc:`${resolvedStreet} · ${flatType}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)},
-    {id:5,label:'Nearby blocks, similar unit size',desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'}`,fn:()=>avgSqm?allStreetRecs.filter(r=>Math.abs(+r.floor_area_sqm-avgSqm)<=15):[]},
+    {id:3,label:'Nearby blocks, same flat type, similar floor',desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet)&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
+    {id:4,label:'Nearby blocks, same flat type, any floor',desc:`${resolvedStreet} · ${flatType}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet))},
+    {id:5,label:'Nearby blocks, similar unit size',desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'}`,fn:()=>avgSqm?allStreetRecs.filter(r=>normStr(r.street_name)===normStr(resolvedStreet)&&Math.abs(+r.floor_area_sqm-avgSqm)<=15):[]},
     {id:6,label:'Same town, same flat type',desc:`${resolvedTown} · ${flatType}`,fn:async()=>{showStatus(`Fetching town data for ${resolvedTown}...`);const r=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);showStatus('',false);return r;}}
   ];
   const attempted=[];
