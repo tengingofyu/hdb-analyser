@@ -114,7 +114,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
       <div class="form-row">
         <div class="field"><label>Postal code</label><input type="text" id="postal" maxlength="6" inputmode="numeric" oninput="onPostalInput()"/></div>
         <div class="field"><label>Flat type</label><select id="quick_flat_type"><option value="">Select type</option><option>1 ROOM</option><option>2 ROOM</option><option>3 ROOM</option><option>4 ROOM</option><option>5 ROOM</option><option>EXECUTIVE</option></select></div>
-        <div class="field"><label>Asking price <span style="font-weight:400;color:var(--text3)">(SGD, optional)</span></label><input type="number" id="asking" min="0" step="1000" inputmode="numeric"/></div>
+        <div class="field"><label>Floor <span style="font-weight:400;color:var(--text3)">(optional)</span></label><input type="number" id="quick_floor" min="1" max="50" inputmode="numeric" placeholder="e.g. 10"/></div>
         <div class="field"><label>Months of history</label><select id="months_back"><option value="6">Last 6 months</option><option value="12" selected>Last 12 months</option><option value="24">Last 24 months</option><option value="36">Last 36 months</option></select></div>
       </div>
       <div id="resolved-tag"></div>
@@ -141,16 +141,6 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
       <div id="qr-est-banner"></div>
       <div id="qr-hero-price" class="hero-price"></div>
       <div id="qr-hero-range" class="hero-range"></div>
-      <div id="qr-floor-input" style="display:none;margin-bottom:1rem">
-        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text2)">
-          <span style="font-weight:500;color:var(--text)">Refine estimate by floor</span>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <input type="number" id="qr-floor" min="1" max="50" inputmode="numeric" placeholder="e.g. 10" style="width:100px;font-size:14px;padding:7px 10px;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);outline:none"/>
-            <button class="btn btn-secondary" style="width:auto;padding:7px 16px;font-size:13px" onclick="recalcEstimateWithFloor()">Update</button>
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:5px">Floor affects value by ~3–5% per band. Without floor, estimate assumes mid-floor.</div>
-        </div>
-      </div>
       <div class="quick-metrics">
         <div class="qm"><div class="qm-label">Transactions</div><div class="qm-value" id="qr-count"></div></div>
         <div class="qm"><div class="qm-label">Median PSF</div><div class="qm-value" id="qr-psf"></div></div>
@@ -453,8 +443,9 @@ async function doQuickSearch(){
       if(streetData.length)allStreetRecs=[...allBlockRecs,...streetData.filter(r=>r.block!==resolvedBlock)];
       showStatus('',false);
     }
+    const userFloorQuick=+document.getElementById('quick_floor').value||0;
     const qResult=await runQuickFallback(flatType);
-    renderQuickResult(qResult,+document.getElementById('asking').value||null,flatType);
+    renderQuickResult(qResult,userFloorQuick,flatType);
     document.getElementById('quickResult').style.display='block';setStep(2);
   }catch(e){showStatus('Connection error. Try again.');}
   btn.disabled=false;btn.textContent='Get ballpark price';
@@ -469,13 +460,10 @@ async function runQuickFallback(flatType){
   return null;
 }
 
-let lastEst=null; // store last estimate for floor recalc
-
-function renderQuickResult(qResult,asking,flatType){
+function renderQuickResult(qResult,floor,flatType){
   const estBannerEl=document.getElementById('qr-est-banner');
   const heroPrice=document.getElementById('qr-hero-price');
   const heroRange=document.getElementById('qr-hero-range');
-  const floorInput=document.getElementById('qr-floor-input');
 
   if(!qResult){
     const est=buildEstimate(flatType);
@@ -484,22 +472,24 @@ function renderQuickResult(qResult,asking,flatType){
       estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">No ${flatType} transactions found</div><div style="font-size:12px;margin-top:3px">No comparable data available. Try extending the date range to 24–36 months.</div></div>`;
       heroPrice.textContent='—';heroRange.textContent='No data available.';
       document.getElementById('qr-count').textContent='0';document.getElementById('qr-psf').textContent='—';document.getElementById('qr-lease').textContent='—';
-      document.getElementById('qr-source').textContent='';document.getElementById('qr-verdict').style.display='none';
-      floorInput.style.display='none';return;
+      document.getElementById('qr-source').textContent='';document.getElementById('qr-verdict').style.display='none';return;
     }
-    lastEst=est;
-    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${flatType} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}, adjusted for unit size. Confidence: ${est.confidence}. Not a formal valuation.</div></div>`;
-    heroPrice.textContent=sgd(est.estMid);
-    heroRange.textContent=`Estimated range: ${sgd(est.estLow)} – ${sgd(est.estHigh)}`;
+    // Apply floor adjustment if floor provided
+    const floorAdj=floor>=13?1.05:floor>=7?1.02:floor>=1?0.97:1.0; // no floor = neutral
+    const adjMid=floor?Math.round(est.estMid*floorAdj):est.estMid;
+    const adjLow=Math.round(adjMid*0.92),adjHigh=Math.round(adjMid*1.08);
+    const floorNote=floor?` · floor ${floor} applied (${floorAdj>=1?'+':''}${Math.round((floorAdj-1)*100)}%)`:'· mid-floor assumed';
+    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${flatType} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}${floorNote}. Confidence: ${est.confidence}. Not a formal valuation.</div></div>`;
+    heroPrice.textContent=sgd(adjMid);
+    heroRange.textContent=`Estimated range: ${sgd(adjLow)} – ${sgd(adjHigh)}`;
     document.getElementById('qr-count').textContent='Est.';document.getElementById('qr-psf').textContent='S$'+est.adjustedPsf;document.getElementById('qr-lease').textContent='—';
     document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock} · Estimated`;
-    document.getElementById('qr-source').textContent=`From ${est.comparableFlatType} comparables (S$${est.medPsf}/sqft, ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% size adj, ${est.targetSqm} sqm target, mid-floor assumed).`;
-    floorInput.style.display='block';
-    if(asking){renderVerdict(asking,est.estMid,true);}else{document.getElementById('qr-verdict').style.display='none';}
+    document.getElementById('qr-source').textContent=`From ${est.comparableFlatType} comparables · S$${est.medPsf}/sqft · ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% size adj · ${est.targetSqm} sqm${floor?' · floor '+floor+' adj':' · mid-floor assumed'}`;
+    document.getElementById('qr-verdict').style.display='none';
     return;
   }
 
-  lastEst=null;floorInput.style.display='none';estBannerEl.innerHTML='';
+  estBannerEl.innerHTML='';
   const{id,desc,records}=qResult;
   const prices=records.map(r=>+r.resale_price);
   const med=pct(prices,50),p25=pct(prices,25),p75=pct(prices,75);
@@ -509,48 +499,29 @@ function renderQuickResult(qResult,asking,flatType){
   const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
   heroPrice.textContent=sgd(med);
   heroRange.textContent=`Range: ${sgd(p25)} – ${sgd(p75)} · ${records.length} transactions`;
-  document.getElementById('qr-count').textContent=records.length;document.getElementById('qr-psf').textContent='S$'+medPsf;document.getElementById('qr-lease').textContent=medLease?medLease+'y':'—';
+  document.getElementById('qr-count').textContent=records.length;
+  document.getElementById('qr-psf').textContent='S$'+medPsf;
+  document.getElementById('qr-lease').textContent=medLease?medLease+'y':'—';
   document.getElementById('qr-scope').textContent=`${quickFlatType} · ${desc}`;
-  if(asking){renderVerdict(asking,med,false);}else{document.getElementById('qr-verdict').style.display='none';}
+  document.getElementById('qr-verdict').style.display='none';
   const sourceNote=id===1?`Block ${resolvedBlock} only`:`Street-level (${desc}) — no block-specific data in this period`;
   document.getElementById('qr-source').textContent=sourceNote;
 }
 
-function renderVerdict(asking,mid,isEst){
-  const diff=asking-mid,p=Math.round((diff/mid)*100);
-  let bg,col,txt;
-  if(p<=-10){bg='var(--info-bg)';col='var(--info-text)';txt=`${Math.abs(p)}% below ${isEst?'estimate':'median'} — looks like a deal`;}
-  else if(p<0){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${Math.abs(p)}% below ${isEst?'estimate':'median'} — fairly priced`;}
-  else if(p<=8){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${p}% above ${isEst?'estimate':'median'} — within normal range`;}
-  else if(p<=20){bg='var(--warn-bg)';col='var(--warn-text)';txt=`${p}% above ${isEst?'estimate':'median'} — elevated`;}
-  else{bg='var(--err-bg)';col='var(--err-text)';txt=`${p}% above ${isEst?'estimate':'median'} — significantly above market`;}
-  const vEl=document.getElementById('qr-verdict');
-  vEl.style.cssText=`background:${bg};color:${col}`;
-  vEl.textContent=`Your price ${sgd(asking)}: ${txt}${isEst?' (estimate only)':''}`;
-  vEl.style.display='block';
-}
-
-function recalcEstimateWithFloor(){
-  if(!lastEst)return;
-  const floor=+document.getElementById('qr-floor').value;
-  if(!floor||floor<1||floor>50)return;
-  // Apply floor band premium to estimate
-  // High floor (13+): +5%, Mid-high (7-12): +2%, Low (1-6): -3%
-  const floorAdj=floor>=13?1.05:floor>=7?1.02:0.97;
-  const adjMid=Math.round(lastEst.estMid*floorAdj);
-  const adjLow=Math.round(adjMid*0.92);
-  const adjHigh=Math.round(adjMid*1.08);
-  document.getElementById('qr-hero-price').textContent=sgd(adjMid);
-  document.getElementById('qr-hero-range').textContent=`Estimated range: ${sgd(adjLow)} – ${sgd(adjHigh)} (floor ${floor} applied)`;
-  document.getElementById('qr-source').textContent=`From ${lastEst.comparableFlatType} comparables + ${Math.round((floorAdj-1)*100)}% floor adjustment for floor ${floor}.`;
-  const asking=+document.getElementById('asking').value||null;
-  if(asking)renderVerdict(asking,adjMid,true);
-}
-
 function goToFullAnalysis(){
-  document.getElementById('quickResult').style.display='none';document.getElementById('step1-panel').style.display='none';document.getElementById('step2-panel').style.display='block';
+  document.getElementById('quickResult').style.display='none';
+  document.getElementById('step1-panel').style.display='none';
+  document.getElementById('step2-panel').style.display='block';
   document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label==='Mid-low (7–12)'?' selected':''}>${b.label}</option>`).join('');
-  document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${quickFlatType}. Enter your floor for floor band matching, then run full analysis.</div>`;setStep(2);
+  // Pre-fill floor from quick input
+  const qFloor=document.getElementById('quick_floor').value;
+  if(qFloor){
+    document.getElementById('floor_num').value=qFloor;
+    const band=getBand(+qFloor);
+    document.getElementById('storey_band_sel').value=band.label;
+  }
+  document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${quickFlatType}. ${qFloor?'Floor '+qFloor+' pre-filled.':'Enter your floor for floor band matching.'}</div>`;
+  setStep(2);
 }
 
 function resetToStep1(){
