@@ -37,6 +37,9 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .t-ok{background:var(--ok-bg);color:var(--ok-text)}.t-err{background:var(--err-bg);color:var(--err-text)}.t-info{background:var(--info-bg);color:var(--info-text)}.t-warn{background:var(--warn-bg);color:var(--warn-text)}
 .quick-result{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
 .quick-price{font-size:28px;font-weight:500;color:var(--text);margin-bottom:2px}
+.hero-price{font-size:48px;font-weight:600;color:var(--text);text-align:center;letter-spacing:-1px;margin:0.5rem 0 0.25rem}
+.hero-range{font-size:14px;color:var(--text2);text-align:center;margin-bottom:1rem}
+.hero-est-note{font-size:12px;color:var(--warn-text);text-align:center;margin-bottom:0.75rem;font-weight:500}
 .quick-range{font-size:13px;color:var(--text2);margin-bottom:0.75rem}
 .quick-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
 .qm{background:var(--bg2);border-radius:var(--radius);padding:0.6rem 0.75rem}
@@ -136,8 +139,18 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
     <div class="quick-result">
       <div class="sl">Quick price check — <span id="qr-scope"></span></div>
       <div id="qr-est-banner"></div>
-      <div class="quick-price" id="qr-median"></div>
-      <div class="quick-range" id="qr-range"></div>
+      <div id="qr-hero-price" class="hero-price"></div>
+      <div id="qr-hero-range" class="hero-range"></div>
+      <div id="qr-floor-input" style="display:none;margin-bottom:1rem">
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text2)">
+          <span style="font-weight:500;color:var(--text)">Refine estimate by floor</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="number" id="qr-floor" min="1" max="50" inputmode="numeric" placeholder="e.g. 10" style="width:100px;font-size:14px;padding:7px 10px;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);outline:none"/>
+            <button class="btn btn-secondary" style="width:auto;padding:7px 16px;font-size:13px" onclick="recalcEstimateWithFloor()">Update</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:5px">Floor affects value by ~3–5% per band. Without floor, estimate assumes mid-floor.</div>
+        </div>
+      </div>
       <div class="quick-metrics">
         <div class="qm"><div class="qm-label">Transactions</div><div class="qm-value" id="qr-count"></div></div>
         <div class="qm"><div class="qm-label">Median PSF</div><div class="qm-value" id="qr-psf"></div></div>
@@ -187,10 +200,6 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
       <div class="card">
         <p class="sl">Nearby amenities</p>
         <div id="amenitiesContent"><p style="font-size:13px;color:var(--text2)">Loading amenities...</p></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:0.75rem;line-height:1.7">
-          MRT distances are straight-line. School distances are straight-line, consistent with MOE's P1 registration balloting method.
-          For definitive P1 eligibility, verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank">MOE e-Registration portal</a>.
-        </div>
       </div>
     </div>
     <div id="tab-value" style="display:none">
@@ -224,6 +233,8 @@ const API_HDB='https://data.gov.sg/api/action/datastore_search';
 const DS_HDB='d_8b84c4ee58e3cfc0ece0d773c8ca6abc';
 const DS_SCH='d_688b934f82c1059ed0a6993d2a829089';
 const DS_CC='d_696c994c50745b079b3684f0e90ffc53';
+const DS_HAWKER='d_4a086da0a5553be1d89383cd90d07ecd'; // NEA hawker centres
+const AMENITY_DATA_DATE='May 2026'; // UPDATE THIS when refreshing static data
 const ONEMAP='https://www.onemap.gov.sg/api/common/elastic/search';
 const ALL_FLAT_TYPES=['1 ROOM','2 ROOM','3 ROOM','4 ROOM','5 ROOM','EXECUTIVE'];
 const BANDS=[{label:'Low (1–6)',min:1,max:6},{label:'Mid-low (7–12)',min:7,max:12},{label:'Mid-high (13–18)',min:13,max:18},{label:'High (19–24)',min:19,max:24},{label:'Very high (25+)',min:25,max:99}];
@@ -295,15 +306,47 @@ async function fetchDataset(dsId,limit=500){
   cacheSet(cacheKey,all);return all;
 }
 
+const GEO_CACHE_TTL=180*24*60*60*1000; // 6 months in ms
+const GEO_FAIL='__FAIL__'; // sentinel for failed lookups
+
+function geoCacheGet(key){
+  try{
+    const raw=localStorage.getItem('geo_'+key);
+    if(!raw)return undefined;
+    const{v,t}=JSON.parse(raw);
+    if(Date.now()-t>GEO_CACHE_TTL){localStorage.removeItem('geo_'+key);return undefined;}
+    return v; // may be GEO_FAIL sentinel or actual result
+  }catch(e){return undefined;}
+}
+function geoCacheSet(key,value){
+  try{localStorage.setItem('geo_'+key,JSON.stringify({v:value,t:Date.now()}));}catch(e){}
+}
+
 async function geocodeOM(query){
   const clean=cleanStr(query);
-  const cacheKey=`om_${clean.toLowerCase().replace(/\W+/g,'_').slice(0,60)}`;
-  const cached=cacheGet(cacheKey);if(cached)return cached;
+  const cacheKey=clean.toLowerCase().replace(/\W+/g,'_').slice(0,60);
+  // Check sessionStorage first (fast path)
+  const sess=cacheGet('om_'+cacheKey);
+  if(sess)return sess===GEO_FAIL?null:sess;
+  // Check localStorage (persistent across sessions)
+  const local=geoCacheGet(cacheKey);
+  if(local!==undefined)return local===GEO_FAIL?null:local;
+  // Make API call
   try{
     const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(clean)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`,{headers:buildOMH()});
-    const j=await r.json();const result=j.results?.length?j.results[0]:null;
-    if(result)cacheSet(cacheKey,result);return result;
-  }catch(e){return null;}
+    if(!r.ok){geoCacheSet(cacheKey,GEO_FAIL);cacheSet('om_'+cacheKey,GEO_FAIL);return null;}
+    const j=await r.json();
+    const result=j.results?.length?j.results[0]:null;
+    const toStore=result||GEO_FAIL;
+    geoCacheSet(cacheKey,toStore);
+    cacheSet('om_'+cacheKey,toStore);
+    return result;
+  }catch(e){
+    // CORS or network error — cache failure to prevent retry spam
+    geoCacheSet(cacheKey,GEO_FAIL);
+    cacheSet('om_'+cacheKey,GEO_FAIL);
+    return null;
+  }
 }
 
 // ── Estimation Engine ──────────────────────────────────────
@@ -426,60 +469,82 @@ async function runQuickFallback(flatType){
   return null;
 }
 
+let lastEst=null; // store last estimate for floor recalc
+
 function renderQuickResult(qResult,asking,flatType){
   const estBannerEl=document.getElementById('qr-est-banner');
+  const heroPrice=document.getElementById('qr-hero-price');
+  const heroRange=document.getElementById('qr-hero-range');
+  const floorInput=document.getElementById('qr-floor-input');
+
   if(!qResult){
     const est=buildEstimate(flatType);
     document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock}`;
     if(!est){
       estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">No ${flatType} transactions found</div><div style="font-size:12px;margin-top:3px">No comparable data available. Try extending the date range to 24–36 months.</div></div>`;
-      document.getElementById('qr-median').textContent='—';document.getElementById('qr-range').textContent='No data available.';
+      heroPrice.textContent='—';heroRange.textContent='No data available.';
       document.getElementById('qr-count').textContent='0';document.getElementById('qr-psf').textContent='—';document.getElementById('qr-lease').textContent='—';
-      document.getElementById('qr-source').textContent='';document.getElementById('qr-verdict').style.display='none';return;
+      document.getElementById('qr-source').textContent='';document.getElementById('qr-verdict').style.display='none';
+      floorInput.style.display='none';return;
     }
-    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${flatType} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}, adjusted for unit size. Confidence: ${est.confidence}. Not a formal valuation — use full analysis for methodology detail.</div></div>`;
-    document.getElementById('qr-median').textContent=sgd(est.estMid);
-    document.getElementById('qr-range').textContent=`Estimated range: ${sgd(est.estLow)} – ${sgd(est.estHigh)}`;
+    lastEst=est;
+    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${flatType} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}, adjusted for unit size. Confidence: ${est.confidence}. Not a formal valuation.</div></div>`;
+    heroPrice.textContent=sgd(est.estMid);
+    heroRange.textContent=`Estimated range: ${sgd(est.estLow)} – ${sgd(est.estHigh)}`;
     document.getElementById('qr-count').textContent='Est.';document.getElementById('qr-psf').textContent='S$'+est.adjustedPsf;document.getElementById('qr-lease').textContent='—';
     document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock} · Estimated`;
-    document.getElementById('qr-source').textContent=`Estimated from ${est.comparableFlatType} comparables (S$${est.medPsf}/sqft, ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% size adjustment, ${est.targetSqm} sqm target).`;
-    if(asking){
-      const diff=asking-est.estMid,p=Math.round((diff/est.estMid)*100);
-      let bg,col,txt;
-      if(p<=-15){bg='var(--info-bg)';col='var(--info-text)';txt=`${Math.abs(p)}% below estimate — possibly a deal, verify carefully`;}
-      else if(p<0){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${Math.abs(p)}% below estimate — looks reasonable`;}
-      else if(p<=10){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${p}% above estimate — within expected range`;}
-      else if(p<=25){bg='var(--warn-bg)';col='var(--warn-text)';txt=`${p}% above estimate — elevated, negotiate carefully`;}
-      else{bg='var(--err-bg)';col='var(--err-text)';txt=`${p}% above estimate — significantly above expected range`;}
-      const vEl=document.getElementById('qr-verdict');
-      vEl.style.cssText=`background:${bg};color:${col}`;vEl.textContent=`Your price ${sgd(asking)}: ${txt} (estimate only)`;vEl.style.display='block';
-    }else{document.getElementById('qr-verdict').style.display='none';}
+    document.getElementById('qr-source').textContent=`From ${est.comparableFlatType} comparables (S$${est.medPsf}/sqft, ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% size adj, ${est.targetSqm} sqm target, mid-floor assumed).`;
+    floorInput.style.display='block';
+    if(asking){renderVerdict(asking,est.estMid,true);}else{document.getElementById('qr-verdict').style.display='none';}
     return;
   }
-  estBannerEl.innerHTML='';
+
+  lastEst=null;floorInput.style.display='none';estBannerEl.innerHTML='';
   const{id,desc,records}=qResult;
   const prices=records.map(r=>+r.resale_price);
   const med=pct(prices,50),p25=pct(prices,25),p75=pct(prices,75);
   const areas=records.map(r=>+r.floor_area_sqm);
-  const avgArea=areas.reduce((a,b)=>a+b,0)/areas.length;
-  const medPsf=psfCalc(med,avgArea);
+  const medPsf=psfCalc(med,areas.reduce((a,b)=>a+b,0)/areas.length);
   const leaseYrs=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
   const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
-  document.getElementById('qr-median').textContent=sgd(med);
-  document.getElementById('qr-range').textContent=`Range: ${sgd(p25)} – ${sgd(p75)} · ${records.length} transactions`;
+  heroPrice.textContent=sgd(med);
+  heroRange.textContent=`Range: ${sgd(p25)} – ${sgd(p75)} · ${records.length} transactions`;
   document.getElementById('qr-count').textContent=records.length;document.getElementById('qr-psf').textContent='S$'+medPsf;document.getElementById('qr-lease').textContent=medLease?medLease+'y':'—';
   document.getElementById('qr-scope').textContent=`${quickFlatType} · ${desc}`;
-  if(asking){
-    const diff=asking-med,p=Math.round((diff/med)*100);let bg,col,txt;
-    if(p<=-10){bg='var(--info-bg)';col='var(--info-text)';txt=`${Math.abs(p)}% below median — looks like a deal`;}
-    else if(p<0){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${Math.abs(p)}% below median — fairly priced`;}
-    else if(p<=8){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${p}% above median — within normal range`;}
-    else if(p<=20){bg='var(--warn-bg)';col='var(--warn-text)';txt=`${p}% above median — elevated`;}
-    else{bg='var(--err-bg)';col='var(--err-text)';txt=`${p}% above median — significantly above market`;}
-    const vEl=document.getElementById('qr-verdict');vEl.style.cssText=`background:${bg};color:${col}`;vEl.textContent=`Your price ${sgd(asking)}: ${txt}`;vEl.style.display='block';
-  }else{document.getElementById('qr-verdict').style.display='none';}
+  if(asking){renderVerdict(asking,med,false);}else{document.getElementById('qr-verdict').style.display='none';}
   const sourceNote=id===1?`Block ${resolvedBlock} only`:`Street-level (${desc}) — no block-specific data in this period`;
   document.getElementById('qr-source').textContent=sourceNote;
+}
+
+function renderVerdict(asking,mid,isEst){
+  const diff=asking-mid,p=Math.round((diff/mid)*100);
+  let bg,col,txt;
+  if(p<=-10){bg='var(--info-bg)';col='var(--info-text)';txt=`${Math.abs(p)}% below ${isEst?'estimate':'median'} — looks like a deal`;}
+  else if(p<0){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${Math.abs(p)}% below ${isEst?'estimate':'median'} — fairly priced`;}
+  else if(p<=8){bg='var(--ok-bg)';col='var(--ok-text)';txt=`${p}% above ${isEst?'estimate':'median'} — within normal range`;}
+  else if(p<=20){bg='var(--warn-bg)';col='var(--warn-text)';txt=`${p}% above ${isEst?'estimate':'median'} — elevated`;}
+  else{bg='var(--err-bg)';col='var(--err-text)';txt=`${p}% above ${isEst?'estimate':'median'} — significantly above market`;}
+  const vEl=document.getElementById('qr-verdict');
+  vEl.style.cssText=`background:${bg};color:${col}`;
+  vEl.textContent=`Your price ${sgd(asking)}: ${txt}${isEst?' (estimate only)':''}`;
+  vEl.style.display='block';
+}
+
+function recalcEstimateWithFloor(){
+  if(!lastEst)return;
+  const floor=+document.getElementById('qr-floor').value;
+  if(!floor||floor<1||floor>50)return;
+  // Apply floor band premium to estimate
+  // High floor (13+): +5%, Mid-high (7-12): +2%, Low (1-6): -3%
+  const floorAdj=floor>=13?1.05:floor>=7?1.02:0.97;
+  const adjMid=Math.round(lastEst.estMid*floorAdj);
+  const adjLow=Math.round(adjMid*0.92);
+  const adjHigh=Math.round(adjMid*1.08);
+  document.getElementById('qr-hero-price').textContent=sgd(adjMid);
+  document.getElementById('qr-hero-range').textContent=`Estimated range: ${sgd(adjLow)} – ${sgd(adjHigh)} (floor ${floor} applied)`;
+  document.getElementById('qr-source').textContent=`From ${lastEst.comparableFlatType} comparables + ${Math.round((floorAdj-1)*100)}% floor adjustment for floor ${floor}.`;
+  const asking=+document.getElementById('asking').value||null;
+  if(asking)renderVerdict(asking,adjMid,true);
 }
 
 function goToFullAnalysis(){
@@ -629,11 +694,18 @@ function renderTable(records,med){
 
 async function renderAmenitiesTab(schools,centres){
   if(!resolvedLat||!resolvedLng){document.getElementById('amenitiesContent').innerHTML='<p style="color:var(--text2);font-size:13px">Location unavailable.</p>';return;}
-  const mrtNearby=MRT_STATIONS.map(s=>({...s,km:hkm(resolvedLat,resolvedLng,s.lat,s.lng)})).filter(s=>s.km<=1.5).sort((a,b)=>a.km-b.km).slice(0,5);
-  const mrtHtml=mrtNearby.length?mrtNearby.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n} <span style="font-size:10px;font-weight:400;color:var(--text3)">${s.l}</span></div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div><div class="amenity-walk">~${Math.round(s.km*1000/80)} min walk</div></div></div>`).join(''):'<p class="amenity-none">No MRT/LRT stations within 1.5km</p>';
+  const mrtNearby=MRT_STATIONS.map(s=>({...s,km:hkm(resolvedLat,resolvedLng,s.lat,s.lng)})).filter(s=>s.km<=2.0).sort((a,b)=>a.km-b.km).slice(0,5);
+  const mrtHtml=mrtNearby.length?mrtNearby.map(s=>{
+    const walkable=s.km<=1.0;
+    const distLabel=`${Math.round(s.km*1000)}m`;
+    const modeLabel=walkable?`~${Math.round(s.km*1000/80)} min walk`:'🚌 Bus / drive';
+    const modeColor=walkable?'var(--text3)':'var(--warn-text)';
+    return`<div class="amenity-item"><div class="amenity-name">${s.n} <span style="font-size:10px;font-weight:400;color:var(--text3)">${s.l}</span></div><div class="amenity-meta"><div class="amenity-dist">${distLabel}</div><div class="amenity-walk" style="color:${modeColor}">${modeLabel}</div></div></div>`;
+  }).join(''):'<p class="amenity-none">No MRT/LRT stations within 2km</p>';
   document.getElementById('amenitiesContent').innerHTML=`
-    <div class="amenity-section"><span class="amenity-header ah-mrt">🚇 MRT / LRT stations within 1.5km</span>${mrtHtml}</div>
+    <div class="amenity-section"><span class="amenity-header ah-mrt">🚇 MRT / LRT stations within 2km</span>${mrtHtml}</div>
     <div class="amenity-section" id="schoolsSection"><span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span><p style="font-size:12px;color:var(--text2)">Geocoding schools...</p></div>
+    <div class="amenity-section" id="hawkerSection"><span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span><p style="font-size:12px;color:var(--text2)">Loading...</p></div>
     <div class="amenity-section" id="childcareSection"><span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span><p style="font-size:12px;color:var(--text2)">Loading childcare centres...</p></div>`;
   const primarySchools=schools.filter(s=>s.mainlevel_code==='PRIMARY'),schoolNearby=[],BATCH=15;
   for(let i=0;i<primarySchools.length;i+=BATCH){
@@ -669,6 +741,35 @@ async function renderAmenitiesTab(schools,centres){
   }
   ccNearby.sort((a,b)=>a.km-b.km);
   document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>${ccNearby.length?ccNearby.slice(0,10).map(c=>`<div class="amenity-item"><div class="amenity-name">${c.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(c.km*1000)}m</div></div></div>`).join('')+(ccNearby.length>10?`<p style="font-size:11px;color:var(--text3);padding:4px 0">+${ccNearby.length-10} more within 1km</p>`:''): '<p class="amenity-none">No childcare centres found within 1km</p>'}`;
+
+  // Hawker centres
+  let hawkers=[];try{hawkers=await fetchDataset(DS_HAWKER,500);}catch(e){}
+  const hawkerNearby=[];
+  for(let i=0;i<hawkers.length;i+=BATCH){
+    const batch=hawkers.slice(i,i+BATCH);
+    const results=await Promise.all(batch.map(async h=>{
+      const postal=cleanStr(h.location_of_centre||h.postal_code||h.address_myenv||'');
+      const name=cleanStr(h.name_of_centre||h.hawker_centre_name||h.name||'');
+      const query=/^\d{6}$/.test(postal)?postal:name;if(!query)return null;
+      const res=await geocodeOM(query);if(!res)return null;
+      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
+      if(isNaN(lat)||isNaN(lng))return null;
+      const km=hkm(resolvedLat,resolvedLng,lat,lng);if(km>1.0)return null;
+      return{name:name||postal,km};
+    }));
+    results.forEach(h=>{if(h)hawkerNearby.push(h);});await sleep(50);
+  }
+  hawkerNearby.sort((a,b)=>a.km-b.km);
+  document.getElementById('hawkerSection').innerHTML=`<span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span>${hawkerNearby.length?hawkerNearby.map(h=>`<div class="amenity-item"><div class="amenity-name">${h.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(h.km*1000)}m</div></div></div>`).join(''):`<p class="amenity-none">No hawker centres within 1km</p>`}`;
+
+  // Maintenance reminder
+  const amCard=document.querySelector('#tab-amenities .card');
+  if(amCard&&!amCard.querySelector('.amenity-reminder')){
+    const rem=document.createElement('div');rem.className='amenity-reminder';
+    rem.style.cssText='font-size:11px;color:var(--text3);margin-top:1rem;padding-top:0.75rem;border-top:0.5px solid var(--border);line-height:1.7';
+    rem.innerHTML=`📅 School and hawker data last updated <strong>${AMENITY_DATA_DATE}</strong> — verify annually at <a href="https://www.moe.gov.sg/schoolfinder" target="_blank" style="color:#378ADD">MOE</a> and <a href="https://www.nea.gov.sg/our-services/hawker-management/listing-of-hawker-centres" target="_blank" style="color:#378ADD">NEA</a>.<br>MRT distances are straight-line. For definitive P1 eligibility verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank" style="color:#378ADD">MOE e-Registration portal</a>.`;
+    amCard.appendChild(rem);
+  }
 }
 
 function renderValueTab(records,mb){
