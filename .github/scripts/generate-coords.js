@@ -109,7 +109,8 @@ async function main() {
   const centres = await geocodeAll(ccEntries, token, 'childcare centres');
 
   // Update index.html
-  let html = fs.readFileSync('index.html', 'utf8');
+  const indexPath = new URL('../../index.html', import.meta.url).pathname;
+  let html = fs.readFileSync(indexPath, 'utf8');
   html = inject(html, 'PRIMARY_SCHOOLS', buildConst('PRIMARY_SCHOOLS', schools));
 
   // For childcare - either inject existing or append before PRIMARY_SCHOOLS
@@ -120,7 +121,7 @@ async function main() {
     html = html.replace('const PRIMARY_SCHOOLS=[', ccConst + '\n' + 'const PRIMARY_SCHOOLS=[');
   }
 
-  fs.writeFileSync('index.html', html);
+  fs.writeFileSync(indexPath, html);
   console.log('✓ index.html updated');
   console.log(`  Schools: ${schools.length}`);
   console.log(`  Childcare: ${centres.length}`);
