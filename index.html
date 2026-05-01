@@ -111,7 +111,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
       <div class="form-row">
         <div class="field"><label>Postal code</label><input type="text" id="postal" maxlength="6" inputmode="numeric" oninput="onPostalInput()"/></div>
         <div class="field"><label>Flat type</label><select id="quick_flat_type"><option value="">Select type</option><option>1 ROOM</option><option>2 ROOM</option><option>3 ROOM</option><option>4 ROOM</option><option>5 ROOM</option><option>EXECUTIVE</option></select></div>
-        <div class="field"><label>Compare against price (SGD)</label><input type="number" id="asking" min="0" step="1000" inputmode="numeric"/><div class="hint">Optional</div></div>
+        <div class="field"><label>Asking price <span style="font-weight:400;color:var(--text3)">(SGD, optional)</span></label><input type="number" id="asking" min="0" step="1000" inputmode="numeric"/></div>
         <div class="field"><label>Months of history</label><select id="months_back"><option value="6">Last 6 months</option><option value="12" selected>Last 12 months</option><option value="24">Last 24 months</option><option value="36">Last 36 months</option></select></div>
       </div>
       <div id="resolved-tag"></div>
@@ -376,14 +376,27 @@ async function doQuickSearch(){
     if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';return;}
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
+    // Resolve town from OneMap address before fetching — block numbers repeat across Singapore
+    resolvedTown=res.ADDRESS?.match(/\b(ANG MO KIO|BEDOK|BISHAN|BUKIT BATOK|BUKIT MERAH|BUKIT PANJANG|BUKIT TIMAH|CENTRAL AREA|CHOA CHU KANG|CLEMENTI|GEYLANG|HOUGANG|JURONG EAST|JURONG WEST|KALLANG|MARINE PARADE|PASIR RIS|PUNGGOL|QUEENSTOWN|SEMBAWANG|SENGKANG|SERANGOON|TAMPINES|TOA PAYOH|WOODLANDS|YISHUN)\b/i)?.[0]?.toUpperCase()||'';
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
     showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
-    allBlockRecs=await fetchRecs({block:resolvedBlock},mb,2000);
-    if(allBlockRecs.length){resolvedStreet=allBlockRecs[0]?.street_name||resolvedStreet;resolvedTown=allBlockRecs[0]?.town||'';allStreetRecs=allBlockRecs;}
-    else{
-      resolvedTown=res.ADDRESS?.match(/\b(ANG MO KIO|BEDOK|BISHAN|BUKIT BATOK|BUKIT MERAH|BUKIT PANJANG|BUKIT TIMAH|CENTRAL AREA|CHOA CHU KANG|CLEMENTI|GEYLANG|HOUGANG|JURONG EAST|JURONG WEST|KALLANG|MARINE PARADE|PASIR RIS|PUNGGOL|QUEENSTOWN|SEMBAWANG|SENGKANG|SERANGOON|TAMPINES|TOA PAYOH|WOODLANDS|YISHUN)\b/i)?.[0]?.toUpperCase()||'';
-      if(resolvedTown){showStatus(`No block data — fetching ${resolvedTown} data...`);allStreetRecs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,3000);}
+    // Always filter by BOTH block AND town to avoid matching block 268 in Yishun vs Jurong East etc.
+    const blockFilter=resolvedTown?{block:resolvedBlock,town:resolvedTown}:{block:resolvedBlock};
+    allBlockRecs=await fetchRecs(blockFilter,mb,2000);
+    if(allBlockRecs.length){
+      // Override street name from HDB data — more reliable than OneMap
+      resolvedStreet=allBlockRecs[0]?.street_name?.toUpperCase()||resolvedStreet;
+      resolvedTown=allBlockRecs[0]?.town||resolvedTown;
+      allStreetRecs=allBlockRecs;
+    } else {
+      if(resolvedTown){
+        showStatus(`No block data — fetching ${resolvedTown} data...`);
+        allStreetRecs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,3000);
+        // Pin street from results if available
+        const streetMatch=allStreetRecs.find(r=>normStr(r.street_name)===normStr(resolvedStreet));
+        if(!streetMatch&&allStreetRecs.length)resolvedStreet=allStreetRecs[0]?.street_name?.toUpperCase()||resolvedStreet;
+      }
     }
     showStatus('',false);
     if(!resolvedTown&&allStreetRecs.length)resolvedTown=allStreetRecs[0]?.town||'';
