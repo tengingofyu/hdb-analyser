@@ -376,26 +376,27 @@ async function doQuickSearch(){
     if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';return;}
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
-    // Resolve town from OneMap address before fetching — block numbers repeat across Singapore
-    resolvedTown=res.ADDRESS?.match(/\b(ANG MO KIO|BEDOK|BISHAN|BUKIT BATOK|BUKIT MERAH|BUKIT PANJANG|BUKIT TIMAH|CENTRAL AREA|CHOA CHU KANG|CLEMENTI|GEYLANG|HOUGANG|JURONG EAST|JURONG WEST|KALLANG|MARINE PARADE|PASIR RIS|PUNGGOL|QUEENSTOWN|SEMBAWANG|SENGKANG|SERANGOON|TAMPINES|TOA PAYOH|WOODLANDS|YISHUN)\b/i)?.[0]?.toUpperCase()||'';
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
     showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
-    // Always filter by BOTH block AND town to avoid matching block 268 in Yishun vs Jurong East etc.
-    const blockFilter=resolvedTown?{block:resolvedBlock,town:resolvedTown}:{block:resolvedBlock};
-    allBlockRecs=await fetchRecs(blockFilter,mb,2000);
+    // Fetch all records for this block number (may include same block number from other towns)
+    const allBlockNumberRecs=await fetchRecs({block:resolvedBlock},mb,2000);
+    // Filter to correct town by matching street name from OneMap
+    const streetNorm=normStr(resolvedStreet);
+    allBlockRecs=allBlockNumberRecs.filter(r=>normStr(r.street_name)===streetNorm);
+    // If street filter returns nothing, try partial match
+    if(!allBlockRecs.length)allBlockRecs=allBlockNumberRecs.filter(r=>normStr(r.street_name).includes(streetNorm)||streetNorm.includes(normStr(r.street_name)));
     if(allBlockRecs.length){
-      // Override street name from HDB data — more reliable than OneMap
       resolvedStreet=allBlockRecs[0]?.street_name?.toUpperCase()||resolvedStreet;
-      resolvedTown=allBlockRecs[0]?.town||resolvedTown;
+      resolvedTown=allBlockRecs[0]?.town||'';
       allStreetRecs=allBlockRecs;
     } else {
+      // No block data at all — try town from HDB via coordinates not available, use block number records' towns
+      const towns=[...new Set(allBlockNumberRecs.map(r=>r.town).filter(Boolean))];
+      resolvedTown=towns[0]||'';
       if(resolvedTown){
-        showStatus(`No block data — fetching ${resolvedTown} data...`);
+        showStatus(`Fetching ${resolvedTown} data...`);
         allStreetRecs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,3000);
-        // Pin street from results if available
-        const streetMatch=allStreetRecs.find(r=>normStr(r.street_name)===normStr(resolvedStreet));
-        if(!streetMatch&&allStreetRecs.length)resolvedStreet=allStreetRecs[0]?.street_name?.toUpperCase()||resolvedStreet;
       }
     }
     showStatus('',false);
