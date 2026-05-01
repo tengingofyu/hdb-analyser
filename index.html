@@ -446,7 +446,13 @@ async function doQuickSearch(){
     const userFloorQuick=+document.getElementById('quick_floor').value||0;
     const qResult=await runQuickFallback(flatType);
     renderQuickResult(qResult,userFloorQuick,flatType);
-    document.getElementById('quickResult').style.display='block';setStep(2);
+    document.getElementById('quickResult').style.display='block';
+    // If floor already entered, skip step 2 and pre-populate for full analysis
+    if(userFloorQuick){
+      document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label===getBand(userFloorQuick).label?' selected':''}>${b.label}</option>`).join('');
+      document.getElementById('floor_num').value=userFloorQuick;
+    }
+    setStep(2);
   }catch(e){showStatus('Connection error. Try again.');}
   btn.disabled=false;btn.textContent='Get ballpark price';
 }
@@ -509,19 +515,44 @@ function renderQuickResult(qResult,floor,flatType){
 }
 
 function goToFullAnalysis(){
-  document.getElementById('quickResult').style.display='none';
-  document.getElementById('step1-panel').style.display='none';
-  document.getElementById('step2-panel').style.display='block';
-  document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label==='Mid-low (7–12)'?' selected':''}>${b.label}</option>`).join('');
-  // Pre-fill floor from quick input
-  const qFloor=document.getElementById('quick_floor').value;
+  const qFloor=+document.getElementById('quick_floor').value||0;
   if(qFloor){
+    // Floor already known — skip step 2, go straight to full analysis
+    document.getElementById('quickResult').style.display='none';
+    document.getElementById('step1-panel').style.display='none';
+    document.getElementById('step2-panel').style.display='none';
+    selectedFlatType=quickFlatType;
+    selectedBand=getBand(qFloor);
+    adjBands=getAdj(selectedBand);
     document.getElementById('floor_num').value=qFloor;
-    const band=getBand(+qFloor);
-    document.getElementById('storey_band_sel').value=band.label;
+    document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label===selectedBand.label?' selected':''}>${b.label}</option>`).join('');
+    setStep(3);
+    const mb=+document.getElementById('months_back').value;
+    const asking=null;
+    // Run full analysis directly
+    const analyseBtn=document.getElementById('analyseBtn');
+    analyseBtn.disabled=true;analyseBtn.textContent='Analysing...';
+    showStatus('Running comparison search...');
+    runFullFallback(selectedFlatType,adjBands,mb).then(async result=>{
+      let schools=[];try{schools=await fetchDataset(DS_SCH);}catch(e){}
+      let centres=[];try{centres=await fetchDataset(DS_CC);}catch(e){}
+      showStatus('',false);
+      renderPriceTab(result,asking,selectedFlatType,mb);
+      renderAmenitiesTab(schools,centres);
+      renderValueTab(result?result.records:[],mb);
+      document.getElementById('fullResults').style.display='block';
+      showTab('price');
+      analyseBtn.disabled=false;analyseBtn.textContent='Full analysis';
+    });
+  } else {
+    // No floor — show step 2 to ask
+    document.getElementById('quickResult').style.display='none';
+    document.getElementById('step1-panel').style.display='none';
+    document.getElementById('step2-panel').style.display='block';
+    document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label==='Mid-low (7–12)'?' selected':''}>${b.label}</option>`).join('');
+    document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${quickFlatType}. Enter your floor to refine the analysis.</div>`;
+    setStep(2);
   }
-  document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${quickFlatType}. ${qFloor?'Floor '+qFloor+' pre-filled.':'Enter your floor for floor band matching.'}</div>`;
-  setStep(2);
 }
 
 function resetToStep1(){
@@ -535,7 +566,7 @@ async function doFullAnalysis(){
   const btn=document.getElementById('analyseBtn');btn.disabled=true;btn.textContent='Analysing...';
   const userFloor=+document.getElementById('floor_num').value||1;
   selectedFlatType=quickFlatType;selectedBand=getBand(userFloor);adjBands=getAdj(selectedBand);
-  const asking=+document.getElementById('asking').value||null;const mb=+document.getElementById('months_back').value;
+  const asking=null;const mb=+document.getElementById('months_back').value;
   showStatus('Running comparison search...');
   const result=await runFullFallback(selectedFlatType,adjBands,mb);
   showStatus('Loading schools and childcare...');
