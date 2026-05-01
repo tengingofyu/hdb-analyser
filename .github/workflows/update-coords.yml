@@ -30,13 +30,20 @@ jobs:
 
           const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-          async function fetchDataset(id, limit=2000) {
+          async function fetchDataset(id, limit=500) {
             const headers = process.env.DATAGOV_API_KEY ? {'x-api-key': process.env.DATAGOV_API_KEY} : {};
-            const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}`, {headers});
-            const d = await r.json();
-            if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id);
-            console.log(`Fetched ${d.result.records.length} records from ${id}`);
-            return d.result.records;
+            let all = [], offset = 0;
+            while (true) {
+              const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}&offset=${offset}`, {headers});
+              const d = await r.json();
+              if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id);
+              all = all.concat(d.result.records);
+              if (all.length >= d.result.total || d.result.records.length < limit) break;
+              offset += limit;
+              await sleep(300);
+            }
+            console.log(`Fetched ${all.length} records from ${id}`);
+            return all;
           }
 
           async function geocodeAll(entries, label) {
