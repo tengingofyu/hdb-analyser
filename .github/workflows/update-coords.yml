@@ -36,7 +36,7 @@ jobs:
             while (true) {
               const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}&offset=${offset}`, {headers});
               const d = await r.json();
-              if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id);
+              if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id + ' response: ' + JSON.stringify(d).slice(0,200));
               all = all.concat(d.result.records);
               if (all.length >= d.result.total || d.result.records.length < limit) break;
               offset += limit;
