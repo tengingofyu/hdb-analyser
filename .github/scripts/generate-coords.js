@@ -3,17 +3,9 @@ import fs from 'fs';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ── 1. Get fresh OneMap token ──────────────────────────────────────────────
+// ── 1. No auth needed — /api/common/elastic/search is public ──────────────
 async function getOneMapToken() {
-  const r = await fetch('https://www.onemap.gov.sg/api/auth/post/getToken', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({email: process.env.ONEMAP_EMAIL, password: process.env.ONEMAP_PASSWORD})
-  });
-  const d = await r.json();
-  if (!d.access_token) throw new Error('OneMap auth failed: ' + JSON.stringify(d));
-  console.log('✓ OneMap token obtained');
-  return d.access_token;
+  return null; // public endpoint, no token required
 }
 
 // ── 2. Fetch dataset from data.gov.sg ─────────────────────────────────────
@@ -30,7 +22,7 @@ async function fetchDataset(resourceId, limit = 2000) {
 // ── 3. Geocode a postal code via OneMap ────────────────────────────────────
 async function geocode(postal, token) {
   const url = `https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${postal}&returnGeom=Y&getAddrDetails=Y&pageNum=1`;
-  const r = await fetch(url, {headers: {Authorization: `Bearer ${token}`}});
+  const r = await fetch(url);
   const d = await r.json();
   if (d.results?.length) {
     return [parseFloat(d.results[0].LATITUDE), parseFloat(d.results[0].LONGITUDE)];
