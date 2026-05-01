@@ -337,14 +337,21 @@ function estimateFromComparables(targetFlatType,comparableRecs,comparableFlatTyp
 }
 
 function buildEstimate(targetFlatType){
+  // Only use same-street data for estimation — never town-level
+  // allStreetRecs may only contain block data; filter to same street by street_name
+  const streetName=resolvedStreet;
+  const streetRecs=allStreetRecs.filter(r=>{
+    const s=normStr(r.street_name),n=normStr(streetName);
+    return s===n||s.includes(n)||n.includes(s);
+  });
   const ftIdx=ALL_FLAT_TYPES.indexOf(targetFlatType);
   const candidates=[ftIdx-1,ftIdx+1,ftIdx-2,ftIdx+2].filter(i=>i>=0&&i<ALL_FLAT_TYPES.length);
   for(const ci of candidates){
     const compType=ALL_FLAT_TYPES[ci];
-    const recs=allStreetRecs.filter(r=>r.flat_type===compType);
+    const recs=streetRecs.filter(r=>r.flat_type===compType);
     if(recs.length>=3)return estimateFromComparables(targetFlatType,recs,compType);
   }
-  return null;
+  return null; // not enough local data — don't estimate from town level
 }
 
 // ── Step 1: Quick Search ───────────────────────────────────
@@ -381,6 +388,14 @@ async function doQuickSearch(){
     showStatus('',false);
     if(!resolvedTown&&allStreetRecs.length)resolvedTown=allStreetRecs[0]?.town||'';
     quickFlatType=flatType;
+    // If no target flat type found in current data, fetch full street for estimation
+    const hasTargetType=allStreetRecs.some(r=>r.flat_type===flatType);
+    if(!hasTargetType&&resolvedStreet){
+      showStatus('Fetching street data for estimation...');
+      const streetData=await fetchRecs({street_name:resolvedStreet},mb,3000);
+      if(streetData.length)allStreetRecs=[...allBlockRecs,...streetData.filter(r=>r.block!==resolvedBlock)];
+      showStatus('',false);
+    }
     const qResult=await runQuickFallback(flatType);
     renderQuickResult(qResult,+document.getElementById('asking').value||null,flatType);
     document.getElementById('quickResult').style.display='block';setStep(2);
