@@ -30,11 +30,12 @@ jobs:
 
           const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-          async function fetchDataset(id, limit=500) {
+          async function fetchDataset(id, limit=500, fields='') {
             const headers = process.env.DATAGOV_API_KEY ? {'x-api-key': process.env.DATAGOV_API_KEY} : {};
             let all = [], offset = 0;
             while (true) {
-              const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}&offset=${offset}`, {headers});
+              const fieldsParam = fields ? '&fields=' + fields : '';
+              const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}&offset=${offset}${fieldsParam}`, {headers});
               const d = await r.json();
               if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id + ' response: ' + JSON.stringify(d).slice(0,200));
               all = all.concat(d.result.records);
@@ -95,7 +96,7 @@ jobs:
           const schools = await geocodeAll(schoolEntries, 'schools');
 
           // Fetch childcare
-          const ccRecs = await fetchDataset('d_696c994c50745b079b3684f0e90ffc53', 2000);
+          const ccRecs = await fetchDataset('d_696c994c50745b079b3684f0e90ffc53', 500, 'centre_name,postal_code');
           const ccEntries = ccRecs.map(r=>({name:r.centre_name||r.organisation_name||'',postal:r.postal_code})).filter(r=>r.name&&r.postal);
           const centres = await geocodeAll(ccEntries, 'childcare');
 
