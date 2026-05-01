@@ -18,12 +18,16 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install --prefix .github/scripts node-fetch
+        run: |
+          cd .github/scripts
+          npm install
 
       - name: Generate coordinates
         env:
           DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
-        run: node .github/scripts/generate-coords.js
+        run: |
+          cd .github/scripts
+          node generate-coords.js
 
       - name: Commit and push if changed
         run: |
