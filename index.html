@@ -107,7 +107,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
   <div class="card" id="inputCard">
     <div class="steps" id="stepsIndicator">
       <div class="step"><div class="sn active" id="sn1">1</div><div class="sl2 active" id="sl1">Enter block details</div></div>
-      <div class="step" id="step2row"><div class="sn" id="sn2">2</div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
+      <div class="step" id="step2row" style="display:none"><div class="sn" id="sn2">2</div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
       <div class="step"><div class="sn" id="sn3">3</div><div class="sl2" id="sl3">Full analysis</div></div>
     </div>
     <div id="step1-panel">
@@ -439,19 +439,27 @@ function showStatus(msg,vis=true){const e=document.getElementById('statusMsg');e
 function setStep(n){
   const hasFloor=!!(+document.getElementById('quick_floor')?.value||0);
   const step2row=document.getElementById('step2row');
-  // Hide step 2 row when floor already provided and we're at step 3
-  if(step2row)step2row.style.display=(hasFloor&&n>=3)?'none':'flex';
-  // Remap step numbers: if floor known and n>=3, show as step 2 of 2
-  const displayN=hasFloor&&n>=3?2:n;
-  const maxStep=hasFloor?2:3;
-  [1,2,3].forEach(i=>{
-    const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);
-    if(!num)return;
-    const d=hasFloor&&i===3?2:i; // remap display number
-    if(i<n){num.className='sn done';num.textContent='✓';lbl.className='sl2';}
-    else if(i===n){num.className='sn active';num.textContent=hasFloor&&i===3?2:i;lbl.className='sl2 active';}
-    else{num.className='sn';num.textContent=hasFloor&&i===3?2:i;lbl.className='sl2';}
-  });
+  // Show step 2 row only when floor not provided and at step 2
+  if(step2row)step2row.style.display=(!hasFloor&&n===2)?'flex':'none';
+  if(hasFloor){
+    // 2-step mode: step 1 and step 3 only, renumbered as 1 and 2
+    const sn1=document.getElementById('sn1'),sl1=document.getElementById('sl1');
+    const sn3=document.getElementById('sn3'),sl3=document.getElementById('sl3');
+    if(n>=3){sn1.className='sn done';sn1.textContent='✓';sl1.className='sl2';}
+    else{sn1.className='sn active';sn1.textContent='1';sl1.className='sl2 active';}
+    sn3.textContent='2';
+    if(n>=3){sn3.className='sn active';sl3.className='sl2 active';}
+    else{sn3.className='sn';sl3.className='sl2';}
+  } else {
+    // 3-step mode: normal
+    [1,2,3].forEach(i=>{
+      const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);
+      if(!num)return;
+      if(i<n){num.className='sn done';num.textContent='✓';lbl.className='sl2';}
+      else if(i===n){num.className='sn active';num.textContent=i;lbl.className='sl2 active';}
+      else{num.className='sn';num.textContent=i;lbl.className='sl2';}
+    });
+  }
 }
 function showTab(t){['price','amenities','value'].forEach(x=>{document.getElementById('tab-'+x).style.display=x===t?'block':'none';document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');});}
 function onPostalInput(){resolvedBlock='';document.getElementById('resolved-tag').innerHTML='';}
@@ -915,7 +923,7 @@ async function renderAmenitiesTab(schools,centres){
   const s2km = schoolNearby.filter(s => s.km > 1.0 && s.km <= 2.0);
   document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span>
     <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km — Phase 2B priority</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
-    <div><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>\`;
+    <div><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>`;
   updateSchoolSignal(s1km, s2km);
   // Childcare and hawker centres require server-side geocoding (OneMap blocks CORS from browsers)
   const unavailMsg=`<div style="font-size:12px;color:var(--text2);padding:6px 0;line-height:1.6">
