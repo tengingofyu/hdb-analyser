@@ -2,8 +2,8 @@ name: Update Coordinates
 
 on:
   schedule:
-    - cron: '0 2 1 * *'  # 1st of every month at 2am UTC
-  workflow_dispatch:       # manual trigger
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
 
 jobs:
   update:
@@ -17,17 +17,88 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          cd .github/scripts
-          npm install
+      - name: Install node-fetch
+        run: npm install node-fetch
 
       - name: Generate coordinates
         env:
           DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
         run: |
-          cd .github/scripts
-          node generate-coords.js
+          node --input-type=module << 'EOF'
+          import fetch from 'node-fetch';
+          import fs from 'fs';
+
+          const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+          async function fetchDataset(id, limit=2000) {
+            const headers = process.env.DATAGOV_API_KEY ? {'x-api-key': process.env.DATAGOV_API_KEY} : {};
+            const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}`, {headers});
+            const d = await r.json();
+            if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id);
+            console.log(`Fetched ${d.result.records.length} records from ${id}`);
+            return d.result.records;
+          }
+
+          async function geocodeAll(entries, label) {
+            const postalMap = {};
+            for (const e of entries) {
+              const p = (e.postal||'').toString().padStart(6,'0');
+              if (p && p !== '000000') { if (!postalMap[p]) postalMap[p]=[]; postalMap[p].push(e.name); }
+            }
+            const postals = Object.keys(postalMap);
+            console.log(`Geocoding ${postals.length} postal codes for ${label}...`);
+            const coords = {};
+            let done = 0;
+            for (const p of postals) {
+              try {
+                const r = await fetch(`https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${p}&returnGeom=Y&getAddrDetails=Y&pageNum=1`);
+                const d = await r.json();
+                if (d.results?.length) coords[p] = [parseFloat(d.results[0].LATITUDE), parseFloat(d.results[0].LONGITUDE)];
+              } catch(e) {}
+              done++;
+              if (done % 100 === 0) console.log(`  ${done}/${postals.length}...`);
+              await sleep(150);
+            }
+            const result = [];
+            for (const [p, names] of Object.entries(postalMap)) {
+              if (coords[p]) {
+                for (const n of names) {
+                  result.push({n, lat: Math.round(coords[p][0]*100000)/100000, lng: Math.round(coords[p][1]*100000)/100000});
+                }
+              }
+            }
+            console.log(`${result.length} ${label} geocoded`);
+            return result;
+          }
+
+          function buildConst(name, entries) {
+            const items = entries.map(e => `  {n:'${e.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',lat:${e.lat},lng:${e.lng}}`);
+            return `const ${name}=[\n${items.join(',\n')}\n];`;
+          }
+
+          function inject(html, name, newConst) {
+            const regex = new RegExp(`const ${name}=\\[\\n[\\s\\S]*?\\n\\];`, 'm');
+            if (regex.test(html)) return html.replace(regex, newConst);
+            throw new Error(`Cannot find ${name} in index.html`);
+          }
+
+          // Fetch schools
+          const schoolRecs = await fetchDataset('d_688b934f82c1059ed0a6993d2a829089');
+          const schoolEntries = schoolRecs.filter(r=>r.mainlevel_code==='PRIMARY').map(r=>({name:r.school_name,postal:r.postal_code}));
+          const schools = await geocodeAll(schoolEntries, 'schools');
+
+          // Fetch childcare
+          const ccRecs = await fetchDataset('d_696c994c50745b079b3684f0e90ffc53', 2000);
+          const ccEntries = ccRecs.map(r=>({name:r.centre_name||r.organisation_name||'',postal:r.postal_code})).filter(r=>r.name&&r.postal);
+          const centres = await geocodeAll(ccEntries, 'childcare');
+
+          // Update index.html
+          let html = fs.readFileSync('index.html','utf8');
+          html = inject(html, 'PRIMARY_SCHOOLS', buildConst('PRIMARY_SCHOOLS', schools));
+          html = inject(html, 'CHILDCARE_CENTRES', buildConst('CHILDCARE_CENTRES', centres));
+          fs.writeFileSync('index.html', html);
+          console.log('index.html updated');
+          EOF
 
       - name: Commit and push if changed
         run: |
