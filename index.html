@@ -105,9 +105,9 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
   <div id="ad-slot"><!-- Google AdSense --></div>
 
   <div class="card" id="inputCard">
-    <div class="steps">
+    <div class="steps" id="stepsIndicator">
       <div class="step"><div class="sn active" id="sn1">1</div><div class="sl2 active" id="sl1">Enter block details</div></div>
-      <div class="step"><div class="sn" id="sn2">2</div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
+      <div class="step" id="step2row"><div class="sn" id="sn2">2</div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
       <div class="step"><div class="sn" id="sn3">3</div><div class="sl2" id="sl3">Full analysis</div></div>
     </div>
     <div id="step1-panel">
@@ -224,6 +224,187 @@ const DS_HDB='d_8b84c4ee58e3cfc0ece0d773c8ca6abc';
 const DS_SCH='d_688b934f82c1059ed0a6993d2a829089';
 const DS_CC='d_696c994c50745b079b3684f0e90ffc53';
 const DS_HAWKER='d_4a086da0a5553be1d89383cd90d07ecd'; // NEA hawker centres
+const PRIMARY_SCHOOLS=[
+  {n:'ADMIRALTY PRIMARY SCHOOL',lat:1.44263,lng:103.80004},
+  {n:'AHMAD IBRAHIM PRIMARY SCHOOL',lat:1.43315,lng:103.83294},
+  {n:'AI TONG SCHOOL',lat:1.36058,lng:103.83302},
+  {n:'ALEXANDRA PRIMARY SCHOOL',lat:1.29133,lng:103.82442},
+  {n:'ANCHOR GREEN PRIMARY SCHOOL',lat:1.39037,lng:103.88717},
+  {n:'ANDERSON PRIMARY SCHOOL',lat:1.38426,lng:103.84139},
+  {n:'ANG MO KIO PRIMARY SCHOOL',lat:1.36932,lng:103.83963},
+  {n:'ANGLO-CHINESE SCHOOL (JUNIOR)',lat:1.30935,lng:103.84095},
+  {n:'ANGLO-CHINESE SCHOOL (PRIMARY)',lat:1.31837,lng:103.83561},
+  {n:'ANGSANA PRIMARY SCHOOL',lat:1.36361,lng:103.93894},
+  {n:'BEACON PRIMARY SCHOOL',lat:1.38395,lng:103.77363},
+  {n:'BEDOK GREEN PRIMARY SCHOOL',lat:1.32345,lng:103.93788},
+  {n:'BENDEMEER PRIMARY SCHOOL',lat:1.32181,lng:103.8654},
+  {n:'BLANGAH RISE PRIMARY SCHOOL',lat:1.27612,lng:103.80863},
+  {n:'BOON LAY GARDEN PRIMARY SCHOOL',lat:1.34318,lng:103.71328},
+  {n:'BUKIT PANJANG PRIMARY SCHOOL',lat:1.37362,lng:103.76937},
+  {n:'BUKIT TIMAH PRIMARY SCHOOL',lat:1.3373,lng:103.76683},
+  {n:'BUKIT VIEW PRIMARY SCHOOL',lat:1.34586,lng:103.75367},
+  {n:'CANBERRA PRIMARY SCHOOL',lat:1.45125,lng:103.81586},
+  {n:'CANOSSA CATHOLIC PRIMARY SCHOOL',lat:1.32664,lng:103.88223},
+  {n:'CANTONMENT PRIMARY SCHOOL',lat:1.27547,lng:103.83996},
+  {n:'CASUARINA PRIMARY SCHOOL',lat:1.37246,lng:103.95702},
+  {n:'CEDAR PRIMARY SCHOOL',lat:1.33559,lng:103.87562},
+  {n:'CHANGKAT PRIMARY SCHOOL',lat:1.34023,lng:103.95208},
+  {n:'CHIJ (KATONG) PRIMARY',lat:1.30649,lng:103.91111},
+  {n:'CHIJ (KELLOCK)',lat:1.27502,lng:103.82816},
+  {n:'CHIJ OUR LADY OF GOOD COUNSEL',lat:1.35743,lng:103.86401},
+  {n:'CHIJ OUR LADY OF THE NATIVITY',lat:1.3733,lng:103.89758},
+  {n:'CHIJ OUR LADY QUEEN OF PEACE',lat:1.3666,lng:103.76741},
+  {n:'CHIJ PRIMARY (TOA PAYOH)',lat:1.33275,lng:103.84185},
+  {n:'CHONGFU SCHOOL',lat:1.4384,lng:103.83931},
+  {n:'CHONGZHENG PRIMARY SCHOOL',lat:1.35071,lng:103.9514},
+  {n:'CHUA CHU KANG PRIMARY SCHOOL',lat:1.37776,lng:103.74183},
+  {n:'CLEMENTI PRIMARY SCHOOL',lat:1.31506,lng:103.76314},
+  {n:'COMPASSVALE PRIMARY SCHOOL',lat:1.39445,lng:103.89781},
+  {n:'CONCORD PRIMARY SCHOOL',lat:1.38001,lng:103.73623},
+  {n:'CORPORATION PRIMARY SCHOOL',lat:1.351,lng:103.70759},
+  {n:'DAMAI PRIMARY SCHOOL',lat:1.33546,lng:103.92127},
+  {n:'DAZHONG PRIMARY SCHOOL',lat:1.35918,lng:103.74847},
+  {n:'DE LA SALLE SCHOOL',lat:1.39471,lng:103.7432},
+  {n:'EAST SPRING PRIMARY SCHOOL',lat:1.35268,lng:103.96168},
+  {n:'EDGEFIELD PRIMARY SCHOOL',lat:1.40009,lng:103.90785},
+  {n:'ELIAS PARK PRIMARY SCHOOL',lat:1.37451,lng:103.94513},
+  {n:'ENDEAVOUR PRIMARY SCHOOL',lat:1.45404,lng:103.81744},
+  {n:'EVERGREEN PRIMARY SCHOOL',lat:1.44415,lng:103.79458},
+  {n:'FAIRFIELD METHODIST SCHOOL (PRIMARY)',lat:1.30054,lng:103.78544},
+  {n:'FARRER PARK PRIMARY SCHOOL',lat:1.31237,lng:103.85077},
+  {n:'FENGSHAN PRIMARY SCHOOL',lat:1.32981,lng:103.93171},
+  {n:'FERN GREEN PRIMARY SCHOOL',lat:1.39727,lng:103.88033},
+  {n:'FERNVALE PRIMARY SCHOOL',lat:1.3903,lng:103.87445},
+  {n:'FIRST TOA PAYOH PRIMARY SCHOOL',lat:1.34032,lng:103.85553},
+  {n:'FRONTIER PRIMARY SCHOOL',lat:1.33641,lng:103.6997},
+  {n:'FUCHUN PRIMARY SCHOOL',lat:1.43048,lng:103.77819},
+  {n:'FUHUA PRIMARY SCHOOL',lat:1.3365,lng:103.7361},
+  {n:'GAN ENG SENG PRIMARY SCHOOL',lat:1.2856,lng:103.81555},
+  {n:'GEYLANG METHODIST SCHOOL (PRIMARY)',lat:1.31759,lng:103.88385},
+  {n:'GONGSHANG PRIMARY SCHOOL',lat:1.35724,lng:103.94912},
+  {n:'GREENDALE PRIMARY SCHOOL',lat:1.39648,lng:103.91233},
+  {n:'GREENRIDGE PRIMARY SCHOOL',lat:1.38589,lng:103.76779},
+  {n:'GREENWOOD PRIMARY SCHOOL',lat:1.4399,lng:103.80473},
+  {n:'HAIG GIRLS\' SCHOOL',lat:1.31194,lng:103.9029},
+  {n:'HENRY PARK PRIMARY SCHOOL',lat:1.31668,lng:103.7843},
+  {n:'HOLY INNOCENTS\' PRIMARY SCHOOL',lat:1.36694,lng:103.89411},
+  {n:'HONG WEN SCHOOL',lat:1.32176,lng:103.85763},
+  {n:'HORIZON PRIMARY SCHOOL',lat:1.39955,lng:103.9134},
+  {n:'HOUGANG PRIMARY SCHOOL',lat:1.37738,lng:103.88081},
+  {n:'HUAMIN PRIMARY SCHOOL',lat:1.42697,lng:103.84424},
+  {n:'INNOVA PRIMARY SCHOOL',lat:1.42897,lng:103.79061},
+  {n:'JIEMIN PRIMARY SCHOOL',lat:1.42769,lng:103.83043},
+  {n:'JING SHAN PRIMARY SCHOOL',lat:1.37223,lng:103.85213},
+  {n:'JUNYUAN PRIMARY SCHOOL',lat:1.34787,lng:103.93922},
+  {n:'JURONG PRIMARY SCHOOL',lat:1.34844,lng:103.73316},
+  {n:'JURONG WEST PRIMARY SCHOOL',lat:1.33918,lng:103.6988},
+  {n:'KEMING PRIMARY SCHOOL',lat:1.34553,lng:103.75645},
+  {n:'KHENG CHENG SCHOOL',lat:1.33734,lng:103.84715},
+  {n:'KONG HWA SCHOOL',lat:1.311,lng:103.88835},
+  {n:'KRANJI PRIMARY SCHOOL',lat:1.39356,lng:103.74736},
+  {n:'KUO CHUAN PRESBYTERIAN PRIMARY SCHOOL',lat:1.3494,lng:103.85502},
+  {n:'LAKESIDE PRIMARY SCHOOL',lat:1.3382,lng:103.71809},
+  {n:'LIANHUA PRIMARY SCHOOL',lat:1.35424,lng:103.75417},
+  {n:'MAHA BODHI SCHOOL',lat:1.32847,lng:103.9013},
+  {n:'MARSILING PRIMARY SCHOOL',lat:1.43384,lng:103.77364},
+  {n:'MARYMOUNT CONVENT SCHOOL',lat:1.34037,lng:103.84002},
+  {n:'MAYFLOWER PRIMARY SCHOOL',lat:1.37638,lng:103.84325},
+  {n:'MEE TOH SCHOOL',lat:1.39462,lng:103.90859},
+  {n:'MERIDIAN PRIMARY SCHOOL',lat:1.37553,lng:103.93489},
+  {n:'METHODIST GIRLS\' SCHOOL (PRIMARY)',lat:1.33295,lng:103.78339},
+  {n:'MONTFORT JUNIOR SCHOOL',lat:1.37382,lng:103.88931},
+  {n:'NAN CHIAU PRIMARY SCHOOL',lat:1.39221,lng:103.89118},
+  {n:'NAN HUA PRIMARY SCHOOL',lat:1.3192,lng:103.7611},
+  {n:'NANYANG PRIMARY SCHOOL',lat:1.32085,lng:103.80775},
+  {n:'NAVAL BASE PRIMARY SCHOOL',lat:1.41631,lng:103.83879},
+  {n:'NEW TOWN PRIMARY SCHOOL',lat:1.29964,lng:103.8001},
+  {n:'NGEE ANN PRIMARY SCHOOL',lat:1.30553,lng:103.91746},
+  {n:'NORTH SPRING PRIMARY SCHOOL',lat:1.38706,lng:103.9032},
+  {n:'NORTH VIEW PRIMARY SCHOOL',lat:1.42752,lng:103.84819},
+  {n:'NORTH VISTA PRIMARY SCHOOL',lat:1.38282,lng:103.89596},
+  {n:'NORTHLAND PRIMARY SCHOOL',lat:1.42097,lng:103.84093},
+  {n:'NORTHOAKS PRIMARY SCHOOL',lat:1.45661,lng:103.8142},
+  {n:'NORTHSHORE PRIMARY SCHOOL',lat:1.41814,lng:103.90442},
+  {n:'OASIS PRIMARY SCHOOL',lat:1.40462,lng:103.91112},
+  {n:'OPERA ESTATE PRIMARY SCHOOL',lat:1.31932,lng:103.92379},
+  {n:'PALM VIEW PRIMARY SCHOOL',lat:1.38377,lng:103.89135},
+  {n:'PARK VIEW PRIMARY SCHOOL',lat:1.37738,lng:103.93954},
+  {n:'PASIR RIS PRIMARY SCHOOL',lat:1.37242,lng:103.96281},
+  {n:'PAYA LEBAR METHODIST GIRLS\' SCHOOL (PRIMARY)',lat:1.34947,lng:103.88497},
+  {n:'PEI CHUN PUBLIC SCHOOL',lat:1.33737,lng:103.85559},
+  {n:'PEI HWA PRESBYTERIAN PRIMARY SCHOOL',lat:1.33806,lng:103.77611},
+  {n:'PEI TONG PRIMARY SCHOOL',lat:1.3162,lng:103.7676},
+  {n:'PEIYING PRIMARY SCHOOL',lat:1.41723,lng:103.83042},
+  {n:'PIONEER PRIMARY SCHOOL',lat:1.35443,lng:103.73279},
+  {n:'POI CHING SCHOOL',lat:1.35765,lng:103.93525},
+  {n:'PRINCESS ELIZABETH PRIMARY SCHOOL',lat:1.3492,lng:103.74102},
+  {n:'PUNGGOL COVE PRIMARY SCHOOL',lat:1.4116,lng:103.8988},
+  {n:'PUNGGOL GREEN PRIMARY SCHOOL',lat:1.40187,lng:103.8988},
+  {n:'PUNGGOL PRIMARY SCHOOL',lat:1.37779,lng:103.89451},
+  {n:'PUNGGOL VIEW PRIMARY SCHOOL',lat:1.40515,lng:103.90516},
+  {n:'QIFA PRIMARY SCHOOL',lat:1.31325,lng:103.75674},
+  {n:'QIHUA PRIMARY SCHOOL',lat:1.44204,lng:103.78834},
+  {n:'QUEENSTOWN PRIMARY SCHOOL',lat:1.29559,lng:103.80755},
+  {n:'RADIN MAS PRIMARY SCHOOL',lat:1.27496,lng:103.82419},
+  {n:'RAFFLES GIRLS\' PRIMARY SCHOOL',lat:1.3294,lng:103.80644},
+  {n:'RED SWASTIKA SCHOOL',lat:1.33324,lng:103.93433},
+  {n:'RIVER VALLEY PRIMARY SCHOOL',lat:1.29422,lng:103.83582},
+  {n:'RIVERSIDE PRIMARY SCHOOL',lat:1.44705,lng:103.80183},
+  {n:'RIVERVALE PRIMARY SCHOOL',lat:1.39341,lng:103.90456},
+  {n:'ROSYTH SCHOOL',lat:1.37289,lng:103.875},
+  {n:'RULANG PRIMARY SCHOOL',lat:1.34674,lng:103.71846},
+  {n:'SEMBAWANG PRIMARY SCHOOL',lat:1.44505,lng:103.82102},
+  {n:'SENG KANG PRIMARY SCHOOL',lat:1.3895,lng:103.89977},
+  {n:'SENGKANG GREEN PRIMARY SCHOOL',lat:1.39285,lng:103.87522},
+  {n:'SHUQUN PRIMARY SCHOOL',lat:1.34765,lng:103.72152},
+  {n:'SI LING PRIMARY SCHOOL',lat:1.43241,lng:103.78604},
+  {n:'SINGAPORE CHINESE GIRLS\' PRIMARY SCHOOL',lat:1.32063,lng:103.82816},
+  {n:'SOUTH VIEW PRIMARY SCHOOL',lat:1.38167,lng:103.74628},
+  {n:'SPRINGDALE PRIMARY SCHOOL',lat:1.39467,lng:103.88993},
+  {n:'ST ANDREW\'S SCHOOL (JUNIOR)',lat:1.3314,lng:103.86512},
+  {n:'ST. ANTHONY\'S CANOSSIAN PRIMARY SCHOOL',lat:1.33473,lng:103.94123},
+  {n:'ST. ANTHONY\'S PRIMARY SCHOOL',lat:1.36412,lng:103.74925},
+  {n:'ST. GABRIEL\'S PRIMARY SCHOOL',lat:1.34947,lng:103.86256},
+  {n:'ST. HILDA\'S PRIMARY SCHOOL',lat:1.34939,lng:103.93701},
+  {n:'ST. JOSEPH\'S INSTITUTION JUNIOR',lat:1.31773,lng:103.84561},
+  {n:'ST. MARGARET\'S SCHOOL (PRIMARY)',lat:1.3039,lng:103.84596},
+  {n:'ST. STEPHEN\'S SCHOOL',lat:1.31879,lng:103.91726},
+  {n:'TAMPINES NORTH PRIMARY SCHOOL',lat:1.36048,lng:103.94873},
+  {n:'TAMPINES PRIMARY SCHOOL',lat:1.34978,lng:103.944},
+  {n:'TANJONG KATONG PRIMARY SCHOOL',lat:1.30526,lng:103.90016},
+  {n:'TAO NAN SCHOOL',lat:1.30529,lng:103.91155},
+  {n:'TECK GHEE PRIMARY SCHOOL',lat:1.36559,lng:103.85096},
+  {n:'TECK WHYE PRIMARY SCHOOL',lat:1.38365,lng:103.75329},
+  {n:'TELOK KURAU PRIMARY SCHOOL',lat:1.33105,lng:103.91093},
+  {n:'TEMASEK PRIMARY SCHOOL',lat:1.31771,lng:103.94559},
+  {n:'TOWNSVILLE PRIMARY SCHOOL',lat:1.36003,lng:103.85383},
+  {n:'UNITY PRIMARY SCHOOL',lat:1.40285,lng:103.74682},
+  {n:'VALOUR PRIMARY SCHOOL',lat:1.40684,lng:103.89908},
+  {n:'WATERWAY PRIMARY SCHOOL',lat:1.39883,lng:103.91862},
+  {n:'WELLINGTON PRIMARY SCHOOL',lat:1.45192,lng:103.8223},
+  {n:'WEST GROVE PRIMARY SCHOOL',lat:1.34488,lng:103.69929},
+  {n:'WEST SPRING PRIMARY SCHOOL',lat:1.38944,lng:103.7662},
+  {n:'WEST VIEW PRIMARY SCHOOL',lat:1.38368,lng:103.76024},
+  {n:'WESTWOOD PRIMARY SCHOOL',lat:1.34718,lng:103.70053},
+  {n:'WHITE SANDS PRIMARY SCHOOL',lat:1.36556,lng:103.96092},
+  {n:'WOODGROVE PRIMARY SCHOOL',lat:1.4331,lng:103.7906},
+  {n:'WOODLANDS PRIMARY SCHOOL',lat:1.43655,lng:103.79157},
+  {n:'WOODLANDS RING PRIMARY SCHOOL',lat:1.43495,lng:103.79744},
+  {n:'XINGHUA PRIMARY SCHOOL',lat:1.35791,lng:103.89047},
+  {n:'XINGNAN PRIMARY SCHOOL',lat:1.34255,lng:103.68795},
+  {n:'XINMIN PRIMARY SCHOOL',lat:1.3714,lng:103.88308},
+  {n:'XISHAN PRIMARY SCHOOL',lat:1.43347,lng:103.83776},
+  {n:'YANGZHENG PRIMARY SCHOOL',lat:1.34865,lng:103.8686},
+  {n:'YEW TEE PRIMARY SCHOOL',lat:1.39677,lng:103.75099},
+  {n:'YIO CHU KANG PRIMARY SCHOOL',lat:1.37793,lng:103.88564},
+  {n:'YISHUN PRIMARY SCHOOL',lat:1.43339,lng:103.83409},
+  {n:'YU NENG PRIMARY SCHOOL',lat:1.33389,lng:103.93214},
+  {n:'YUHUA PRIMARY SCHOOL',lat:1.3428,lng:103.74111},
+  {n:'YUMIN PRIMARY SCHOOL',lat:1.35129,lng:103.95046},
+  {n:'ZHANGDE PRIMARY SCHOOL',lat:1.28421,lng:103.82595},
+  {n:'ZHENGHUA PRIMARY SCHOOL',lat:1.37955,lng:103.76931},
+  {n:'ZHONGHUA PRIMARY SCHOOL',lat:1.3602,lng:103.86976}
+];
 const AMENITY_DATA_DATE='May 2026'; // UPDATE THIS when refreshing static data
 const ONEMAP='https://www.onemap.gov.sg/api/common/elastic/search';
 const ALL_FLAT_TYPES=['1 ROOM','2 ROOM','3 ROOM','4 ROOM','5 ROOM','EXECUTIVE'];
@@ -231,7 +412,7 @@ const BANDS=[{label:'Low (1–6)',min:1,max:6},{label:'Mid-low (7–12)',min:7,m
 const FLAT_SQM={'1 ROOM':33,'2 ROOM':45,'3 ROOM':67,'4 ROOM':93,'5 ROOM':113,'EXECUTIVE':140};
 
 const MRT_STATIONS=[
-  {n:'Jurong East',l:'EWL/NSL',lat:1.3332,lng:103.7422},{n:'Buona Vista',l:'EWL/CCL',lat:1.3072,lng:103.7899},{n:'Commonwealth',l:'EWL',lat:1.3023,lng:103.7980},{n:'Queenstown',l:'EWL',lat:1.2942,lng:103.8060},{n:'Redhill',l:'EWL',lat:1.2898,lng:103.8167},{n:'Tiong Bahru',l:'EWL',lat:1.2863,lng:103.8272},{n:'Outram Park',l:'EWL/NEL/TEL',lat:1.2801,lng:103.8395},{n:'Tanjong Pagar',l:'EWL',lat:1.2764,lng:103.8456},{n:'Raffles Place',l:'EWL/NSL',lat:1.2833,lng:103.8514},{n:'City Hall',l:'EWL/NSL',lat:1.2931,lng:103.8520},{n:'Bugis',l:'EWL/DTL',lat:1.3009,lng:103.8559},{n:'Lavender',l:'EWL',lat:1.3073,lng:103.8631},{n:'Kallang',l:'EWL',lat:1.3117,lng:103.8714},{n:'Aljunied',l:'EWL',lat:1.3163,lng:103.8831},{n:'Paya Lebar',l:'EWL/CCL',lat:1.3179,lng:103.8921},{n:'Eunos',l:'EWL',lat:1.3197,lng:103.9033},{n:'Kembangan',l:'EWL',lat:1.3211,lng:103.9128},{n:'Bedok',l:'EWL',lat:1.3240,lng:103.9300},{n:'Tanah Merah',l:'EWL',lat:1.3273,lng:103.9462},{n:'Simei',l:'EWL',lat:1.3435,lng:103.9531},{n:'Tampines',l:'EWL/DTL',lat:1.3535,lng:103.9454},{n:'Pasir Ris',l:'EWL',lat:1.3731,lng:103.9494},{n:'Boon Lay',l:'EWL',lat:1.3387,lng:103.7059},{n:'Pioneer',l:'EWL',lat:1.3378,lng:103.6972},{n:'Joo Koon',l:'EWL',lat:1.3279,lng:103.6786},{n:'Chinese Garden',l:'EWL',lat:1.3424,lng:103.7322},{n:'Lakeside',l:'EWL',lat:1.3441,lng:103.7206},{n:'Clementi',l:'EWL',lat:1.3151,lng:103.7651},{n:'Dover',l:'EWL',lat:1.3113,lng:103.7786},{n:'Toh Guan',l:'JRL',lat:1.3377,lng:103.7386},{n:'Corporation',l:'JRL',lat:1.3293,lng:103.7225},{n:'Jurong Hill',l:'JRL',lat:1.3141,lng:103.7119},{n:'Jurong Pier',l:'JRL',lat:1.3071,lng:103.7165},{n:'Pandan Reservoir',l:'JRL',lat:1.3220,lng:103.7108},{n:'Bukit Batok West',l:'JRL',lat:1.3682,lng:103.7454},{n:'Tengah Park',l:'JRL',lat:1.3771,lng:103.7315},{n:'Tengah Plantation',l:'JRL',lat:1.3696,lng:103.7209},{n:'Tengah',l:'JRL',lat:1.3596,lng:103.7073},{n:'Bahar Junction',l:'JRL',lat:1.3481,lng:103.6978},{n:'Jurong West',l:'JRL',lat:1.3404,lng:103.7057},{n:'Marina Bay',l:'NSL/CEL/TEL',lat:1.2762,lng:103.8545},{n:'Bayfront',l:'CEL/DTL',lat:1.2821,lng:103.8592},{n:'Dhoby Ghaut',l:'NSL/NEL/CCL',lat:1.2989,lng:103.8455},{n:'Somerset',l:'NSL',lat:1.3006,lng:103.8389},{n:'Orchard',l:'NSL/TEL',lat:1.3041,lng:103.8319},{n:'Newton',l:'NSL/DTL',lat:1.3122,lng:103.8380},{n:'Novena',l:'NSL',lat:1.3203,lng:103.8435},{n:'Toa Payoh',l:'NSL',lat:1.3328,lng:103.8474},{n:'Braddell',l:'NSL',lat:1.3401,lng:103.8468},{n:'Bishan',l:'NSL/CCL',lat:1.3510,lng:103.8485},{n:'Ang Mo Kio',l:'NSL',lat:1.3699,lng:103.8495},{n:'Yio Chu Kang',l:'NSL',lat:1.3816,lng:103.8449},{n:'Khatib',l:'NSL',lat:1.4175,lng:103.8330},{n:'Yishun',l:'NSL',lat:1.4294,lng:103.8354},{n:'Sembawang',l:'NSL',lat:1.4490,lng:103.8199},{n:'Canberra',l:'NSL',lat:1.4432,lng:103.8296},{n:'Admiralty',l:'NSL',lat:1.4407,lng:103.8008},{n:'Woodlands',l:'NSL/TEL',lat:1.4374,lng:103.7866},{n:'Woodlands North',l:'TEL',lat:1.4481,lng:103.7861},{n:'Woodlands South',l:'TEL',lat:1.4243,lng:103.7867},{n:'Marsiling',l:'NSL',lat:1.4327,lng:103.7742},{n:'Kranji',l:'NSL',lat:1.4253,lng:103.7619},{n:'Bukit Panjang',l:'DTL/LRT',lat:1.3784,lng:103.7628},{n:'Cashew',l:'DTL',lat:1.3692,lng:103.7646},{n:'Hillview',l:'DTL',lat:1.3622,lng:103.7676},{n:'Beauty World',l:'DTL',lat:1.3412,lng:103.7760},{n:'King Albert Park',l:'DTL',lat:1.3355,lng:103.7831},{n:'Sixth Avenue',l:'DTL',lat:1.3317,lng:103.7961},{n:'Tan Kah Kee',l:'DTL',lat:1.3259,lng:103.8075},{n:'Botanic Gardens',l:'CCL/DTL',lat:1.3224,lng:103.8154},{n:'Farrer Road',l:'CCL',lat:1.3176,lng:103.8074},{n:'Holland Village',l:'CCL',lat:1.3124,lng:103.7961},{n:'one-north',l:'CCL',lat:1.2991,lng:103.7872},{n:'Kent Ridge',l:'CCL',lat:1.2935,lng:103.7843},{n:'Haw Par Villa',l:'CCL',lat:1.2827,lng:103.7820},{n:'Pasir Panjang',l:'CCL',lat:1.2762,lng:103.7919},{n:'Labrador Park',l:'CCL',lat:1.2722,lng:103.8025},{n:'Telok Blangah',l:'CCL',lat:1.2706,lng:103.8096},{n:'HarbourFront',l:'CCL/NEL',lat:1.2654,lng:103.8219},{n:'Keppel',l:'CEL',lat:1.2712,lng:103.8343},{n:'Cantonment',l:'CEL',lat:1.2742,lng:103.8413},{n:'Prince Edward Road',l:'CEL',lat:1.2778,lng:103.8449},{n:'Chinatown',l:'NEL/DTL',lat:1.2835,lng:103.8444},{n:'Clarke Quay',l:'NEL',lat:1.2882,lng:103.8464},{n:'Little India',l:'NEL/DTL',lat:1.3066,lng:103.8495},{n:'Farrer Park',l:'NEL',lat:1.3124,lng:103.8548},{n:'Boon Keng',l:'NEL',lat:1.3194,lng:103.8619},{n:'Potong Pasir',l:'NEL',lat:1.3313,lng:103.8695},{n:'Woodleigh',l:'NEL',lat:1.3397,lng:103.8705},{n:'Serangoon',l:'NEL/CCL',lat:1.3499,lng:103.8733},{n:'Kovan',l:'NEL',lat:1.3597,lng:103.8851},{n:'Hougang',l:'NEL',lat:1.3714,lng:103.8924},{n:'Buangkok',l:'NEL',lat:1.3832,lng:103.8929},{n:'Sengkang',l:'NEL/LRT',lat:1.3916,lng:103.8954},{n:'Punggol',l:'NEL/LRT',lat:1.4051,lng:103.9021},{n:'Tampines East',l:'DTL',lat:1.3559,lng:103.9555},{n:'Upper Changi',l:'DTL',lat:1.3413,lng:103.9614},{n:'Expo',l:'DTL/CEL',lat:1.3352,lng:103.9615},{n:'Changi Airport',l:'CEL',lat:1.3573,lng:103.9882},{n:'Stadium',l:'CCL',lat:1.3030,lng:103.8750},{n:'Mountbatten',l:'CCL',lat:1.3063,lng:103.8828},{n:'Dakota',l:'CCL',lat:1.3081,lng:103.8882},{n:'MacPherson',l:'CCL/DTL',lat:1.3264,lng:103.8900},{n:'Tai Seng',l:'CCL',lat:1.3355,lng:103.8882},{n:'Bartley',l:'CCL',lat:1.3424,lng:103.8800},{n:'Lorong Chuan',l:'CCL',lat:1.3515,lng:103.8641},{n:'Marymount',l:'CCL',lat:1.3494,lng:103.8396},{n:'Caldecott',l:'CCL/TEL',lat:1.3376,lng:103.8393},{n:'Springleaf',l:'TEL',lat:1.3993,lng:103.8193},{n:'Lentor',l:'TEL',lat:1.3846,lng:103.8358},{n:'Mayflower',l:'TEL',lat:1.3702,lng:103.8391},{n:'Bright Hill',l:'TEL',lat:1.3606,lng:103.8352},{n:'Upper Thomson',l:'TEL',lat:1.3529,lng:103.8327},{n:'Mount Pleasant',l:'TEL',lat:1.3236,lng:103.8292},{n:'Stevens',l:'TEL/DTL',lat:1.3196,lng:103.8259},{n:'Napier',l:'TEL',lat:1.3061,lng:103.8189},{n:'Orchard Boulevard',l:'TEL',lat:1.3019,lng:103.8240},{n:'Great World',l:'TEL',lat:1.2937,lng:103.8240},{n:'Havelock',l:'TEL',lat:1.2886,lng:103.8359},{n:'Maxwell',l:'TEL',lat:1.2793,lng:103.8445},{n:'Shenton Way',l:'TEL',lat:1.2769,lng:103.8499},{n:'Gardens by the Bay',l:'TEL',lat:1.2821,lng:103.8630},{n:'Tanjong Rhu',l:'TEL',lat:1.2993,lng:103.8716},{n:'Katong Park',l:'TEL',lat:1.3032,lng:103.8812},{n:'Tanjong Katong',l:'TEL',lat:1.3072,lng:103.8933},{n:'Marine Parade',l:'TEL',lat:1.3030,lng:103.9064},{n:'Marine Terrace',l:'TEL',lat:1.3063,lng:103.9198},{n:'Siglap',l:'TEL',lat:1.3121,lng:103.9282},{n:'Bayshore',l:'TEL',lat:1.3145,lng:103.9394},{n:'Bedok South',l:'TEL',lat:1.3216,lng:103.9474},{n:'Promenade',l:'CCL/DTL',lat:1.2934,lng:103.8609},{n:'Esplanade',l:'CCL',lat:1.2937,lng:103.8554},{n:'Bras Basah',l:'CCL',lat:1.2966,lng:103.8499},{n:'Tampines West',l:'DTL',lat:1.3463,lng:103.9380}
+  {n:'Jurong East',l:'EWL/NSL',lat:1.3332,lng:103.7422},{n:'Buona Vista',l:'EWL/CCL',lat:1.3072,lng:103.7899},{n:'Commonwealth',l:'EWL',lat:1.3023,lng:103.7980},{n:'Queenstown',l:'EWL',lat:1.2942,lng:103.8060},{n:'Redhill',l:'EWL',lat:1.2898,lng:103.8167},{n:'Tiong Bahru',l:'EWL',lat:1.2863,lng:103.8272},{n:'Outram Park',l:'EWL/NEL/TEL',lat:1.2801,lng:103.8395},{n:'Tanjong Pagar',l:'EWL',lat:1.2764,lng:103.8456},{n:'Raffles Place',l:'EWL/NSL',lat:1.2833,lng:103.8514},{n:'City Hall',l:'EWL/NSL',lat:1.2931,lng:103.8520},{n:'Bugis',l:'EWL/DTL',lat:1.3009,lng:103.8559},{n:'Lavender',l:'EWL',lat:1.3073,lng:103.8631},{n:'Kallang',l:'EWL',lat:1.3117,lng:103.8714},{n:'Aljunied',l:'EWL',lat:1.3163,lng:103.8831},{n:'Paya Lebar',l:'EWL/CCL',lat:1.3179,lng:103.8921},{n:'Eunos',l:'EWL',lat:1.3197,lng:103.9033},{n:'Kembangan',l:'EWL',lat:1.3211,lng:103.9128},{n:'Bedok',l:'EWL',lat:1.3240,lng:103.9300},{n:'Tanah Merah',l:'EWL',lat:1.3273,lng:103.9462},{n:'Simei',l:'EWL',lat:1.3435,lng:103.9531},{n:'Tampines',l:'EWL/DTL',lat:1.3535,lng:103.9454},{n:'Pasir Ris',l:'EWL',lat:1.3731,lng:103.9494},{n:'Boon Lay',l:'EWL',lat:1.3387,lng:103.7059},{n:'Pioneer',l:'EWL',lat:1.3378,lng:103.6972},{n:'Joo Koon',l:'EWL',lat:1.3279,lng:103.6786},{n:'Chinese Garden',l:'EWL',lat:1.3424,lng:103.7322},{n:'Lakeside',l:'EWL',lat:1.3441,lng:103.7206},{n:'Clementi',l:'EWL',lat:1.3151,lng:103.7651},{n:'Dover',l:'EWL',lat:1.3113,lng:103.7786},{n:'Bukit Batok',l:'NSL',lat:1.3491,lng:103.7497},{n:'Toh Guan',l:'JRL (u/c 2028)',lat:1.33984,lng:103.7425},{n:'Bukit Batok West',l:'JRL (u/c 2028)',lat:1.34557,lng:103.73959},{n:'Jurong Town Hall',l:'JRL (u/c 2028)',lat:1.326,lng:103.746},{n:'Pandan Reservoir',l:'JRL (u/c 2028)',lat:1.320,lng:103.745},{n:'Tengah Park',l:'JRL (u/c 2028)',lat:1.35235,lng:103.73679},{n:'Tengah Plantation',l:'JRL (u/c 2028)',lat:1.35731,lng:103.73342},{n:'Tengah',l:'JRL (u/c 2028)',lat:1.36633,lng:103.73007},{n:'Hong Kah',l:'JRL (u/c 2028)',lat:1.35795,lng:103.72586},{n:'Corporation',l:'JRL (u/c 2028)',lat:1.352948,lng:103.713930},{n:'Jurong West',l:'JRL (u/c 2028)',lat:1.34919,lng:103.70831},{n:'Bahar Junction',l:'JRL (u/c 2028)',lat:1.3454222,lng:103.7025417},{n:'Choa Chu Kang West',l:'JRL (u/c 2028)',lat:1.37886,lng:103.739497},{n:'Gek Poh',l:'JRL (u/c 2028)',lat:1.348382,lng:103.697963},{n:'Tawas',l:'JRL (u/c 2028)',lat:1.35056,lng:103.69185},{n:'Marina Bay',l:'NSL/CEL/TEL',lat:1.2762,lng:103.8545},{n:'Bayfront',l:'CEL/DTL',lat:1.2821,lng:103.8592},{n:'Dhoby Ghaut',l:'NSL/NEL/CCL',lat:1.2989,lng:103.8455},{n:'Somerset',l:'NSL',lat:1.3006,lng:103.8389},{n:'Orchard',l:'NSL/TEL',lat:1.3041,lng:103.8319},{n:'Newton',l:'NSL/DTL',lat:1.3122,lng:103.8380},{n:'Novena',l:'NSL',lat:1.3203,lng:103.8435},{n:'Toa Payoh',l:'NSL',lat:1.3328,lng:103.8474},{n:'Braddell',l:'NSL',lat:1.3401,lng:103.8468},{n:'Bishan',l:'NSL/CCL',lat:1.3510,lng:103.8485},{n:'Ang Mo Kio',l:'NSL',lat:1.3699,lng:103.8495},{n:'Yio Chu Kang',l:'NSL',lat:1.3816,lng:103.8449},{n:'Khatib',l:'NSL',lat:1.4175,lng:103.8330},{n:'Yishun',l:'NSL',lat:1.4294,lng:103.8354},{n:'Sembawang',l:'NSL',lat:1.4490,lng:103.8199},{n:'Canberra',l:'NSL',lat:1.4432,lng:103.8296},{n:'Admiralty',l:'NSL',lat:1.4407,lng:103.8008},{n:'Woodlands',l:'NSL/TEL',lat:1.4374,lng:103.7866},{n:'Woodlands North',l:'TEL',lat:1.4481,lng:103.7861},{n:'Woodlands South',l:'TEL',lat:1.4243,lng:103.7867},{n:'Marsiling',l:'NSL',lat:1.4327,lng:103.7742},{n:'Kranji',l:'NSL',lat:1.4253,lng:103.7619},{n:'Bukit Panjang',l:'DTL/LRT',lat:1.3784,lng:103.7628},{n:'Cashew',l:'DTL',lat:1.3692,lng:103.7646},{n:'Hillview',l:'DTL',lat:1.3622,lng:103.7676},{n:'Beauty World',l:'DTL',lat:1.3412,lng:103.7760},{n:'King Albert Park',l:'DTL',lat:1.3355,lng:103.7831},{n:'Sixth Avenue',l:'DTL',lat:1.3317,lng:103.7961},{n:'Tan Kah Kee',l:'DTL',lat:1.3259,lng:103.8075},{n:'Botanic Gardens',l:'CCL/DTL',lat:1.3224,lng:103.8154},{n:'Farrer Road',l:'CCL',lat:1.3176,lng:103.8074},{n:'Holland Village',l:'CCL',lat:1.3124,lng:103.7961},{n:'one-north',l:'CCL',lat:1.2991,lng:103.7872},{n:'Kent Ridge',l:'CCL',lat:1.2935,lng:103.7843},{n:'Haw Par Villa',l:'CCL',lat:1.2827,lng:103.7820},{n:'Pasir Panjang',l:'CCL',lat:1.2762,lng:103.7919},{n:'Labrador Park',l:'CCL',lat:1.2722,lng:103.8025},{n:'Telok Blangah',l:'CCL',lat:1.2706,lng:103.8096},{n:'HarbourFront',l:'CCL/NEL',lat:1.2654,lng:103.8219},{n:'Keppel',l:'CEL',lat:1.2712,lng:103.8343},{n:'Cantonment',l:'CEL',lat:1.2742,lng:103.8413},{n:'Prince Edward Road',l:'CEL',lat:1.2778,lng:103.8449},{n:'Chinatown',l:'NEL/DTL',lat:1.2835,lng:103.8444},{n:'Clarke Quay',l:'NEL',lat:1.2882,lng:103.8464},{n:'Little India',l:'NEL/DTL',lat:1.3066,lng:103.8495},{n:'Farrer Park',l:'NEL',lat:1.3124,lng:103.8548},{n:'Boon Keng',l:'NEL',lat:1.3194,lng:103.8619},{n:'Potong Pasir',l:'NEL',lat:1.3313,lng:103.8695},{n:'Woodleigh',l:'NEL',lat:1.3397,lng:103.8705},{n:'Serangoon',l:'NEL/CCL',lat:1.3499,lng:103.8733},{n:'Kovan',l:'NEL',lat:1.3597,lng:103.8851},{n:'Hougang',l:'NEL',lat:1.3714,lng:103.8924},{n:'Buangkok',l:'NEL',lat:1.3832,lng:103.8929},{n:'Sengkang',l:'NEL/LRT',lat:1.3916,lng:103.8954},{n:'Punggol',l:'NEL/LRT',lat:1.4051,lng:103.9021},{n:'Tampines East',l:'DTL',lat:1.3559,lng:103.9555},{n:'Upper Changi',l:'DTL',lat:1.3413,lng:103.9614},{n:'Expo',l:'DTL/CEL',lat:1.3352,lng:103.9615},{n:'Changi Airport',l:'CEL',lat:1.3573,lng:103.9882},{n:'Stadium',l:'CCL',lat:1.3030,lng:103.8750},{n:'Mountbatten',l:'CCL',lat:1.3063,lng:103.8828},{n:'Dakota',l:'CCL',lat:1.3081,lng:103.8882},{n:'MacPherson',l:'CCL/DTL',lat:1.3264,lng:103.8900},{n:'Tai Seng',l:'CCL',lat:1.3355,lng:103.8882},{n:'Bartley',l:'CCL',lat:1.3424,lng:103.8800},{n:'Lorong Chuan',l:'CCL',lat:1.3515,lng:103.8641},{n:'Marymount',l:'CCL',lat:1.3494,lng:103.8396},{n:'Caldecott',l:'CCL/TEL',lat:1.3376,lng:103.8393},{n:'Springleaf',l:'TEL',lat:1.3993,lng:103.8193},{n:'Lentor',l:'TEL',lat:1.3846,lng:103.8358},{n:'Mayflower',l:'TEL',lat:1.3702,lng:103.8391},{n:'Bright Hill',l:'TEL',lat:1.3606,lng:103.8352},{n:'Upper Thomson',l:'TEL',lat:1.3529,lng:103.8327},{n:'Mount Pleasant',l:'TEL',lat:1.3236,lng:103.8292},{n:'Stevens',l:'TEL/DTL',lat:1.3196,lng:103.8259},{n:'Napier',l:'TEL',lat:1.3061,lng:103.8189},{n:'Orchard Boulevard',l:'TEL',lat:1.3019,lng:103.8240},{n:'Great World',l:'TEL',lat:1.2937,lng:103.8240},{n:'Havelock',l:'TEL',lat:1.2886,lng:103.8359},{n:'Maxwell',l:'TEL',lat:1.2793,lng:103.8445},{n:'Shenton Way',l:'TEL',lat:1.2769,lng:103.8499},{n:'Gardens by the Bay',l:'TEL',lat:1.2821,lng:103.8630},{n:'Tanjong Rhu',l:'TEL',lat:1.2993,lng:103.8716},{n:'Katong Park',l:'TEL',lat:1.3032,lng:103.8812},{n:'Tanjong Katong',l:'TEL',lat:1.3072,lng:103.8933},{n:'Marine Parade',l:'TEL',lat:1.3030,lng:103.9064},{n:'Marine Terrace',l:'TEL',lat:1.3063,lng:103.9198},{n:'Siglap',l:'TEL',lat:1.3121,lng:103.9282},{n:'Bayshore',l:'TEL',lat:1.3145,lng:103.9394},{n:'Bedok South',l:'TEL',lat:1.3216,lng:103.9474},{n:'Promenade',l:'CCL/DTL',lat:1.2934,lng:103.8609},{n:'Esplanade',l:'CCL',lat:1.2937,lng:103.8554},{n:'Bras Basah',l:'CCL',lat:1.2966,lng:103.8499},{n:'Tampines West',l:'DTL',lat:1.3463,lng:103.9380}
 ];
 
 let resolvedBlock='',resolvedStreet='',resolvedTown='',resolvedLat=null,resolvedLng=null;
@@ -255,7 +436,23 @@ function remLease(yr,mo){if(!yr)return null;const[y,m]=mo.split('-');return Math
 function leaseFlag(y){if(y===null)return{cls:'p-band',txt:'?'};if(y>=60)return{cls:'p-green',txt:y+'y'};if(y>=30)return{cls:'p-amber',txt:y+'y'};return{cls:'p-red',txt:y+'y'};}
 function cleanStr(v){return(v||'').toString().replace(/^"|"$/g,'').trim();}
 function showStatus(msg,vis=true){const e=document.getElementById('statusMsg');e.textContent=msg;e.style.display=vis?'block':'none';}
-function setStep(n){[1,2,3].forEach(i=>{const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);if(i<n){num.className='sn done';num.textContent='✓';lbl.className='sl2';}else if(i===n){num.className='sn active';num.textContent=i;lbl.className='sl2 active';}else{num.className='sn';num.textContent=i;lbl.className='sl2';}});}
+function setStep(n){
+  const hasFloor=!!(+document.getElementById('quick_floor')?.value||0);
+  const step2row=document.getElementById('step2row');
+  // Hide step 2 row when floor already provided and we're at step 3
+  if(step2row)step2row.style.display=(hasFloor&&n>=3)?'none':'flex';
+  // Remap step numbers: if floor known and n>=3, show as step 2 of 2
+  const displayN=hasFloor&&n>=3?2:n;
+  const maxStep=hasFloor?2:3;
+  [1,2,3].forEach(i=>{
+    const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);
+    if(!num)return;
+    const d=hasFloor&&i===3?2:i; // remap display number
+    if(i<n){num.className='sn done';num.textContent='✓';lbl.className='sl2';}
+    else if(i===n){num.className='sn active';num.textContent=hasFloor&&i===3?2:i;lbl.className='sl2 active';}
+    else{num.className='sn';num.textContent=hasFloor&&i===3?2:i;lbl.className='sl2';}
+  });
+}
 function showTab(t){['price','amenities','value'].forEach(x=>{document.getElementById('tab-'+x).style.display=x===t?'block':'none';document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');});}
 function onPostalInput(){resolvedBlock='';document.getElementById('resolved-tag').innerHTML='';}
 function cacheGet(k){try{const v=sessionStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -709,60 +906,24 @@ async function renderAmenitiesTab(schools,centres){
     <div class="amenity-section" id="schoolsSection"><span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span><p style="font-size:12px;color:var(--text2)">Geocoding schools...</p></div>
     <div class="amenity-section" id="hawkerSection"><span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span><p style="font-size:12px;color:var(--text2)">Loading...</p></div>
     <div class="amenity-section" id="childcareSection"><span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span><p style="font-size:12px;color:var(--text2)">Loading childcare centres...</p></div>`;
-  const primarySchools=schools.filter(s=>s.mainlevel_code==='PRIMARY'),schoolNearby=[],BATCH=15;
-  for(let i=0;i<primarySchools.length;i+=BATCH){
-    const batch=primarySchools.slice(i,i+BATCH);
-    const results=await Promise.all(batch.map(async s=>{
-      const postal=cleanStr(s.postal_code),name=cleanStr(s.school_name);
-      const query=/^\d{6}$/.test(postal)?postal:name;
-      const res=await geocodeOM(query);if(!res)return null;
-      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
-      if(isNaN(lat)||isNaN(lng))return null;
-      const km=hkm(resolvedLat,resolvedLng,lat,lng);if(km>2.1)return null;
-      return{name,km};
-    }));
-    results.forEach(s=>{if(s)schoolNearby.push(s);});await sleep(50);
-  }
-  schoolNearby.sort((a,b)=>a.km-b.km);
-  const s1km=schoolNearby.filter(s=>s.km<=1.0),s2km=schoolNearby.filter(s=>s.km>1.0&&s.km<=2.0);
+  // Primary schools — static lookup, no API calls needed
+  const schoolNearby = PRIMARY_SCHOOLS
+    .map(s => ({...s, km: hkm(resolvedLat, resolvedLng, s.lat, s.lng)}))
+    .filter(s => s.km <= 2.0)
+    .sort((a, b) => a.km - b.km);
+  const s1km = schoolNearby.filter(s => s.km <= 1.0);
+  const s2km = schoolNearby.filter(s => s.km > 1.0 && s.km <= 2.0);
   document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span>
-    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km — Phase 2B priority</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
-    <div><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>`;
-  updateSchoolSignal(s1km,s2km);
-  const ccNearby=[],allCC=centres.filter(c=>c.centre_name||c.organisation_name);
-  for(let i=0;i<allCC.length;i+=BATCH){
-    const batch=allCC.slice(i,i+BATCH);
-    const results=await Promise.all(batch.map(async c=>{
-      const postal=cleanStr(c.postal_code||c.postalcode||''),name=cleanStr(c.centre_name||c.organisation_name||'');
-      const query=/^\d{6}$/.test(postal)?postal:name;if(!query)return null;
-      const res=await geocodeOM(query);if(!res)return null;
-      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);if(isNaN(lat)||isNaN(lng))return null;
-      const km=hkm(resolvedLat,resolvedLng,lat,lng);if(km>1.0)return null;return{name:name||postal,km};
-    }));
-    results.forEach(c=>{if(c)ccNearby.push(c);});await sleep(50);
-  }
-  ccNearby.sort((a,b)=>a.km-b.km);
-  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>${ccNearby.length?ccNearby.slice(0,10).map(c=>`<div class="amenity-item"><div class="amenity-name">${c.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(c.km*1000)}m</div></div></div>`).join('')+(ccNearby.length>10?`<p style="font-size:11px;color:var(--text3);padding:4px 0">+${ccNearby.length-10} more within 1km</p>`:''): '<p class="amenity-none">No childcare centres found within 1km</p>'}`;
-
-  // Hawker centres
-  let hawkers=[];try{hawkers=await fetchDataset(DS_HAWKER,500);}catch(e){}
-  const hawkerNearby=[];
-  for(let i=0;i<hawkers.length;i+=BATCH){
-    const batch=hawkers.slice(i,i+BATCH);
-    const results=await Promise.all(batch.map(async h=>{
-      const postal=cleanStr(h.location_of_centre||h.postal_code||h.address_myenv||'');
-      const name=cleanStr(h.name_of_centre||h.hawker_centre_name||h.name||'');
-      const query=/^\d{6}$/.test(postal)?postal:name;if(!query)return null;
-      const res=await geocodeOM(query);if(!res)return null;
-      const lat=parseFloat(res.LATITUDE),lng=parseFloat(res.LONGITUDE);
-      if(isNaN(lat)||isNaN(lng))return null;
-      const km=hkm(resolvedLat,resolvedLng,lat,lng);if(km>1.0)return null;
-      return{name:name||postal,km};
-    }));
-    results.forEach(h=>{if(h)hawkerNearby.push(h);});await sleep(50);
-  }
-  hawkerNearby.sort((a,b)=>a.km-b.km);
-  document.getElementById('hawkerSection').innerHTML=`<span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span>${hawkerNearby.length?hawkerNearby.map(h=>`<div class="amenity-item"><div class="amenity-name">${h.name}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(h.km*1000)}m</div></div></div>`).join(''):`<p class="amenity-none">No hawker centres within 1km</p>`}`;
+    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km — Phase 2B priority</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
+    <div><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>\`;
+  updateSchoolSignal(s1km, s2km);
+  // Childcare and hawker centres require server-side geocoding (OneMap blocks CORS from browsers)
+  const unavailMsg=`<div style="font-size:12px;color:var(--text2);padding:6px 0;line-height:1.6">
+    Distance data requires server-side geocoding — coming soon.<br>
+    Use <a href="https://www.onemap.gov.sg/main/v2/" target="_blank" style="color:#378ADD">OneMap</a> to search nearby.
+  </div>`;
+  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>${unavailMsg}`;
+  document.getElementById('hawkerSection').innerHTML=`<span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span>${unavailMsg}`;
 
   // Maintenance reminder
   const amCard=document.querySelector('#tab-amenities .card');
