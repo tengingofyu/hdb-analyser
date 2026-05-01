@@ -223,7 +223,8 @@ const API_HDB='https://data.gov.sg/api/action/datastore_search';
 const DS_HDB='d_8b84c4ee58e3cfc0ece0d773c8ca6abc';
 const DS_SCH='d_688b934f82c1059ed0a6993d2a829089';
 const DS_CC='d_696c994c50745b079b3684f0e90ffc53';
-const DS_HAWKER='d_4a086da0a5553be1d89383cd90d07ecd'; // NEA hawker centres
+const CHILDCARE_CENTRES=[
+];
 const PRIMARY_SCHOOLS=[
   {n:'ADMIRALTY PRIMARY SCHOOL',lat:1.44263,lng:103.80004},
   {n:'AHMAD IBRAHIM PRIMARY SCHOOL',lat:1.43315,lng:103.83294},
@@ -448,8 +449,8 @@ function setStep(n){
     if(n>=3){sn1.className='sn done';sn1.textContent='✓';sl1.className='sl2';}
     else{sn1.className='sn active';sn1.textContent='1';sl1.className='sl2 active';}
     sn3.textContent='2';
-    if(n>=3){sn3.className='sn active';sl3.className='sl2 active';}
-    else{sn3.className='sn';sl3.className='sl2';}
+    if(n>=3){sn3.className='sn active';sn3.style.display='none';sl3.className='sl2 active';}
+    else{sn3.className='sn';sn3.style.display='none';sl3.className='sl2';}
   } else {
     // 3-step mode: normal
     [1,2,3].forEach(i=>{
@@ -912,7 +913,6 @@ async function renderAmenitiesTab(schools,centres){
   document.getElementById('amenitiesContent').innerHTML=`
     <div class="amenity-section"><span class="amenity-header ah-mrt">🚇 MRT / LRT stations within 2km</span>${mrtHtml}</div>
     <div class="amenity-section" id="schoolsSection"><span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span><p style="font-size:12px;color:var(--text2)">Geocoding schools...</p></div>
-    <div class="amenity-section" id="hawkerSection"><span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span><p style="font-size:12px;color:var(--text2)">Loading...</p></div>
     <div class="amenity-section" id="childcareSection"><span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span><p style="font-size:12px;color:var(--text2)">Loading childcare centres...</p></div>`;
   // Primary schools — static lookup, no API calls needed
   const schoolNearby = PRIMARY_SCHOOLS
@@ -925,20 +925,21 @@ async function renderAmenitiesTab(schools,centres){
     <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km — Phase 2B priority</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
     <div><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>`;
   updateSchoolSignal(s1km, s2km);
-  // Childcare and hawker centres require server-side geocoding (OneMap blocks CORS from browsers)
-  const unavailMsg=`<div style="font-size:12px;color:var(--text2);padding:6px 0;line-height:1.6">
-    Distance data requires server-side geocoding — coming soon.<br>
-    Use <a href="https://www.onemap.gov.sg/main/v2/" target="_blank" style="color:#378ADD">OneMap</a> to search nearby.
-  </div>`;
-  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>${unavailMsg}`;
-  document.getElementById('hawkerSection').innerHTML=`<span class="amenity-header" style="background:#FEF3E2;color:#7C4A00">🍜 Hawker centres within 1km</span>${unavailMsg}`;
+  // Childcare requires server-side geocoding (OneMap blocks CORS from browsers)
+// Childcare centres - static lookup updated monthly by GitHub Actions
+  const ccNearby = CHILDCARE_CENTRES
+    .map(c => ({...c, km: hkm(resolvedLat, resolvedLng, c.lat, c.lng)}))
+    .filter(c => c.km <= 1.0)
+    .sort((a, b) => a.km - b.km);
+  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare / preschools within 1km</span>${ccNearby.length ? ccNearby.slice(0,10).map(c=>`<div class="amenity-item"><div class="amenity-name">${c.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(c.km*1000)}m</div></div></div>`).join('') + (ccNearby.length > 10 ? `<p style="font-size:11px;color:var(--text3);padding:4px 0">+${ccNearby.length-10} more within 1km</p>` : '') : '<p class="amenity-none">No childcare centres found within 1km</p>'}`;
+
 
   // Maintenance reminder
   const amCard=document.querySelector('#tab-amenities .card');
   if(amCard&&!amCard.querySelector('.amenity-reminder')){
     const rem=document.createElement('div');rem.className='amenity-reminder';
     rem.style.cssText='font-size:11px;color:var(--text3);margin-top:1rem;padding-top:0.75rem;border-top:0.5px solid var(--border);line-height:1.7';
-    rem.innerHTML=`📅 School and hawker data last updated <strong>${AMENITY_DATA_DATE}</strong> — verify annually at <a href="https://www.moe.gov.sg/schoolfinder" target="_blank" style="color:#378ADD">MOE</a> and <a href="https://www.nea.gov.sg/our-services/hawker-management/listing-of-hawker-centres" target="_blank" style="color:#378ADD">NEA</a>.<br>MRT distances are straight-line. For definitive P1 eligibility verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank" style="color:#378ADD">MOE e-Registration portal</a>.`;
+    rem.innerHTML=`📅 School data last updated <strong>${AMENITY_DATA_DATE}</strong> — verify annually at <a href="https://www.moe.gov.sg/schoolfinder" target="_blank" style="color:#378ADD">MOE</a>.<br>MRT distances are straight-line. For definitive P1 eligibility verify on the <a href="https://www.moe.gov.sg/primary/p1-registration" target="_blank" style="color:#378ADD">MOE e-Registration portal</a>.`;
     amCard.appendChild(rem);
   }
 }
