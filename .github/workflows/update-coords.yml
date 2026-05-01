@@ -22,8 +22,6 @@ jobs:
 
       - name: Generate coordinates
         env:
-          ONEMAP_EMAIL: ${{ secrets.ONEMAP_EMAIL }}
-          ONEMAP_PASSWORD: ${{ secrets.ONEMAP_PASSWORD }}
           DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
         run: node .github/scripts/generate-coords.js
 
