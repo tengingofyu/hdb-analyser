@@ -2165,6 +2165,30 @@ const COOLDOWN_MS=3000,SESSION_CAP=20;
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function buildHeaders(){return API_KEY?{'x-api-key':API_KEY}:{};}
 function buildOMH(){return ONEMAP_TOKEN?{'Authorization':`Bearer ${ONEMAP_TOKEN}`}:{};}
+
+// ── Analytics (fire-and-forget; no-op if ANALYTICS_URL is empty) ──
+const ANALYTICS_URL=''; // ← Paste Apps Script web app URL here. See ANALYTICS_SETUP.md
+const SESSION_ID=Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,12);
+const IS_RETURNING=(()=>{try{const k='hdb_visited';if(localStorage.getItem(k))return true;localStorage.setItem(k,'1');return false;}catch(e){return false;}})();
+let _lastEstimMethod=null,_curTab=null,_tabAt=0;
+function _sendEvent(payload){
+  if(!ANALYTICS_URL)return;
+  try{
+    const body=JSON.stringify(payload);
+    if(navigator.sendBeacon){navigator.sendBeacon(ANALYTICS_URL,new Blob([body],{type:'application/json'}));}
+    else{fetch(ANALYTICS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(()=>{});}
+  }catch(e){}
+}
+function postal2(p){return /^\d{6}$/.test(p)?p.slice(0,2):null;}
+function logSearch(o){try{_sendEvent({event_type:'search',ts:new Date().toISOString(),session_id:SESSION_ID,is_returning:IS_RETURNING,...o});}catch(e){}}
+function logError(o){try{_sendEvent({event_type:'error',ts:new Date().toISOString(),...o});}catch(e){}}
+function logTabSwitch(newTab){try{
+  const now=Date.now();
+  if(_curTab){_sendEvent({event_type:'tab',ts:new Date().toISOString(),session_id:SESSION_ID,tab:_curTab,dwell_seconds:Math.round((now-_tabAt)/1000)});}
+  _curTab=newTab;_tabAt=now;
+}catch(e){}}
+window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')logTabSwitch(null);});
+window.addEventListener('pagehide',()=>logTabSwitch(null));
 function sgd(n){return'S$'+Math.round(n).toLocaleString();}
 function psfCalc(p,s){return Math.round(p/(s*10.764));}
 function pct(arr,p){const s=[...arr].sort((a,b)=>a-b);const i=(p/100)*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);}
@@ -2241,7 +2265,7 @@ function setStep(n){
     else{num.className='sn';lbl.className='sl2';}
   });
 }
-function showTab(t){['price','amenities','value'].forEach(x=>{document.getElementById('tab-'+x).style.display=x===t?'block':'none';document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');});}
+function showTab(t){['price','amenities','value'].forEach(x=>{document.getElementById('tab-'+x).style.display=x===t?'block':'none';document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');});logTabSwitch(t);}
 function onPostalInput(){resolvedBlock='';document.getElementById('resolved-tag').innerHTML='';}
 function cacheGet(k){try{const v=sessionStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
 function cacheSet(k,v){try{sessionStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -2367,7 +2391,7 @@ async function doQuickSearch(){
     cm.textContent='Please wait before searching again';cm.style.cssText='font-size:11px;color:var(--text3);text-align:center;margin-top:5px';cm.id='cooldownMsg';
     document.getElementById('quickBtn').after(cm);setTimeout(()=>cm.remove(),2000);return;
   }
-  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';return;}
+  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({postal_2:null,flat_type:null,error_type:'session_cap_hit'});return;}
   const postal=document.getElementById('postal').value.trim();
   const flatType=document.getElementById('quick_flat_type').value;
   if(!/^\d{6}$/.test(postal)){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;}
@@ -2378,7 +2402,7 @@ async function doQuickSearch(){
   showStatus('Resolving postal code...');
   try{
     const res=await geocodeOM(postal);
-    if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';return;}
+    if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';logError({postal_2:postal2(postal),flat_type:flatType,error_type:'postal_not_found'});return;}
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
@@ -2425,7 +2449,7 @@ async function doQuickSearch(){
       document.getElementById('floor_num').value=userFloorQuick;
     }
     setStep(2);
-  }catch(e){showStatus('Connection error. Try again.');}
+  }catch(e){showStatus('Connection error. Try again.');logError({postal_2:postal2(postal),flat_type:flatType,error_type:'connection_error'});}
   btn.disabled=false;btn.textContent='Get ballpark price';
 }
 
@@ -2547,7 +2571,8 @@ function resetToStep1(){
 // ── Step 2: Full Analysis ──────────────────────────────────
 async function doFullAnalysis(){
   const btn=document.getElementById('analyseBtn');btn.disabled=true;btn.textContent='Analysing...';
-  const userFloor=+document.getElementById('floor_num').value||1;
+  const userFloorRaw=+document.getElementById('floor_num').value;
+  const userFloor=userFloorRaw||1;
   selectedFlatType=quickFlatType;selectedBand=getBand(userFloor);adjBands=getAdj(selectedBand);
   const asking=null;const mb=+document.getElementById('months_back').value;
   showStatus('Running comparison search...');
@@ -2557,6 +2582,7 @@ async function doFullAnalysis(){
   renderAmenitiesTab();
   renderValueTab(result?result.records:[],mb);
   document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');setStep(3);
+  logSearch({postal_2:postal2(document.getElementById('postal').value.trim()),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
   btn.disabled=false;btn.textContent='Full analysis';
 }
 
@@ -2579,9 +2605,11 @@ async function runFullFallback(flatType,bands,mb){
 // ── Price Tab ──────────────────────────────────────────────
 function renderPriceTab(result,asking,flatType,mb){
   const estCardEl=document.getElementById('estimationCard');
+  _lastEstimMethod=null;
   if(!result){
     // No direct data — show estimation
     const est=buildEstimate(flatType);
+    _lastEstimMethod=est?'estimate':null;
     document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No ${flatType} transactions found for Block ${resolvedBlock} in this period</div><div style="font-size:12px;opacity:0.85;margin-top:2px">Showing estimated value range based on comparable flat types nearby. Try extending the date range for actual transactions.</div></div>`;
     if(est){
       estCardEl.innerHTML=`
@@ -2627,6 +2655,7 @@ function renderPriceTab(result,asking,flatType,mb){
   if(tier<=4&&userFloor){
     const fm=floorPriceModel(records,userFloor,avgArea);
     if(fm&&fm.price){
+      _lastEstimMethod=fm.method;
       let methodTitle='',methodDetail='';
       if(fm.method==='regression'){
         methodTitle='Floor-adjusted estimate (regression)';
