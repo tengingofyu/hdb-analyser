@@ -2167,7 +2167,7 @@ function buildHeaders(){return API_KEY?{'x-api-key':API_KEY}:{};}
 function buildOMH(){return ONEMAP_TOKEN?{'Authorization':`Bearer ${ONEMAP_TOKEN}`}:{};}
 
 // ── Analytics (fire-and-forget; no-op if ANALYTICS_URL is empty) ──
-const ANALYTICS_URL=''; // ← Paste Apps Script web app URL here. See ANALYTICS_SETUP.md
+const ANALYTICS_URL='https://script.google.com/macros/s/AKfycby4XP2ecWQtL7baf-FfUR41H3vrue-POP-ZwNUIY1T0GkoVOumDYQRyuhRIogTiqNAs/exec';
 const SESSION_ID=Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,12);
 const IS_RETURNING=(()=>{try{const k='hdb_visited';if(localStorage.getItem(k))return true;localStorage.setItem(k,'1');return false;}catch(e){return false;}})();
 let _lastEstimMethod=null,_curTab=null,_tabAt=0;
