@@ -221,8 +221,6 @@ const ONEMAP_TOKEN=''; // OneMap token
 
 const API_HDB='https://data.gov.sg/api/action/datastore_search';
 const DS_HDB='d_8b84c4ee58e3cfc0ece0d773c8ca6abc';
-const DS_SCH='d_688b934f82c1059ed0a6993d2a829089';
-const DS_CC='d_696c994c50745b079b3684f0e90ffc53';
 const CHILDCARE_CENTRES=[
 ];
 const PRIMARY_SCHOOLS=[
@@ -527,19 +525,6 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
   cacheSet(cacheKey,all);return all;
 }
 
-async function fetchDataset(dsId,limit=500){
-  const cacheKey=`ds_${dsId}`,cached=cacheGet(cacheKey);if(cached)return cached;
-  let all=[],offset=0;
-  while(true){
-    const url=`${API_HDB}?resource_id=${dsId}&limit=${limit}&offset=${offset}`;
-    const resp=await fetch(url,{headers:buildHeaders()});const json=await resp.json();
-    if(json.code===24||json.name==='TOO_MANY_REQUESTS'){await sleep(12000);continue;}
-    if(!json.result?.records?.length)break;all=all.concat(json.result.records);
-    if(json.result.records.length<limit)break;offset+=limit;if(offset>5000)break;await sleep(300);
-  }
-  cacheSet(cacheKey,all);return all;
-}
-
 const GEO_CACHE_TTL=180*24*60*60*1000; // 6 months in ms
 const GEO_FAIL='__FAIL__'; // sentinel for failed lookups
 
@@ -791,11 +776,9 @@ function goToFullAnalysis(){
     analyseBtn.disabled=true;analyseBtn.textContent='Analysing...';
     showStatus('Running comparison search...');
     runFullFallback(selectedFlatType,adjBands,mb).then(async result=>{
-      let schools=[];try{schools=await fetchDataset(DS_SCH);}catch(e){}
-      let centres=[];try{centres=await fetchDataset(DS_CC);}catch(e){}
       showStatus('',false);
       renderPriceTab(result,asking,selectedFlatType,mb);
-      renderAmenitiesTab(schools,centres);
+      renderAmenitiesTab();
       renderValueTab(result?result.records:[],mb);
       document.getElementById('fullResults').style.display='block';
       showTab('price');
@@ -826,12 +809,9 @@ async function doFullAnalysis(){
   const asking=null;const mb=+document.getElementById('months_back').value;
   showStatus('Running comparison search...');
   const result=await runFullFallback(selectedFlatType,adjBands,mb);
-  showStatus('Loading schools and childcare...');
-  let schools=[];try{schools=await fetchDataset(DS_SCH);}catch(e){}
-  let centres=[];try{centres=await fetchDataset(DS_CC);}catch(e){}
   showStatus('',false);
   renderPriceTab(result,asking,selectedFlatType,mb);
-  renderAmenitiesTab(schools,centres);
+  renderAmenitiesTab();
   renderValueTab(result?result.records:[],mb);
   document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');setStep(3);
   btn.disabled=false;btn.textContent='Full analysis';
@@ -984,7 +964,7 @@ function renderTable(records,med){
   }).join('');
 }
 
-async function renderAmenitiesTab(schools,centres){
+async function renderAmenitiesTab(){
   if(!resolvedLat||!resolvedLng){document.getElementById('amenitiesContent').innerHTML='<p style="color:var(--text2);font-size:13px">Location unavailable.</p>';return;}
   const mrtNearby=MRT_STATIONS.map(s=>({...s,km:hkm(resolvedLat,resolvedLng,s.lat,s.lng)})).filter(s=>s.km<=2.0).sort((a,b)=>a.km-b.km).slice(0,5);
   const mrtHtml=mrtNearby.length?mrtNearby.map(s=>{
@@ -1006,8 +986,9 @@ async function renderAmenitiesTab(schools,centres){
   const s1km = schoolNearby.filter(s => s.km <= 1.0);
   const s2km = schoolNearby.filter(s => s.km > 1.0 && s.km <= 2.0);
   document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span>
-    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km — Phase 2B priority</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
-    <div><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km — Phase 2C priority</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>`;
+    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km (straight-line)</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
+    <div style="margin-bottom:0.5rem"><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km (straight-line)</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>
+    <p style="font-size:11px;color:var(--text3);margin-top:0.5rem;line-height:1.5">Approximate distances. For official P1 eligibility, check <a href="https://www.moe.gov.sg/schoolfinder" target="_blank" rel="noopener" style="color:#378ADD">MOE School Query Service</a> when registration opens (~June).</p>`;
   updateSchoolSignal(s1km, s2km);
   // Childcare requires server-side geocoding (OneMap blocks CORS from browsers)
 // Childcare centres - static lookup updated monthly by GitHub Actions
