@@ -2179,7 +2179,7 @@ function _sendEvent(payload){
     else{fetch(ANALYTICS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(()=>{});}
   }catch(e){}
 }
-function postal2(p){return /^\d{6}$/.test(p)?p.slice(0,2):null;}
+function fullPostal(p){return /^\d{6}$/.test(p)?p:null;}
 function logSearch(o){try{_sendEvent({event_type:'search',ts:new Date().toISOString(),session_id:SESSION_ID,is_returning:IS_RETURNING,...o});}catch(e){}}
 function logError(o){try{_sendEvent({event_type:'error',ts:new Date().toISOString(),...o});}catch(e){}}
 function logTabSwitch(newTab){try{
@@ -2391,7 +2391,7 @@ async function doQuickSearch(){
     cm.textContent='Please wait before searching again';cm.style.cssText='font-size:11px;color:var(--text3);text-align:center;margin-top:5px';cm.id='cooldownMsg';
     document.getElementById('quickBtn').after(cm);setTimeout(()=>cm.remove(),2000);return;
   }
-  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({postal_2:null,flat_type:null,error_type:'session_cap_hit'});return;}
+  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({postal:null,flat_type:null,error_type:'session_cap_hit'});return;}
   const postal=document.getElementById('postal').value.trim();
   const flatType=document.getElementById('quick_flat_type').value;
   if(!/^\d{6}$/.test(postal)){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;}
@@ -2402,7 +2402,7 @@ async function doQuickSearch(){
   showStatus('Resolving postal code...');
   try{
     const res=await geocodeOM(postal);
-    if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';logError({postal_2:postal2(postal),flat_type:flatType,error_type:'postal_not_found'});return;}
+    if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';logError({postal:fullPostal(postal),flat_type:flatType,error_type:'postal_not_found'});return;}
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
@@ -2449,7 +2449,7 @@ async function doQuickSearch(){
       document.getElementById('floor_num').value=userFloorQuick;
     }
     setStep(2);
-  }catch(e){showStatus('Connection error. Try again.');logError({postal_2:postal2(postal),flat_type:flatType,error_type:'connection_error'});}
+  }catch(e){showStatus('Connection error. Try again.');logError({postal:fullPostal(postal),flat_type:flatType,error_type:'connection_error'});}
   btn.disabled=false;btn.textContent='Get ballpark price';
 }
 
@@ -2582,7 +2582,7 @@ async function doFullAnalysis(){
   renderAmenitiesTab();
   renderValueTab(result?result.records:[],mb);
   document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');setStep(3);
-  logSearch({postal_2:postal2(document.getElementById('postal').value.trim()),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
+  logSearch({postal:fullPostal(document.getElementById('postal').value.trim()),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
   btn.disabled=false;btn.textContent='Full analysis';
 }
 

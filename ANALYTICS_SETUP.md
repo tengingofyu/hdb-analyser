@@ -25,11 +25,11 @@ In the sheet, click **Extensions → Apps Script**. A new tab opens with a code 
 // ──────────────────────────────────────────────────────────────
 
 const SCHEMAS = {
-  search: ['ts', 'postal_2', 'flat_type', 'floor_entered', 'months_back',
+  search: ['ts', 'postal', 'flat_type', 'floor_entered', 'months_back',
            'result_tier', 'result_count', 'estimation_method',
            'is_returning', 'session_id'],
   tab:    ['ts', 'session_id', 'tab', 'dwell_seconds'],
-  error:  ['ts', 'postal_2', 'flat_type', 'error_type'],
+  error:  ['ts', 'postal', 'flat_type', 'error_type'],
 };
 
 function doPost(e) {
@@ -67,9 +67,9 @@ function validate(body, schema) {
     const s = String(v);
     if (s.length > 200) return false;                   // length cap
   }
-  if ('postal_2' in body && body.postal_2 != null) {
-    const p = String(body.postal_2);
-    if (!/^\d{2}$/.test(p)) return false;               // exactly 2 digits
+  if ('postal' in body && body.postal != null) {
+    const p = String(body.postal);
+    if (!/^\d{6}$/.test(p)) return false;               // exactly 6 digits
   }
   if ('session_id' in body && body.session_id != null) {
     if (!/^[A-Za-z0-9_-]{4,40}$/.test(String(body.session_id))) return false;
@@ -113,7 +113,7 @@ Save with **Ctrl/Cmd + S**. Name the project anything (e.g. `hdb-analytics`).
 4. Click **Deploy**.
 5. The first deploy will ask for permissions — grant them. Google will warn that the app is unverified; click **Advanced → Go to <project> (unsafe)**. This is normal for personal scripts.
 6. Copy the **Web app URL**. It looks like:
-   ```
+   ```	
    https://script.google.com/macros/s/AKfycby...........XXX/exec
    ```
 
@@ -147,7 +147,7 @@ If `ANALYTICS_URL` is left empty, all logging is silently no-ops — no errors, 
 | Field | Example |
 |---|---|
 | ts | `2026-05-03T11:42:18.901Z` |
-| postal_2 | `12` (first 2 digits only) |
+| postal | `123311` (full 6-digit postal — block-level granularity, hundreds of units per block) |
 | flat_type | `4 ROOM` |
 | floor_entered | `true` |
 | months_back | `12` |
@@ -169,17 +169,18 @@ If `ANALYTICS_URL` is left empty, all logging is silently no-ops — no errors, 
 | Field | Example |
 |---|---|
 | ts | `2026-05-03T11:42:00.000Z` |
-| postal_2 | `12` (or null) |
+| postal | `123311` (or null) |
 | flat_type | `4 ROOM` (or null) |
 | error_type | `postal_not_found` / `connection_error` / `session_cap_hit` |
 
 ## What is **not** logged
 
-- Full postal codes (only first 2 digits)
 - Asking prices entered by the user
 - IP addresses (Apps Script `doPost` doesn't expose them)
 - User-agent strings
 - Cookies or persistent identifiers (session_id is random per page-load and lives only in memory)
+
+The full 6-digit postal code is logged. In Singapore, a 6-digit postal identifies a specific HDB block (typically hundreds of units), not an individual household.
 
 ## Updating the script later
 
