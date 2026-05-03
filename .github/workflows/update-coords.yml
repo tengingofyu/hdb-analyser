@@ -92,22 +92,54 @@ jobs:
             throw new Error(`Cannot find ${name} in index.html`);
           }
 
-          // Fetch schools
+          // Fetch primary schools
           const schoolRecs = await fetchDataset('d_688b934f82c1059ed0a6993d2a829089');
-          const schoolEntries = schoolRecs.filter(r=>r.mainlevel_code==='PRIMARY').map(r=>({name:r.school_name,postal:r.postal_code}));
-          const schools = await geocodeAll(schoolEntries, 'schools');
+          const primaries = schoolRecs.filter(r=>r.mainlevel_code==='PRIMARY').map(r=>({name:r.school_name,postal:r.postal_code}));
+          const schools = await geocodeAll(primaries, 'schools');
 
-          // Fetch childcare
-          const ccRecs = await fetchDataset('d_696c994c50745b079b3684f0e90ffc53', 500, 'centre_name,postal_code');
-          const ccEntries = ccRecs.map(r=>({name:r.centre_name||r.organisation_name||'',postal:r.postal_code})).filter(r=>r.name&&r.postal);
-          const centres = await geocodeAll(ccEntries, 'childcare');
+          // Fetch ECDA centres, split by service_model (CC/EYC/EYC-DS = childcare, KN = kindergarten, drop DS)
+          const ecdaRecs = await fetchDataset('d_696c994c50745b079b3684f0e90ffc53');
+          const ccEntries = ecdaRecs.filter(r=>['CC','EYC','EYC-DS'].includes(r.service_model)).map(r=>({name:r.centre_name||'',postal:r.postal_code})).filter(r=>r.name&&r.name!=='na'&&r.postal);
+          const knEntries = ecdaRecs.filter(r=>r.service_model==='KN').map(r=>({name:r.centre_name||'',postal:r.postal_code})).filter(r=>r.name&&r.name!=='na'&&r.postal);
+          const childcare = await geocodeAll(ccEntries, 'childcare');
+          const ecdaKindergartens = await geocodeAll(knEntries, 'ECDA kindergartens');
+
+          // Normalize MOE Kindergarten names from ECDA to consistent uppercase form
+          for (const k of ecdaKindergartens) if (/^MOE KINDERGARTEN @ /i.test(k.n)) k.n = k.n.toUpperCase();
+
+          // Fetch MOE Kindergartens — names from MOE locations page, coords from primary school list.
+          // Skip any MK already present in ECDA KN (case-insensitive name match).
+          const keyof = s => s.toUpperCase().replace(/[^A-Z0-9]/g,'');
+          const ecdaKnKeys = new Set(ecdaKindergartens.map(k=>keyof(k.n)));
+          const mkPage = await (await fetch('https://www.moe.gov.sg/preschool/moe-kindergarten/locations')).text();
+          const mkNames = [...new Set([...mkPage.matchAll(/MOE Kindergarten @ ([A-Za-z][A-Za-z0-9 \-]{0,40})/g)].map(m=>m[1].trim()))].filter(s=>!/ceased|will open/i.test(s));
+          const norm = s => s.toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();
+          const priIdx = {};
+          for (const s of schools) priIdx[norm(s.n)] = s;
+          const moeMKs = [];
+          let mkSkipped = 0;
+          for (const mk of mkNames) {
+            const fullName = `MOE KINDERGARTEN @ ${mk.toUpperCase()}`;
+            if (ecdaKnKeys.has(keyof(fullName))) { mkSkipped++; continue; }
+            const candidates = [norm(mk+' PRIMARY SCHOOL'), norm(mk+' SCHOOL'), norm(mk)];
+            let hit = candidates.map(c=>priIdx[c]).find(Boolean);
+            if (!hit) { const mn=norm(mk); for (const k in priIdx) if (mn===k.replace(' PRIMARY SCHOOL','')||k.includes(mn)) {hit=priIdx[k]; break;} }
+            if (hit) moeMKs.push({n:fullName, lat:hit.lat, lng:hit.lng});
+          }
+          console.log(`MOE MKs: ${moeMKs.length} added (${mkSkipped} already in ECDA, ${mkNames.length-moeMKs.length-mkSkipped} unmatched)`);
+          const kindergartens = [...ecdaKindergartens, ...moeMKs];
 
           // Update index.html
+          function buildConstFromObjs(name, items) {
+            const lines = items.map(e=>`  {n:'${e.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',lat:${e.lat},lng:${e.lng}}`);
+            return `const ${name}=[\n${lines.join(',\n')}\n];`;
+          }
           let html = fs.readFileSync('index.html','utf8');
           html = inject(html, 'PRIMARY_SCHOOLS', buildConst('PRIMARY_SCHOOLS', schools));
-          html = inject(html, 'CHILDCARE_CENTRES', buildConst('CHILDCARE_CENTRES', centres));
+          html = inject(html, 'CHILDCARE_CENTRES', buildConstFromObjs('CHILDCARE_CENTRES', childcare));
+          html = inject(html, 'KINDERGARTENS', buildConstFromObjs('KINDERGARTENS', kindergartens));
           fs.writeFileSync('index.html', html);
-          console.log('index.html updated');
+          console.log(`index.html updated (${schools.length} primaries, ${childcare.length} childcare, ${kindergartens.length} kindergartens incl. ${moeMKs.length} MOE MK)`);
           EOF
 
       - name: Commit and push if changed
