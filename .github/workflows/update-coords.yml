@@ -82,7 +82,10 @@ jobs:
           }
 
           function buildConst(name, entries) {
-            const items = entries.map(e => `  {n:'${e.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',lat:${e.lat},lng:${e.lng}}`);
+            // Escape < as < so a name containing "</script>" cannot break out of the inline
+            // script tag. Backslash and apostrophe are the other in-string metacharacters.
+            const esc = s => s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'\\u003c');
+            const items = entries.map(e => `  {n:'${esc(e.n)}',lat:${e.lat},lng:${e.lng}}`);
             return `const ${name}=[\n${items.join(',\n')}\n];`;
           }
 
@@ -131,7 +134,8 @@ jobs:
 
           // Update index.html
           function buildConstFromObjs(name, items) {
-            const lines = items.map(e=>`  {n:'${e.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',lat:${e.lat},lng:${e.lng}}`);
+            const esc = s => s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'\\u003c');
+            const lines = items.map(e=>`  {n:'${esc(e.n)}',lat:${e.lat},lng:${e.lng}}`);
             return `const ${name}=[\n${lines.join(',\n')}\n];`;
           }
           let html = fs.readFileSync('index.html','utf8');
