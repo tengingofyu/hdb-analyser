@@ -200,6 +200,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
   </div>
 
   <div class="attribution">
+    Anonymous usage stats (town, flat type, result) are logged to improve the tool. Respects Do Not Track.<br><br>
     Contains information from
     <a href="https://data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view" target="_blank">HDB Resale Flat Prices</a>,
     <a href="https://data.gov.sg/datasets/d_688b934f82c1059ed0a6993d2a829089/view" target="_blank">MOE General Information of Schools</a>, and
@@ -1040,6 +1041,7 @@ const SESSION_ID=Math.random().toString(36).slice(2,12)+Math.random().toString(3
 const IS_RETURNING=(()=>{try{const k='hdb_visited';if(localStorage.getItem(k))return true;localStorage.setItem(k,'1');return false;}catch(e){return false;}})();
 let _lastEstimMethod=null,_curTab=null,_tabAt=0;
 function _sendEvent(payload){
+  if(navigator.doNotTrack==='1'||window.doNotTrack==='1')return;
   if(!ANALYTICS_URL)return;
   try{
     const body=JSON.stringify(payload);
@@ -1047,7 +1049,8 @@ function _sendEvent(payload){
     else{fetch(ANALYTICS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(()=>{});}
   }catch(e){}
 }
-function fullPostal(p){return /^\d{6}$/.test(p)?p:null;}
+function coarseTown(){return resolvedTown||null;}
+function sector(){const raw=document.getElementById('postal').value.trim();return /^\d{6}$/.test(raw)?raw.slice(0,2):null;}
 function logSearch(o){try{_sendEvent({event_type:'search',ts:new Date().toISOString(),session_id:SESSION_ID,is_returning:IS_RETURNING,...o});}catch(e){}}
 function logError(o){try{_sendEvent({event_type:'error',ts:new Date().toISOString(),...o});}catch(e){}}
 function logTabSwitch(newTab){try{
@@ -1297,7 +1300,7 @@ async function doQuickSearch(){
     cm.textContent='Please wait before searching again';cm.style.cssText='font-size:11px;color:var(--text3);text-align:center;margin-top:5px';cm.id='cooldownMsg';
     document.getElementById('quickBtn').after(cm);setTimeout(()=>cm.remove(),2000);return;
   }
-  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({postal:null,flat_type:null,error_type:'session_cap_hit'});return;}
+  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({flat_type:null,error_type:'session_cap_hit'});return;}
   const postal=document.getElementById('postal').value.trim();
   const flatType=document.getElementById('quick_flat_type').value;
   if(!/^\d{6}$/.test(postal)){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;}
@@ -1308,7 +1311,7 @@ async function doQuickSearch(){
   showStatus('Resolving postal code...');
   try{
     const res=await geocodeOM(postal);
-    if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';logError({postal:fullPostal(postal),flat_type:flatType,error_type:'postal_not_found'});return;}
+    if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';logError({postal_2:sector(),flat_type:flatType,error_type:'postal_not_found'});return;}
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
@@ -1355,7 +1358,7 @@ async function doQuickSearch(){
       document.getElementById('floor_num').value=userFloorQuick;
     }
     setStep(2);
-  }catch(e){showStatus('Connection error. Try again.');logError({postal:fullPostal(postal),flat_type:flatType,error_type:'connection_error'});}
+  }catch(e){showStatus('Connection error. Try again.');logError({postal_2:sector(),flat_type:flatType,error_type:'connection_error'});}
   btn.disabled=false;btn.textContent='Get ballpark price';
 }
 
@@ -1490,7 +1493,7 @@ async function doFullAnalysis(){
   renderAmenitiesTab();
   renderValueTab(result?result.records:[],mb);
   document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');setStep(3);
-  logSearch({postal:fullPostal(document.getElementById('postal').value.trim()),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
+  logSearch({town:coarseTown(),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
   btn.disabled=false;btn.textContent='Full analysis';
 }
 
