@@ -1247,7 +1247,10 @@ async function doQuickSearch(){
     document.getElementById('quickBtn').after(cm);setTimeout(()=>cm.remove(),2000);return;
   }
   if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({postal_2:sector(),flat_type:null,error_type:'session_cap_hit'});return;}
-  const postal=document.getElementById('postal').value.trim();
+  // Zero-pad 4–5-digit numeric input to handle legit leading-zero postals (e.g. "88256" → "088256").
+  // Empty / non-numeric / >6 chars fall through unpadded and hit the "Enter a valid postal" error below.
+  const rawPostal=document.getElementById('postal').value.trim();
+  const postal=/^\d{4,5}$/.test(rawPostal)?rawPostal.padStart(6,'0'):rawPostal;
   const flatType=document.getElementById('quick_flat_type').value;
   if(!/^\d{6}$/.test(postal)){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;}
   if(!flatType){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Select a flat type</div>';return;}
@@ -1294,7 +1297,9 @@ async function doQuickSearch(){
       if(streetData.length)allStreetRecs=[...allBlockRecs,...streetData.filter(r=>r.block!==resolvedBlock)];
       showStatus('',false);
     }
-    const userFloorQuick=+document.getElementById('quick_floor').value||0;
+    // Clamp to 0 — negative floor values fed to the pipeline otherwise pass through as truthy
+    // and produce nonsense like "Floor -1: regression on ..."
+    const userFloorQuick=Math.max(0,+document.getElementById('quick_floor').value||0);
     // Same fallback progression the full analysis uses, so identical inputs land on the identical
     // pool and the two screens can't diverge on numbers. Skip the async tier-6 town fetch to keep
     // the quick check fast; full analysis will retry with tier 6 if needed.
@@ -1355,7 +1360,7 @@ function renderQuickResult(qResult,floor,flatType){
 }
 
 function goToFullAnalysis(){
-  const qFloor=+document.getElementById('quick_floor').value||0;
+  const qFloor=Math.max(0,+document.getElementById('quick_floor').value||0);
   if(qFloor){
     // Floor already known — skip step 2, go straight to full analysis
     document.getElementById('quickResult').style.display='none';
@@ -1428,7 +1433,7 @@ function newSearch(){
 // ── Step 2: Full Analysis ──────────────────────────────────
 async function doFullAnalysis(){
   const btn=document.getElementById('analyseBtn');btn.disabled=true;btn.textContent='Analysing...';
-  const userFloorRaw=+document.getElementById('floor_num').value;
+  const userFloorRaw=Math.max(0,+document.getElementById('floor_num').value||0);
   const userFloor=userFloorRaw||1;
   selectedFlatType=quickFlatType;selectedBand=getBand(userFloor);adjBands=getAdj(selectedBand);
   const asking=null;const mb=+document.getElementById('months_back').value;
@@ -1493,7 +1498,7 @@ async function renderPriceTab(result,asking,flatType,mb){
   const lys=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null),medLease=lys.length?Math.round(pct(lys,50)):null;
 
   // Floor-aware estimate — same canonical pipeline the quick check uses, so labels line up.
-  const userFloor=+document.getElementById('floor_num').value||0;
+  const userFloor=Math.max(0,+document.getElementById('floor_num').value||0);
   if(userFloor){
     const est=estimateFromPool(records,userFloor,avgArea,tier);
     if(est){
@@ -1691,7 +1696,7 @@ function renderValueTab(records,mb){
   let fpPct=null;if(hf.length>=2&&lf.length>=2)fpPct=Math.round(((pct(hf,50)-pct(lf,50))/pct(lf,50))*100);
   const allSqm=records.map(r=>+r.floor_area_sqm),medSqm=allSqm.length?Math.round(pct(allSqm,50)):null;
   const bSqm=allBlockRecs.filter(r=>r.flat_type===selectedFlatType).map(r=>+r.floor_area_sqm),medBSqm=bSqm.length?Math.round(pct(bSqm,50)):null;
-  const userFloor=+document.getElementById('floor_num').value||1,signals=[];
+  const userFloor=Math.max(1,+document.getElementById('floor_num').value||1),signals=[];
   if(medLease!==null){const pos=medLease>=60,neg=medLease<30;signals.push({icon:'📋',iconCls:pos?'signal-icon-pos':neg?'signal-icon-neg':'signal-icon-cau',badgeCls:pos?'sb-pos':neg?'sb-neg':'sb-cau',badge:pos?'Positive':neg?'Caution':'Watch',name:'Remaining lease',desc:pos?`${medLease} years remaining — CPF unrestricted, strong resale appeal.`:neg?`${medLease} years remaining — CPF cannot be used. Bank loan restrictions apply.`:`${medLease} years remaining — CPF may be restricted. Verify with CPF Board.`});}
   if(nearestMrt){const km=nearestMrt.km,pos=km<0.5,good=km<1.0,neu=km<2.0;signals.push({icon:'🚇',iconCls:pos||good?'signal-icon-pos':neu?'signal-icon-neu':'signal-icon-neg',badgeCls:pos?'sb-pos':good?'sb-pos':neu?'sb-neu':'sb-neg',badge:pos?'Strong positive':good?'Positive':neu?'Neutral':'Negative',name:'MRT proximity',desc:`${esc(nearestMrt.n)} (${esc(nearestMrt.l)}) is ${Math.round(km*1000)}m away (~${Math.round(km*1000/80)} min walk). ${pos?'Walking distance — strong value driver.':good?'Within 1km — solid connectivity premium.':neu?'1–2km — moderate transit access.':'Beyond 2km.'}`});}
   signals.push({icon:'🏫',iconCls:'signal-icon-neu',badgeCls:'sb-neu',badge:'Loading',name:'Primary school proximity',desc:'Checking nearby schools...',id:'school-signal'});
@@ -1700,8 +1705,16 @@ function renderValueTab(records,mb){
   if(medBSqm&&medSqm){const diff=medBSqm-medSqm,larger=diff>5;signals.push({icon:'📐',iconCls:larger?'signal-icon-pos':'signal-icon-neu',badgeCls:larger?'sb-pos':'sb-neu',badge:larger?'Above median size':diff<-5?'Below median size':'At median size',name:'Unit size',desc:`Block ${esc(resolvedBlock)} ${esc(selectedFlatType)} median: ${medBSqm} sqm. Area average: ${medSqm} sqm. ${larger?'Larger than area average — size premium applies.':diff<-5?'Smaller than area average.':'Typical size.'}`});}
   signals.push({icon:'🗺️',iconCls:'signal-icon-neu',badgeCls:'sb-neu',badge:'Manual check',name:'URA Master Plan',desc:`Check upcoming developments that could affect value. <a href="https://www.ura.gov.sg/maps" target="_blank" style="color:#378ADD">View URA Master Plan →</a>`});
   const pos=signals.filter(s=>s.badgeCls==='sb-pos').length,neg=signals.filter(s=>s.badgeCls==='sb-neg').length,cau=signals.filter(s=>s.badgeCls==='sb-cau').length;
-  const summaryCol=neg>=2?'var(--err-bg)':cau>=2?'var(--warn-bg)':'var(--ok-bg)',summaryTCol=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':'var(--ok-text)';
-  const summaryMsg=neg>=2?`${neg} signals requiring attention`:cau>=2?`${cau} factors worth checking`:`${pos} positive signal${pos!==1?'s':''} — broadly favourable`;
+  // "broadly favourable" only when there's ≥1 positive; when the summary is dominated by
+  // neutrals/watches/negatives and there are no positives, use honest wording + neutral bar.
+  const summaryCol=neg>=2?'var(--err-bg)':cau>=2?'var(--warn-bg)':pos>0?'var(--ok-bg)':'var(--neu-bg)';
+  const summaryTCol=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':pos>0?'var(--ok-text)':'var(--text)';
+  const summaryMsg=
+    neg>=2?`${neg} signals requiring attention`:
+    cau>=2?`${cau} factors worth checking`:
+    pos>0?`${pos} positive signal${pos!==1?'s':''} — broadly favourable`:
+    neg+cau>0?`${neg+cau} mixed signal${neg+cau!==1?'s':''} — see details below`:
+    `Neutral outlook — no strong signals either way`;
   document.getElementById('valueSummary').innerHTML=`<div class="summary-bar" style="background:${summaryCol};color:${summaryTCol}"><div class="summary-dots">${Array(pos).fill(`<div class="dot" style="background:#1D9E75"></div>`).join('')}${Array(cau).fill(`<div class="dot" style="background:#BA7517"></div>`).join('')}${Array(neg).fill(`<div class="dot" style="background:#E24B4A"></div>`).join('')}</div><span style="font-weight:500">${summaryMsg}</span></div>`;
   document.getElementById('valueSignals').innerHTML=signals.map(s=>`<div class="signal-item"${s.id?` id="${s.id}"`:''}>  <div class="signal-left"><div class="signal-icon ${s.iconCls}">${s.icon}</div><div><div class="signal-name">${s.name}</div><div class="signal-desc">${s.desc}</div></div></div><span class="signal-badge ${s.badgeCls}">${s.badge}</span></div>`).join('');
   let leaseHtml='<p style="font-size:13px;color:var(--text2)">No lease data.</p>';
