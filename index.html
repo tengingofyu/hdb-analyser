@@ -1418,8 +1418,13 @@ function renderQuickResult(qResult,floor,flatType){
   const fm=floorPriceModel(records,floor,medArea);
   if(floor&&fm&&fm.price){
     heroPrice.textContent=sgd(fm.price);
+    const scopeWord=(qResult&&qResult.id===1)?'in this block':`on ${qResult.desc}`;
     let methodNote='';
-    if(fm.method==='regression')methodNote=`Floor ${floor} estimate: regression on ${fm.txCount} tx across ${fm.bandCount} storey bands · ~S$${fm.perFloor.toLocaleString()}/floor in this block`;
+    if(fm.method==='regression'){
+      methodNote=`Floor ${floor} estimate: regression on ${fm.txCount} tx across ${fm.bandCount} storey bands`;
+      if(fm.perFloorTrusted&&fm.perFloor!=null)methodNote+=` · ~S$${fm.perFloor.toLocaleString()}/floor ${scopeWord}`;
+      if(fm.extrapolated)methodNote+=` · floor ${floor} is outside observed range — extrapolated, treat as rough`;
+    }
     else if(fm.method==='band')methodNote=`Floor ${floor} estimate: median of ${fm.bandN} tx in band ${esc(fm.bandLabel)}`;
     else if(fm.method==='fallback')methodNote=`Floor ${floor} estimate: ${fm.adjPct>=0?'+':''}${fm.adjPct}% heuristic (only ${fm.txCount} tx, low confidence)`;
     heroRange.textContent=`Range: ${sgd(fm.low)} – ${sgd(fm.high)} · ${methodNote}`;
@@ -1573,7 +1578,9 @@ function renderPriceTab(result,asking,flatType,mb){
       let methodTitle='',methodDetail='';
       if(fm.method==='regression'){
         methodTitle='Floor-adjusted estimate (regression)';
-        methodDetail=`Linear regression on ${fm.txCount} transactions across ${fm.bandCount} storey bands. Each floor adds ~S$${fm.perFloor.toLocaleString()} in this block. Predicted PSF for floor ${userFloor}: S$${fm.predPsf}/sqft.`;
+        const scopeWord=tier<=2?'in this block':`across nearby blocks on ${esc(resolvedStreet)}`;
+        methodDetail=`Linear regression on ${fm.txCount} transactions across ${fm.bandCount} storey bands. Each floor adds ~S$${fm.perFloor.toLocaleString()} ${scopeWord}. Predicted PSF for floor ${userFloor}: S$${fm.predPsf}/sqft.`;
+        if(fm.extrapolated)methodDetail+=` Floor ${userFloor} is outside the observed range — extrapolated, treat as rough.`;
       } else if(fm.method==='band'){
         methodTitle='Floor-adjusted estimate (band median)';
         methodDetail=`Median of ${fm.bandN} transactions in storey band ${esc(fm.bandLabel)}. Insufficient spread for regression (${fm.bandCount} band${fm.bandCount===1?'':'s'} in data).`;
