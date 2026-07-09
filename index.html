@@ -217,9 +217,9 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 
 <script>
 // ============================================================
-// KEYS — PASTE YOUR VALUES HERE, NOWHERE ELSE NEEDED
-// (data.gov.sg's datastore_search is a public endpoint, no key needed.)
-const ONEMAP_TOKEN=''; // OneMap token
+// data.gov.sg's datastore_search and OneMap's elastic/search are
+// both public endpoints — no auth needed for the calls this page
+// makes.
 // ============================================================
 
 const API_HDB='https://data.gov.sg/api/action/datastore_search';
@@ -1034,7 +1034,6 @@ let quickFlatType='',chartInstance=null,lastSearchTime=0,sessionSearchCount=0;
 const COOLDOWN_MS=3000,SESSION_CAP=20;
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-function buildOMH(){return ONEMAP_TOKEN?{'Authorization':`Bearer ${ONEMAP_TOKEN}`}:{};}
 
 // ── Analytics (fire-and-forget; no-op if ANALYTICS_URL is empty) ──
 const ANALYTICS_URL='https://script.google.com/macros/s/AKfycbxOI5MsylxwnrpRwofg4r1dKFMCP_d6pmegGenzWedEeXV5iDoOkj8EOdhDYjnuXgox/exec';
@@ -1227,7 +1226,7 @@ async function geocodeOM(query){
   if(local!==undefined)return local===GEO_FAIL?null:local;
   // Make API call
   try{
-    const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(clean)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`,{headers:buildOMH()});
+    const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(clean)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`);
     if(!r.ok){geoCacheSet(cacheKey,GEO_FAIL);cacheSet('om_'+cacheKey,GEO_FAIL);return null;}
     const j=await r.json();
     const result=j.results?.length?j.results[0]:null;

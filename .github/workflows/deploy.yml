@@ -1,4 +1,4 @@
-name: Deploy with keys
+name: Deploy to Pages
 
 on:
   push:
@@ -14,10 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Inject OneMap token
-        run: |
-          sed -i "s|const ONEMAP_TOKEN='';|const ONEMAP_TOKEN='${{ secrets.ONEMAP_TOKEN }}';|" index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
