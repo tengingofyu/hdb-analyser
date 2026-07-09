@@ -1063,6 +1063,7 @@ function logTabSwitch(newTab){try{
 window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')logTabSwitch(null);});
 window.addEventListener('pagehide',()=>logTabSwitch(null));
 function sgd(n){return'S$'+Math.round(n).toLocaleString();}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function psfCalc(p,s){return Math.round(p/(s*10.764));}
 function pct(arr,p){const s=[...arr].sort((a,b)=>a-b);const i=(p/100)*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);}
 function hkm(la1,lo1,la2,lo2){const R=6371,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180;const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
@@ -1316,7 +1317,7 @@ async function doQuickSearch(){
     if(!res){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Postal code not found.</div>';showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';logError({postal_2:sector(),flat_type:flatType,error_type:'postal_not_found'});return;}
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
-    document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${resolvedBlock}, ${resolvedStreet}</div>`;
+    document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok">Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)}</div>`;
     showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
     // Fetch all records for this block number (may include same block number from other towns)
@@ -1382,7 +1383,7 @@ function renderQuickResult(qResult,floor,flatType){
     const est=buildEstimate(flatType);
     document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock}`;
     if(!est){
-      estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">No ${flatType} transactions found</div><div style="font-size:12px;margin-top:3px">No comparable data available. Try extending the date range to 24–36 months.</div></div>`;
+      estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">No ${esc(flatType)} transactions found</div><div style="font-size:12px;margin-top:3px">No comparable data available. Try extending the date range to 24–36 months.</div></div>`;
       heroPrice.textContent='—';heroRange.textContent='No data available.';
       document.getElementById('qr-count').textContent='0';document.getElementById('qr-psf').textContent='—';document.getElementById('qr-lease').textContent='—';
       document.getElementById('qr-source').textContent='';document.getElementById('qr-verdict').style.display='none';return;
@@ -1394,7 +1395,7 @@ function renderQuickResult(qResult,floor,flatType){
     const adjLow=floor?Math.round(est.estLow*floorAdj):est.estLow;
     const adjHigh=floor?Math.round(est.estHigh*floorAdj):est.estHigh;
     const floorNote=floor?` · floor ${floor} applied (${floorAdj>=1?'+':''}${Math.round((floorAdj-1)*100)}%)`:'· mid-floor assumed';
-    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${flatType} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}${floorNote}. Confidence: ${est.confidence}. Not a formal valuation.</div></div>`;
+    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${esc(flatType)} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${esc(est.comparableFlatType)} transactions on ${esc(resolvedStreet)}${floorNote}. Confidence: ${esc(est.confidence)}. Not a formal valuation.</div></div>`;
     heroPrice.textContent=sgd(adjMid);
     heroRange.textContent=`Estimated range: ${sgd(adjLow)} – ${sgd(adjHigh)}`;
     document.getElementById('qr-count').textContent='Est.';document.getElementById('qr-psf').textContent='S$'+est.adjustedPsf;document.getElementById('qr-lease').textContent='—';
@@ -1419,7 +1420,7 @@ function renderQuickResult(qResult,floor,flatType){
     heroPrice.textContent=sgd(fm.price);
     let methodNote='';
     if(fm.method==='regression')methodNote=`Floor ${floor} estimate: regression on ${fm.txCount} tx across ${fm.bandCount} storey bands · ~S$${fm.perFloor.toLocaleString()}/floor in this block`;
-    else if(fm.method==='band')methodNote=`Floor ${floor} estimate: median of ${fm.bandN} tx in band ${fm.bandLabel}`;
+    else if(fm.method==='band')methodNote=`Floor ${floor} estimate: median of ${fm.bandN} tx in band ${esc(fm.bandLabel)}`;
     else if(fm.method==='fallback')methodNote=`Floor ${floor} estimate: ${fm.adjPct>=0?'+':''}${fm.adjPct}% heuristic (only ${fm.txCount} tx, low confidence)`;
     heroRange.textContent=`Range: ${sgd(fm.low)} – ${sgd(fm.high)} · ${methodNote}`;
   } else {
@@ -1470,7 +1471,7 @@ function goToFullAnalysis(){
     document.getElementById('step1-panel').style.display='none';
     document.getElementById('step2-panel').style.display='block';
     document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label==='Mid-low (7–12)'?' selected':''}>${b.label}</option>`).join('');
-    document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${quickFlatType}. Enter your floor to refine the analysis.</div>`;
+    document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${esc(quickFlatType)}. Enter your floor to refine the analysis.</div>`;
     setStep(2);
   }
 }
@@ -1523,7 +1524,7 @@ function renderPriceTab(result,asking,flatType,mb){
     // No direct data — show estimation
     const est=buildEstimate(flatType);
     _lastEstimMethod=est?'estimate':null;
-    document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No ${flatType} transactions found for Block ${resolvedBlock} in this period</div><div style="font-size:12px;opacity:0.85;margin-top:2px">Showing estimated value range based on comparable flat types nearby. Try extending the date range for actual transactions.</div></div>`;
+    document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No ${esc(flatType)} transactions found for Block ${esc(resolvedBlock)} in this period</div><div style="font-size:12px;opacity:0.85;margin-top:2px">Showing estimated value range based on comparable flat types nearby. Try extending the date range for actual transactions.</div></div>`;
     if(est){
       estCardEl.innerHTML=`
         <div class="card">
@@ -1532,8 +1533,8 @@ function renderPriceTab(result,asking,flatType,mb){
           <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Estimated range: ${sgd(est.estLow)} – ${sgd(est.estHigh)}</div>
           <div class="est-method">
             <div class="est-method-title">How this estimate was calculated</div>
-            <div class="est-step"><div class="est-step-num">1</div><div><strong>Comparable data:</strong> ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}. Median price ${sgd(est.comparableMedian)}, median PSF S$${est.medPsf}/sqft.</div></div>
-            <div class="est-step"><div class="est-step-num">2</div><div><strong>Size adjustment:</strong> ${flatType} units are typically ~${est.targetSqm} sqm (${est.targetSqft} sqft). Larger units trade at a lower PSF — applied ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% PSF adjustment = S$${est.adjustedPsf}/sqft.</div></div>
+            <div class="est-step"><div class="est-step-num">1</div><div><strong>Comparable data:</strong> ${est.comparableCount} ${esc(est.comparableFlatType)} transactions on ${esc(resolvedStreet)}. Median price ${sgd(est.comparableMedian)}, median PSF S$${est.medPsf}/sqft.</div></div>
+            <div class="est-step"><div class="est-step-num">2</div><div><strong>Size adjustment:</strong> ${esc(flatType)} units are typically ~${est.targetSqm} sqm (${est.targetSqft} sqft). Larger units trade at a lower PSF — applied ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% PSF adjustment = S$${est.adjustedPsf}/sqft.</div></div>
             <div class="est-step"><div class="est-step-num">3</div><div><strong>Estimated midpoint:</strong> S$${est.adjustedPsf}/sqft × ${est.targetSqft} sqft = ${sgd(est.estMid)}.</div></div>
             <div class="est-step"><div class="est-step-num">4</div><div><strong>Range:</strong> 25th–75th percentile of comparable PSFs (${est.comparableCount} tx) scaled to target size = ${sgd(est.estLow)} to ${sgd(est.estHigh)}.</div></div>
           </div>
@@ -1553,7 +1554,7 @@ function renderPriceTab(result,asking,flatType,mb){
   estCardEl.innerHTML='';
   const{tier,records,attempted}=result;
   const bannerClass=tier<=2?'fb-exact':tier<=4?'fb-block':tier===5?'fb-street':'fb-town';
-  const bannerTitle=tier<=2?`Block ${resolvedBlock} transactions`:tier<=4?`No ${selectedFlatType} at Block ${resolvedBlock} in this period — showing nearby blocks on ${resolvedStreet}`:tier===5?`No ${selectedFlatType} data on ${resolvedStreet} — showing similar-sized units nearby`:`Limited local data — showing ${resolvedTown} town-level comparables`;
+  const bannerTitle=tier<=2?`Block ${esc(resolvedBlock)} transactions`:tier<=4?`No ${esc(selectedFlatType)} at Block ${esc(resolvedBlock)} in this period — showing nearby blocks on ${esc(resolvedStreet)}`:tier===5?`No ${esc(selectedFlatType)} data on ${esc(resolvedStreet)} — showing similar-sized units nearby`:`Limited local data — showing ${esc(resolvedTown)} town-level comparables`;
   const used=attempted.find(t=>t.used);
   const bannerBody=tier<=2?`${used.count} transaction${used.count!==1?'s':''} found. ${tier===1?'Floor band matched.':'All floors included — higher floors typically command a premium.'}`:tier<=4?`${used.count} transaction${used.count!==1?'s':''} across nearby blocks. ${tier===3?'Floor band matched.':'All floors included.'}`:tier===5?`Matched by unit size (±15sqm). Use as directional only.`:`Town-level context only. Not unit-specific.`;
   document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner ${bannerClass}"><div class="fb-title">${bannerTitle}</div><div style="font-size:12px;opacity:0.85;margin-top:2px">${bannerBody}</div></div>`;
@@ -1575,12 +1576,12 @@ function renderPriceTab(result,asking,flatType,mb){
         methodDetail=`Linear regression on ${fm.txCount} transactions across ${fm.bandCount} storey bands. Each floor adds ~S$${fm.perFloor.toLocaleString()} in this block. Predicted PSF for floor ${userFloor}: S$${fm.predPsf}/sqft.`;
       } else if(fm.method==='band'){
         methodTitle='Floor-adjusted estimate (band median)';
-        methodDetail=`Median of ${fm.bandN} transactions in storey band ${fm.bandLabel}. Insufficient spread for regression (${fm.bandCount} band${fm.bandCount===1?'':'s'} in data).`;
+        methodDetail=`Median of ${fm.bandN} transactions in storey band ${esc(fm.bandLabel)}. Insufficient spread for regression (${fm.bandCount} band${fm.bandCount===1?'':'s'} in data).`;
       } else if(fm.method==='fallback'){
         methodTitle='Floor-adjusted estimate (heuristic — low confidence)';
         methodDetail=`Only ${fm.txCount} transaction${fm.txCount===1?'':'s'} available — too sparse for regression or band median. Applied ${fm.adjPct>=0?'+':''}${fm.adjPct}% adjustment to block median based on standard floor premiums.`;
       }
-      const bandRows=fm.bands.map(b=>`<tr><td>${b.label}</td><td>${b.n}</td><td>${sgd(b.medPrice)}</td><td>S$${b.medPsf}</td></tr>`).join('');
+      const bandRows=fm.bands.map(b=>`<tr><td>${esc(b.label)}</td><td>${b.n}</td><td>${sgd(b.medPrice)}</td><td>S$${b.medPsf}</td></tr>`).join('');
       estCardEl.innerHTML=`
         <div class="card">
           <p class="sl">${methodTitle}</p>
@@ -1645,7 +1646,7 @@ function renderTable(records,med){
     const price=+r.resale_price,area=+r.floor_area_sqm,psfV=psfCalc(price,area),rb=getBand(smid(r.storey_range)),isSame=rb.label===selectedBand?.label;
     const diff=Math.round(((price-med)/med)*100),tc=diff>5?'p-above':diff<-5?'p-below':'p-fair',tt=diff>0?`+${diff}%`:`${diff}%`;
     const rl=remLease(r.lease_commence_date,r.month),lf=leaseFlag(rl);
-    return`<tr><td>${r.month}</td><td>${r.block}</td><td>${r.storey_range}</td><td class="hide-mobile">${area}</td><td>${sgd(price)}</td><td class="hide-mobile">S$${psfV}</td><td class="hide-mobile">${r.lease_commence_date||'—'}</td><td><span class="pill ${lf.cls}">${lf.txt}</span></td><td class="hide-mobile"><span class="pill ${isSame?'p-same':'p-band'}">${rb.label.split('(')[0].trim()}</span></td><td><span class="pill ${tc}">${tt}</span></td></tr>`;
+    return`<tr><td>${esc(r.month)}</td><td>${esc(r.block)}</td><td>${esc(r.storey_range)}</td><td class="hide-mobile">${area}</td><td>${sgd(price)}</td><td class="hide-mobile">S$${psfV}</td><td class="hide-mobile">${esc(r.lease_commence_date||'—')}</td><td><span class="pill ${lf.cls}">${lf.txt}</span></td><td class="hide-mobile"><span class="pill ${isSame?'p-same':'p-band'}">${esc(rb.label.split('(')[0].trim())}</span></td><td><span class="pill ${tc}">${tt}</span></td></tr>`;
   }).join('');
 }
 
@@ -1657,7 +1658,7 @@ async function renderAmenitiesTab(){
     const distLabel=`${Math.round(s.km*1000)}m`;
     const modeLabel=walkable?`~${Math.round(s.km*1000/80)} min walk`:'🚌 Bus / drive';
     const modeColor=walkable?'var(--text3)':'var(--warn-text)';
-    return`<div class="amenity-item"><div class="amenity-name">${s.n} <span style="font-size:10px;font-weight:400;color:var(--text3)">${s.l}</span></div><div class="amenity-meta"><div class="amenity-dist">${distLabel}</div><div class="amenity-walk" style="color:${modeColor}">${modeLabel}</div></div></div>`;
+    return`<div class="amenity-item"><div class="amenity-name">${esc(s.n)} <span style="font-size:10px;font-weight:400;color:var(--text3)">${esc(s.l)}</span></div><div class="amenity-meta"><div class="amenity-dist">${distLabel}</div><div class="amenity-walk" style="color:${modeColor}">${modeLabel}</div></div></div>`;
   }).join(''):'<p class="amenity-none">No MRT/LRT stations within 2km</p>';
   document.getElementById('amenitiesContent').innerHTML=`
     <div class="amenity-section"><span class="amenity-header ah-mrt">🚇 MRT / LRT stations within 2km</span>${mrtHtml}</div>
@@ -1672,8 +1673,8 @@ async function renderAmenitiesTab(){
   const s1km = schoolNearby.filter(s => s.km <= 1.0);
   const s2km = schoolNearby.filter(s => s.km > 1.0 && s.km <= 2.0);
   document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools (P1 registration)</span>
-    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km (straight-line)</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
-    <div style="margin-bottom:0.5rem"><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km (straight-line)</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${s.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>
+    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km (straight-line)</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${esc(s.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
+    <div style="margin-bottom:0.5rem"><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km (straight-line)</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${esc(s.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>
     <p style="font-size:11px;color:var(--text3);margin-top:0.5rem;line-height:1.5">Approximate distances. For official P1 eligibility, check <a href="https://www.moe.gov.sg/schoolfinder" target="_blank" rel="noopener" style="color:#378ADD">MOE School Query Service</a> when registration opens (~June).</p>`;
   updateSchoolSignal(s1km, s2km);
   // Kindergartens (ECDA KN + MOE MK) - static lookup updated monthly by GitHub Actions
@@ -1681,13 +1682,13 @@ async function renderAmenitiesTab(){
     .map(k => ({...k, km: hkm(resolvedLat, resolvedLng, k.lat, k.lng), isMK: k.n.startsWith('MOE KINDERGARTEN @ ')}))
     .filter(k => k.km <= 1.0)
     .sort((a, b) => a.km - b.km);
-  document.getElementById('kindergartenSection').innerHTML=`<span class="amenity-header ah-kindergarten">🎓 Kindergartens within 1km</span>${kgNearby.length ? kgNearby.map(k=>`<div class="amenity-item"><div class="amenity-name">${k.n}${k.isMK?' <span class="amenity-header ah-mk" style="font-size:10px;padding:1px 6px;margin-left:4px">MOE — Phase 2A primary feeder</span>':''}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(k.km*1000)}m</div></div></div>`).join('') : '<p class="amenity-none">No kindergartens found within 1km</p>'}`;
+  document.getElementById('kindergartenSection').innerHTML=`<span class="amenity-header ah-kindergarten">🎓 Kindergartens within 1km</span>${kgNearby.length ? kgNearby.map(k=>`<div class="amenity-item"><div class="amenity-name">${esc(k.n)}${k.isMK?' <span class="amenity-header ah-mk" style="font-size:10px;padding:1px 6px;margin-left:4px">MOE — Phase 2A primary feeder</span>':''}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(k.km*1000)}m</div></div></div>`).join('') : '<p class="amenity-none">No kindergartens found within 1km</p>'}`;
   // Childcare centres (ECDA CC + EYC)
   const ccNearby = CHILDCARE_CENTRES
     .map(c => ({...c, km: hkm(resolvedLat, resolvedLng, c.lat, c.lng)}))
     .filter(c => c.km <= 1.0)
     .sort((a, b) => a.km - b.km);
-  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare centres within 1km</span>${ccNearby.length ? ccNearby.slice(0,10).map(c=>`<div class="amenity-item"><div class="amenity-name">${c.n}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(c.km*1000)}m</div></div></div>`).join('') + (ccNearby.length > 10 ? `<p style="font-size:11px;color:var(--text3);padding:4px 0">+${ccNearby.length-10} more within 1km</p>` : '') : '<p class="amenity-none">No childcare centres found within 1km</p>'}`;
+  document.getElementById('childcareSection').innerHTML=`<span class="amenity-header ah-childcare">🧒 Childcare centres within 1km</span>${ccNearby.length ? ccNearby.slice(0,10).map(c=>`<div class="amenity-item"><div class="amenity-name">${esc(c.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(c.km*1000)}m</div></div></div>`).join('') + (ccNearby.length > 10 ? `<p style="font-size:11px;color:var(--text3);padding:4px 0">+${ccNearby.length-10} more within 1km</p>` : '') : '<p class="amenity-none">No childcare centres found within 1km</p>'}`;
 
 
   // Maintenance reminder
@@ -1714,11 +1715,11 @@ function renderValueTab(records,mb){
   const bSqm=allBlockRecs.filter(r=>r.flat_type===selectedFlatType).map(r=>+r.floor_area_sqm),medBSqm=bSqm.length?Math.round(pct(bSqm,50)):null;
   const userFloor=+document.getElementById('floor_num').value||1,signals=[];
   if(medLease!==null){const pos=medLease>=60,neg=medLease<30;signals.push({icon:'📋',iconCls:pos?'signal-icon-pos':neg?'signal-icon-neg':'signal-icon-cau',badgeCls:pos?'sb-pos':neg?'sb-neg':'sb-cau',badge:pos?'Positive':neg?'Caution':'Watch',name:'Remaining lease',desc:pos?`${medLease} years remaining — CPF unrestricted, strong resale appeal.`:neg?`${medLease} years remaining — CPF cannot be used. Bank loan restrictions apply.`:`${medLease} years remaining — CPF may be restricted. Verify with CPF Board.`});}
-  if(nearestMrt){const km=nearestMrt.km,pos=km<0.5,good=km<1.0,neu=km<2.0;signals.push({icon:'🚇',iconCls:pos||good?'signal-icon-pos':neu?'signal-icon-neu':'signal-icon-neg',badgeCls:pos?'sb-pos':good?'sb-pos':neu?'sb-neu':'sb-neg',badge:pos?'Strong positive':good?'Positive':neu?'Neutral':'Negative',name:'MRT proximity',desc:`${nearestMrt.n} (${nearestMrt.l}) is ${Math.round(km*1000)}m away (~${Math.round(km*1000/80)} min walk). ${pos?'Walking distance — strong value driver.':good?'Within 1km — solid connectivity premium.':neu?'1–2km — moderate transit access.':'Beyond 2km.'}`});}
+  if(nearestMrt){const km=nearestMrt.km,pos=km<0.5,good=km<1.0,neu=km<2.0;signals.push({icon:'🚇',iconCls:pos||good?'signal-icon-pos':neu?'signal-icon-neu':'signal-icon-neg',badgeCls:pos?'sb-pos':good?'sb-pos':neu?'sb-neu':'sb-neg',badge:pos?'Strong positive':good?'Positive':neu?'Neutral':'Negative',name:'MRT proximity',desc:`${esc(nearestMrt.n)} (${esc(nearestMrt.l)}) is ${Math.round(km*1000)}m away (~${Math.round(km*1000/80)} min walk). ${pos?'Walking distance — strong value driver.':good?'Within 1km — solid connectivity premium.':neu?'1–2km — moderate transit access.':'Beyond 2km.'}`});}
   signals.push({icon:'🏫',iconCls:'signal-icon-neu',badgeCls:'sb-neu',badge:'Loading',name:'Primary school proximity',desc:'Checking nearby schools...',id:'school-signal'});
   if(months.length>=3){const r=trendSlope>300,f=trendSlope<-300;signals.push({icon:'📈',iconCls:r?'signal-icon-pos':f?'signal-icon-neg':'signal-icon-neu',badgeCls:r?'sb-pos':f?'sb-neg':'sb-neu',badge:r?'Positive':f?'Negative':'Neutral',name:'Price trend',desc:r?`Prices trending up — sellers' market conditions.`:f?`Prices trending down — buyers have negotiating room.`:`Prices broadly stable.`});}
   if(fpPct!==null){const isHigh=userFloor>=13,strong=Math.abs(fpPct)>=10;signals.push({icon:'🏢',iconCls:isHigh&&strong?'signal-icon-pos':!isHigh&&strong?'signal-icon-neg':'signal-icon-neu',badgeCls:isHigh&&strong?'sb-pos':!isHigh&&strong?'sb-neg':'sb-neu',badge:`${fpPct}% floor premium`,name:'Floor premium',desc:`High-floor units (~13th+) transact ~${fpPct}% ${fpPct>=0?'above':'below'} low-floor in comparable transactions. ${isHigh?'Your floor benefits from this.':'Lower floors trade at a discount here.'}`});}
-  if(medBSqm&&medSqm){const diff=medBSqm-medSqm,larger=diff>5;signals.push({icon:'📐',iconCls:larger?'signal-icon-pos':'signal-icon-neu',badgeCls:larger?'sb-pos':'sb-neu',badge:larger?'Above median size':diff<-5?'Below median size':'At median size',name:'Unit size',desc:`Block ${resolvedBlock} ${selectedFlatType} median: ${medBSqm} sqm. Area average: ${medSqm} sqm. ${larger?'Larger than area average — size premium applies.':diff<-5?'Smaller than area average.':'Typical size.'}`});}
+  if(medBSqm&&medSqm){const diff=medBSqm-medSqm,larger=diff>5;signals.push({icon:'📐',iconCls:larger?'signal-icon-pos':'signal-icon-neu',badgeCls:larger?'sb-pos':'sb-neu',badge:larger?'Above median size':diff<-5?'Below median size':'At median size',name:'Unit size',desc:`Block ${esc(resolvedBlock)} ${esc(selectedFlatType)} median: ${medBSqm} sqm. Area average: ${medSqm} sqm. ${larger?'Larger than area average — size premium applies.':diff<-5?'Smaller than area average.':'Typical size.'}`});}
   signals.push({icon:'🗺️',iconCls:'signal-icon-neu',badgeCls:'sb-neu',badge:'Manual check',name:'URA Master Plan',desc:`Check upcoming developments that could affect value. <a href="https://www.ura.gov.sg/maps" target="_blank" style="color:#378ADD">View URA Master Plan →</a>`});
   const pos=signals.filter(s=>s.badgeCls==='sb-pos').length,neg=signals.filter(s=>s.badgeCls==='sb-neg').length,cau=signals.filter(s=>s.badgeCls==='sb-cau').length;
   const summaryCol=neg>=2?'var(--err-bg)':cau>=2?'var(--warn-bg)':'var(--ok-bg)',summaryTCol=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':'var(--ok-text)';
@@ -1747,8 +1748,8 @@ function renderValueTab(records,mb){
 function updateSchoolSignal(s1km,s2km){
   const el=document.getElementById('school-signal');if(!el)return;
   const has1=s1km.length>0,has2=s2km.length>0,iconCls=has1?'signal-icon-pos':'signal-icon-neu',badgeCls=has1?'sb-pos':'sb-neu',badge=has1?'Positive':'Neutral';
-  const desc=has1?`${s1km.length} school${s1km.length!==1?'s':''} within 1km (Phase 2B): ${s1km.slice(0,3).map(s=>s.name).join(', ')}${s1km.length>3?'…':''}.${has2?` Plus ${s2km.length} within 2km (Phase 2C).`:''}`
-    :has2?`No schools within 1km. ${s2km.length} within 2km (Phase 2C): ${s2km.slice(0,3).map(s=>s.name).join(', ')}${s2km.length>3?'…':''}.`:'No primary schools within 2km.';
+  const desc=has1?`${s1km.length} school${s1km.length!==1?'s':''} within 1km (Phase 2B): ${s1km.slice(0,3).map(s=>esc(s.name)).join(', ')}${s1km.length>3?'…':''}.${has2?` Plus ${s2km.length} within 2km (Phase 2C).`:''}`
+    :has2?`No schools within 1km. ${s2km.length} within 2km (Phase 2C): ${s2km.slice(0,3).map(s=>esc(s.name)).join(', ')}${s2km.length>3?'…':''}.`:'No primary schools within 2km.';
   el.innerHTML=`<div class="signal-left"><div class="signal-icon ${iconCls}">🏫</div><div><div class="signal-name">Primary school proximity</div><div class="signal-desc">${desc}</div></div></div><span class="signal-badge ${badgeCls}">${badge}</span>`;
 }
 </script>
