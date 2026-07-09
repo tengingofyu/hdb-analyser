@@ -15,11 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject API keys
+      - name: Inject OneMap token
         run: |
-          sed -i "s|const API_KEY='';|const API_KEY='${{ secrets.DATAGOV_API_KEY }}';|" index.html
           sed -i "s|const ONEMAP_TOKEN='';|const ONEMAP_TOKEN='${{ secrets.ONEMAP_TOKEN }}';|" index.html
-          grep "API_KEY" index.html | head -2
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
