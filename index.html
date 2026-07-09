@@ -1061,7 +1061,21 @@ function sgd(n){return'S$'+Math.round(n).toLocaleString();}
 function psfCalc(p,s){return Math.round(p/(s*10.764));}
 function pct(arr,p){const s=[...arr].sort((a,b)=>a-b);const i=(p/100)*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);}
 function hkm(la1,lo1,la2,lo2){const R=6371,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180;const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
-function linReg(xs,ys){const n=xs.length,mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;const num=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0),den=xs.reduce((s,x)=>s+(x-mx)**2,0);const slope=den?num/den:0;return{slope,intercept:my-slope*mx};}
+function linReg(xs,ys){
+  const n=xs.length;
+  const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;
+  const Sxx=xs.reduce((s,x)=>s+(x-mx)**2,0);
+  const Sxy=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+  const slope=Sxx?Sxy/Sxx:0;
+  const intercept=my-slope*mx;
+  let SSE=0,SST=0;
+  for(let i=0;i<n;i++){const pred=intercept+slope*xs[i];SSE+=(ys[i]-pred)**2;SST+=(ys[i]-my)**2;}
+  const s=n>2?Math.sqrt(SSE/(n-2)):NaN;
+  const R2=SST>0?1-SSE/SST:0;
+  const SEslope=(s>0&&Sxx>0)?s/Math.sqrt(Sxx):0;
+  const tSlope=SEslope>0?slope/SEslope:(slope!==0?Infinity:0);
+  return{slope,intercept,n,mx,Sxx,s,R2,tSlope};
+}
 // Floor price model: given transactions for a flat type, predicts price by floor.
 // Tries regression first (PSF vs floor midpoint), falls back to band median, then hardcoded.
 function floorPriceModel(records,targetFloor,targetSqm){
@@ -1076,7 +1090,7 @@ function floorPriceModel(records,targetFloor,targetSqm){
   // Build band breakdown for transparency
   const bandMap={};
   txs.forEach(t=>{const k=t.storey;if(!bandMap[k])bandMap[k]={floor:t.floor,prices:[],psfs:[]};bandMap[k].prices.push(t.price);bandMap[k].psfs.push(t.psf);});
-  const bands=Object.entries(bandMap).map(([label,b])=>({label,floor:b.floor,n:b.prices.length,medPrice:Math.round(pct(b.prices,50)),medPsf:Math.round(pct(b.psfs,50))})).sort((a,b)=>a.floor-b.floor);
+  const bands=Object.entries(bandMap).map(([label,b])=>({label,floor:b.floor,n:b.prices.length,medPrice:Math.round(pct(b.prices,50)),medPsf:Math.round(pct(b.psfs,50)),p25:Math.round(pct(b.prices,25)),p75:Math.round(pct(b.prices,75))})).sort((a,b)=>a.floor-b.floor);
   const allPrices=txs.map(t=>t.price);
   const blockMedian=Math.round(pct(allPrices,50));
   const blockMin=Math.min(...allPrices);
@@ -1099,14 +1113,14 @@ function floorPriceModel(records,targetFloor,targetSqm){
   if(targetFloor){
     const targetBand=bands.find(b=>{const m=b.label.match(/(\d+)\s*TO\s*(\d+)/i);return m&&targetFloor>=+m[1]&&targetFloor<=+m[2];});
     if(targetBand&&targetBand.n>=2){
-      return{method:'band',price:targetBand.medPrice,low:Math.round(targetBand.medPrice*0.92),high:Math.round(targetBand.medPrice*1.08),bandLabel:targetBand.label,bandN:targetBand.n,txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+      return{method:'band',price:targetBand.medPrice,low:targetBand.p25,high:targetBand.p75,bandLabel:targetBand.label,bandN:targetBand.n,txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
     }
   }
   // Method 3: Hardcoded fallback (sparse data)
   if(targetFloor){
     const adj=targetFloor>=20?1.07:targetFloor>=13?1.04:targetFloor>=7?1.01:0.96;
     const adjPrice=Math.round(blockMedian*adj);
-    return{method:'fallback',price:adjPrice,low:Math.round(adjPrice*0.92),high:Math.round(adjPrice*1.08),adjPct:Math.round((adj-1)*100),txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+    return{method:'fallback',price:adjPrice,low:blockMin,high:blockMax,adjPct:Math.round((adj-1)*100),txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
   }
   return{method:'noflr',blockMedian,blockMin,blockMax,txCount:txs.length,bandCount:bands.length,bands,sqm:Math.round(sqm),sqft:Math.round(sqft)};
 }
@@ -1226,8 +1240,11 @@ function estimateFromComparables(targetFlatType,comparableRecs,comparableFlatTyp
   const psfAdjFactor=1-(sizeDiff*0.04);
   const adjustedPsf=Math.round(medPsf*psfAdjFactor);
   const estMid=Math.round(adjustedPsf*targetSqft);
-  const estLow=Math.round(estMid*0.92);
-  const estHigh=Math.round(estMid*1.08);
+  // Range derived from the comparable-PSF quartile spread, scaled to target unit size.
+  const compPsfs=comparableRecs.map(r=>+r.resale_price/(+r.floor_area_sqm*10.764));
+  const psfQ25=pct(compPsfs,25),psfQ75=pct(compPsfs,75);
+  const estLow=Math.round(psfQ25*psfAdjFactor*targetSqft);
+  const estHigh=Math.round(psfQ75*psfAdjFactor*targetSqft);
   const confidence=comparableRecs.length>=10&&Math.abs(sizeDiff)===1?'Medium':comparableRecs.length>=5?'Low':'Very low';
 
   return{estLow,estMid,estHigh,medPsf,adjustedPsf,targetSqm:Math.round(targetSqm),targetSqft:Math.round(targetSqft),comparableFlatType,comparableCount:comparableRecs.length,comparableMedian:medPrice,psfAdjPct:Math.round((psfAdjFactor-1)*100),sizeDiff,confidence};
@@ -1347,7 +1364,9 @@ function renderQuickResult(qResult,floor,flatType){
     // Apply floor adjustment if floor provided
     const floorAdj=floor>=13?1.05:floor>=7?1.02:floor>=1?0.97:1.0; // no floor = neutral
     const adjMid=floor?Math.round(est.estMid*floorAdj):est.estMid;
-    const adjLow=Math.round(adjMid*0.92),adjHigh=Math.round(adjMid*1.08);
+    // Scale the data-derived quartile band by the same floor adjustment.
+    const adjLow=floor?Math.round(est.estLow*floorAdj):est.estLow;
+    const adjHigh=floor?Math.round(est.estHigh*floorAdj):est.estHigh;
     const floorNote=floor?` · floor ${floor} applied (${floorAdj>=1?'+':''}${Math.round((floorAdj-1)*100)}%)`:'· mid-floor assumed';
     estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${flatType} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}${floorNote}. Confidence: ${est.confidence}. Not a formal valuation.</div></div>`;
     heroPrice.textContent=sgd(adjMid);
@@ -1490,7 +1509,7 @@ function renderPriceTab(result,asking,flatType,mb){
             <div class="est-step"><div class="est-step-num">1</div><div><strong>Comparable data:</strong> ${est.comparableCount} ${est.comparableFlatType} transactions on ${resolvedStreet}. Median price ${sgd(est.comparableMedian)}, median PSF S$${est.medPsf}/sqft.</div></div>
             <div class="est-step"><div class="est-step-num">2</div><div><strong>Size adjustment:</strong> ${flatType} units are typically ~${est.targetSqm} sqm (${est.targetSqft} sqft). Larger units trade at a lower PSF — applied ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% PSF adjustment = S$${est.adjustedPsf}/sqft.</div></div>
             <div class="est-step"><div class="est-step-num">3</div><div><strong>Estimated midpoint:</strong> S$${est.adjustedPsf}/sqft × ${est.targetSqft} sqft = ${sgd(est.estMid)}.</div></div>
-            <div class="est-step"><div class="est-step-num">4</div><div><strong>Range:</strong> ±8% applied to reflect real market variance = ${sgd(est.estLow)} to ${sgd(est.estHigh)}.</div></div>
+            <div class="est-step"><div class="est-step-num">4</div><div><strong>Range:</strong> 25th–75th percentile of comparable PSFs (${est.comparableCount} tx) scaled to target size = ${sgd(est.estLow)} to ${sgd(est.estHigh)}.</div></div>
           </div>
           <div style="font-size:11px;padding:8px 10px;background:var(--err-bg);color:var(--err-text);border-radius:var(--radius)">
             Confidence: ${est.confidence}. This is a market-based estimate — not a formal valuation. Actual prices may differ significantly based on unit condition, renovation, floor, facing, and remaining lease. Verify with a licensed valuer before making financial decisions.
