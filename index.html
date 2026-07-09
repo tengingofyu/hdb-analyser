@@ -29,6 +29,9 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .btn-primary{background:var(--text);color:var(--bg)}.btn-primary:hover{opacity:0.88}.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--bg2);color:var(--text);border:0.5px solid var(--border2)}.btn-secondary:hover{background:var(--bg3)}
 .tabs{display:flex;gap:6px;margin-bottom:1rem}
+.new-search-bar{display:flex;justify-content:flex-start;margin-bottom:0.75rem}
+.new-search-btn{background:transparent;color:var(--text2);border:0.5px solid var(--border2);border-radius:var(--radius);padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer}
+.new-search-btn:hover{background:var(--bg2);color:var(--text)}
 .tab{flex:1;padding:7px 4px;font-size:13px;font-weight:500;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);cursor:pointer;text-align:center;transition:all 0.15s}
 .tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}.tab:hover:not(.active){background:var(--bg3)}
 .tag{display:inline-block;font-size:12px;padding:4px 10px;border-radius:var(--radius);font-weight:500;margin-bottom:0.75rem}
@@ -144,6 +147,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
   </div>
 
   <div id="fullResults" style="display:none">
+    <div class="new-search-bar"><button class="new-search-btn" onclick="newSearch()">← New search</button></div>
     <div class="tabs">
       <div class="tab active" id="nav-price" onclick="showTab('price')">Price</div>
       <div class="tab" id="nav-amenities" onclick="showTab('amenities')">Amenities</div>
@@ -1423,6 +1427,7 @@ function goToFullAnalysis(){
     document.getElementById('quickResult').style.display='none';
     document.getElementById('step1-panel').style.display='none';
     document.getElementById('step2-panel').style.display='none';
+    document.getElementById('inputCard').style.display='none';
     selectedFlatType=quickFlatType;
     selectedBand=getBand(qFloor);
     adjBands=getAdj(selectedBand);
@@ -1455,9 +1460,35 @@ function goToFullAnalysis(){
 }
 
 function resetToStep1(){
+  document.getElementById('inputCard').style.display='block';
   document.getElementById('step1-panel').style.display='block';document.getElementById('step2-panel').style.display='none';
   document.getElementById('quickResult').style.display='none';document.getElementById('fullResults').style.display='none';
   showStatus('',false);
+}
+function newSearch(){
+  // Destroy chart to prevent Chart.js instance leak
+  if(chartInstance){chartInstance.destroy();chartInstance=null;}
+  // Clear form fields (postal, flat type, floor, months)
+  document.getElementById('postal').value='';
+  document.getElementById('quick_flat_type').value='';
+  document.getElementById('quick_floor').value='';
+  document.getElementById('floor_num').value='';
+  document.getElementById('months_back').value='12';
+  document.getElementById('resolved-tag').innerHTML='';
+  // Reset analysis state — records, resolved geo, selected flat type / band
+  allBlockRecs=[];allStreetRecs=[];quickFlatType='';selectedFlatType='';selectedBand=null;adjBands=[];
+  resolvedBlock='';resolvedStreet='';resolvedTown='';resolvedLat=null;resolvedLng=null;
+  _lastEstimMethod=null;
+  // Clear residual result cards so the next analysis renders fresh
+  ['fallbackBanner','estimationCard','metricsRow','verdictBox','chartLegend','txBody','valueSummary','valueSignals','leaseContent','appreciationContent','amenitiesContent','trendSummary'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+  // Reset visibility to the input form
+  document.getElementById('inputCard').style.display='block';
+  document.getElementById('step1-panel').style.display='block';
+  document.getElementById('step2-panel').style.display='none';
+  document.getElementById('quickResult').style.display='none';
+  document.getElementById('fullResults').style.display='none';
+  showStatus('',false);
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 // ── Step 2: Full Analysis ──────────────────────────────────
@@ -1473,7 +1504,7 @@ async function doFullAnalysis(){
   renderPriceTab(result,asking,selectedFlatType,mb);
   renderAmenitiesTab();
   renderValueTab(result?result.records:[],mb);
-  document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');
+  document.getElementById('step2-panel').style.display='none';document.getElementById('inputCard').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');
   logSearch({town:coarseTown(),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
   btn.disabled=false;btn.textContent='Full analysis';
 }
