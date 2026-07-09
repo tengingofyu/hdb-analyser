@@ -1471,6 +1471,7 @@ function goToFullAnalysis(){
       renderValueTab(result?result.records:[],mb);
       document.getElementById('fullResults').style.display='block';
       showTab('price');
+      logSearch({town:coarseTown(),flat_type:selectedFlatType,floor_entered:true,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
       analyseBtn.disabled=false;analyseBtn.textContent='Full analysis';
     });
   } else {
