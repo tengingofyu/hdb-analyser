@@ -1046,8 +1046,12 @@ function _sendEvent(payload){
   if(!ANALYTICS_URL)return;
   try{
     const body=JSON.stringify(payload);
-    if(navigator.sendBeacon){navigator.sendBeacon(ANALYTICS_URL,new Blob([body],{type:'application/json'}));}
-    else{fetch(ANALYTICS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(()=>{});}
+    // Blob type MUST stay CORS-safelisted (text/plain / application/x-www-form-urlencoded /
+    // multipart/form-data) so sendBeacon and fetch don't trigger a preflight against Apps
+    // Script, which returns 405 to OPTIONS. Apps Script parses e.postData.contents as a
+    // raw string regardless of Content-Type, so the body payload is unaffected.
+    if(navigator.sendBeacon){navigator.sendBeacon(ANALYTICS_URL,new Blob([body],{type:'text/plain'}));}
+    else{fetch(ANALYTICS_URL,{method:'POST',body,keepalive:true}).catch(()=>{});}
   }catch(e){}
 }
 function coarseTown(){return resolvedTown||null;}
@@ -1302,7 +1306,7 @@ async function doQuickSearch(){
     cm.textContent='Please wait before searching again';cm.style.cssText='font-size:11px;color:var(--text3);text-align:center;margin-top:5px';cm.id='cooldownMsg';
     document.getElementById('quickBtn').after(cm);setTimeout(()=>cm.remove(),2000);return;
   }
-  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({flat_type:null,error_type:'session_cap_hit'});return;}
+  if(sessionSearchCount>=SESSION_CAP){document.getElementById('resolved-tag').innerHTML='<div class="tag t-warn">Too many searches this session. Please refresh.</div>';logError({postal_2:sector(),flat_type:null,error_type:'session_cap_hit'});return;}
   const postal=document.getElementById('postal').value.trim();
   const flatType=document.getElementById('quick_flat_type').value;
   if(!/^\d{6}$/.test(postal)){document.getElementById('resolved-tag').innerHTML='<div class="tag t-err">Enter a valid 6-digit postal code</div>';return;}
