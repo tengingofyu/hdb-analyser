@@ -1098,16 +1098,37 @@ function floorPriceModel(records,targetFloor,targetSqm){
   // Use targetSqm if given, else median area from these txs
   const sqm=targetSqm||(txs.map(t=>t.area).reduce((a,b)=>a+b,0)/txs.length);
   const sqft=sqm*10.764;
-  // Method 1: Regression (≥5 tx, ≥3 distinct bands)
+  // Method 1: Regression (≥5 tx, ≥3 distinct bands) — gated by slope significance + fit
   if(txs.length>=5&&bands.length>=3){
-    const{slope,intercept}=linReg(txs.map(t=>t.floor),txs.map(t=>t.psf));
-    if(targetFloor){
+    const reg=linReg(txs.map(t=>t.floor),txs.map(t=>t.psf));
+    const{slope,intercept,n,mx,Sxx,s,R2,tSlope}=reg;
+    const T=1.7; // ~80% band. Approximation across df; tunable.
+    const floors=txs.map(t=>t.floor);
+    const fLo=Math.min(...floors),fHi=Math.max(...floors);
+    const slopeTrusted=Math.abs(tSlope)>=1.7&&R2>=0.3;
+    if(targetFloor&&slopeTrusted){
+      const extrapolated=targetFloor<fLo||targetFloor>fHi;
       const predPsf=intercept+slope*targetFloor;
-      const predPrice=Math.round(predPsf*sqft);
-      const perFloor=Math.round(slope*sqft); // dollar premium per floor
-      return{method:'regression',price:predPrice,low:Math.round(predPrice*0.92),high:Math.round(predPrice*1.08),slope,intercept,perFloor,predPsf:Math.round(predPsf),txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+      const SEpred=s*Math.sqrt(1+1/n+((targetFloor-mx)**2)/Sxx);
+      const halfPsf=T*SEpred;
+      const rawPrice=predPsf*sqft;
+      const price=Math.round(rawPrice/1000)*1000; // nearest S$1,000 — no false precision
+      const low=Math.round((predPsf-halfPsf)*sqft);
+      const high=Math.round((predPsf+halfPsf)*sqft);
+      return{method:'regression',price,low,high,slope,intercept,
+             perFloor:Math.round(slope*sqft),perFloorTrusted:true,
+             predPsf:Math.round(predPsf),R2:+R2.toFixed(2),extrapolated,
+             txCount:txs.length,bandCount:bands.length,bands,
+             blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
     }
-    return{method:'regression-noflr',blockMedian,blockMin,blockMax,slope,perFloor:Math.round(slope*sqft),txCount:txs.length,bandCount:bands.length,bands,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+    if(!targetFloor){
+      return{method:'regression-noflr',blockMedian,blockMin,blockMax,slope,
+             perFloor:slopeTrusted?Math.round(slope*sqft):null,
+             perFloorTrusted:slopeTrusted,
+             txCount:txs.length,bandCount:bands.length,bands,
+             sqm:Math.round(sqm),sqft:Math.round(sqft)};
+    }
+    // targetFloor present but slope not trusted → fall through to Method 2
   }
   // Method 2: Band median (≥2 tx in target's band)
   if(targetFloor){
@@ -1559,7 +1580,7 @@ function renderPriceTab(result,asking,flatType,mb){
         <div class="card">
           <p class="sl">${methodTitle}</p>
           <div style="font-size:28px;font-weight:500;color:var(--text);margin-bottom:4px">${sgd(fm.price)}</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Estimated range: ${sgd(fm.low)} – ${sgd(fm.high)} · ±8%</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Estimated range: ${sgd(fm.low)} – ${sgd(fm.high)} <span style="color:var(--text3);font-size:11px">(wider = less data / more scatter)</span></div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:0.75rem">${methodDetail}</div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:0.5rem">Block-wide median (all floors): <strong style="color:var(--text2)">${sgd(fm.blockMedian)}</strong> · Range across all floors: ${sgd(fm.blockMin)} – ${sgd(fm.blockMax)}</div>
           <details style="margin-top:0.75rem">
