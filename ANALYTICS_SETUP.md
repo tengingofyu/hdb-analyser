@@ -158,7 +158,7 @@ If `ANALYTICS_URL` is left empty, all logging is silently no-ops — no errors, 
 | months_back | `12` |
 | result_tier | `1` (1=same block, 6=town fallback, null=no comps) |
 | result_count | `7` |
-| estimation_method | `regression` / `band` / `fallback` / `estimate` / `null` |
+| estimation_method | `regression` / `band` / `none` / `null` (null = no pool at any tier; `none` = pool found but too sparse for a floor-adjusted estimate) |
 | trend_window | `12` (12-month pool met the trend gate) / `24` (fell back to 24-month refetch for trend chart) / `"none"` (both windows too sparse) |
 
 ### `tab` (one row per tab leave / page hide)

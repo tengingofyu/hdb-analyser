@@ -1012,9 +1012,7 @@ const PRIMARY_SCHOOLS=[
 ];
 const AMENITY_DATA_DATE='May 2026'; // UPDATE THIS when refreshing static data
 const ONEMAP='https://www.onemap.gov.sg/api/common/elastic/search';
-const ALL_FLAT_TYPES=['1 ROOM','2 ROOM','3 ROOM','4 ROOM','5 ROOM','EXECUTIVE'];
 const BANDS=[{label:'Low (1–6)',min:1,max:6},{label:'Mid-low (7–12)',min:7,max:12},{label:'Mid-high (13–18)',min:13,max:18},{label:'High (19–24)',min:19,max:24},{label:'Very high (25+)',min:25,max:99}];
-const FLAT_SQM={'1 ROOM':33,'2 ROOM':45,'3 ROOM':67,'4 ROOM':93,'5 ROOM':113,'EXECUTIVE':140};
 
 const MRT_STATIONS=[
   {n:'Jurong East',l:'EWL/NSL',lat:1.3332,lng:103.7422},{n:'Buona Vista',l:'EWL/CCL',lat:1.3072,lng:103.7899},{n:'Commonwealth',l:'EWL',lat:1.3023,lng:103.7980},{n:'Queenstown',l:'EWL',lat:1.2942,lng:103.8060},{n:'Redhill',l:'EWL',lat:1.2898,lng:103.8167},{n:'Tiong Bahru',l:'EWL',lat:1.2863,lng:103.8272},{n:'Outram Park',l:'EWL/NEL/TEL',lat:1.2801,lng:103.8395},{n:'Tanjong Pagar',l:'EWL',lat:1.2764,lng:103.8456},{n:'Raffles Place',l:'EWL/NSL',lat:1.2833,lng:103.8514},{n:'City Hall',l:'EWL/NSL',lat:1.2931,lng:103.8520},{n:'Bugis',l:'EWL/DTL',lat:1.3009,lng:103.8559},{n:'Lavender',l:'EWL',lat:1.3073,lng:103.8631},{n:'Kallang',l:'EWL',lat:1.3117,lng:103.8714},{n:'Aljunied',l:'EWL',lat:1.3163,lng:103.8831},{n:'Paya Lebar',l:'EWL/CCL',lat:1.3179,lng:103.8921},{n:'Eunos',l:'EWL',lat:1.3197,lng:103.9033},{n:'Kembangan',l:'EWL',lat:1.3211,lng:103.9128},{n:'Bedok',l:'EWL',lat:1.3240,lng:103.9300},{n:'Tanah Merah',l:'EWL',lat:1.3273,lng:103.9462},{n:'Simei',l:'EWL',lat:1.3435,lng:103.9531},{n:'Tampines',l:'EWL/DTL',lat:1.3535,lng:103.9454},{n:'Pasir Ris',l:'EWL',lat:1.3731,lng:103.9494},{n:'Boon Lay',l:'EWL',lat:1.3387,lng:103.7059},{n:'Pioneer',l:'EWL',lat:1.3378,lng:103.6972},{n:'Joo Koon',l:'EWL',lat:1.3279,lng:103.6786},{n:'Chinese Garden',l:'EWL',lat:1.3424,lng:103.7322},{n:'Lakeside',l:'EWL',lat:1.3441,lng:103.7206},{n:'Clementi',l:'EWL',lat:1.3151,lng:103.7651},{n:'Dover',l:'EWL',lat:1.3113,lng:103.7786},{n:'Bukit Batok',l:'NSL',lat:1.3491,lng:103.7497},{n:'Toh Guan',l:'JRL (u/c 2028)',lat:1.33984,lng:103.7425},{n:'Bukit Batok West',l:'JRL (u/c 2028)',lat:1.34557,lng:103.73959},{n:'Jurong Town Hall',l:'JRL (u/c 2028)',lat:1.326,lng:103.746},{n:'Pandan Reservoir',l:'JRL (u/c 2028)',lat:1.320,lng:103.745},{n:'Tengah Park',l:'JRL (u/c 2028)',lat:1.35235,lng:103.73679},{n:'Tengah Plantation',l:'JRL (u/c 2028)',lat:1.35731,lng:103.73342},{n:'Tengah',l:'JRL (u/c 2028)',lat:1.36633,lng:103.73007},{n:'Hong Kah',l:'JRL (u/c 2028)',lat:1.35795,lng:103.72586},{n:'Corporation',l:'JRL (u/c 2028)',lat:1.352948,lng:103.713930},{n:'Jurong West',l:'JRL (u/c 2028)',lat:1.34919,lng:103.70831},{n:'Bahar Junction',l:'JRL (u/c 2028)',lat:1.3454222,lng:103.7025417},{n:'Choa Chu Kang West',l:'JRL (u/c 2028)',lat:1.37886,lng:103.739497},{n:'Gek Poh',l:'JRL (u/c 2028)',lat:1.348382,lng:103.697963},{n:'Tawas',l:'JRL (u/c 2028)',lat:1.35056,lng:103.69185},{n:'Marina Bay',l:'NSL/CEL/TEL',lat:1.2762,lng:103.8545},{n:'Bayfront',l:'CEL/DTL',lat:1.2821,lng:103.8592},{n:'Dhoby Ghaut',l:'NSL/NEL/CCL',lat:1.2989,lng:103.8455},{n:'Somerset',l:'NSL',lat:1.3006,lng:103.8389},{n:'Orchard',l:'NSL/TEL',lat:1.3041,lng:103.8319},{n:'Newton',l:'NSL/DTL',lat:1.3122,lng:103.8380},{n:'Novena',l:'NSL',lat:1.3203,lng:103.8435},{n:'Toa Payoh',l:'NSL',lat:1.3328,lng:103.8474},{n:'Braddell',l:'NSL',lat:1.3401,lng:103.8468},{n:'Bishan',l:'NSL/CCL',lat:1.3510,lng:103.8485},{n:'Ang Mo Kio',l:'NSL',lat:1.3699,lng:103.8495},{n:'Yio Chu Kang',l:'NSL',lat:1.3816,lng:103.8449},{n:'Khatib',l:'NSL',lat:1.4175,lng:103.8330},{n:'Yishun',l:'NSL',lat:1.4294,lng:103.8354},{n:'Sembawang',l:'NSL',lat:1.4490,lng:103.8199},{n:'Canberra',l:'NSL',lat:1.4432,lng:103.8296},{n:'Admiralty',l:'NSL',lat:1.4407,lng:103.8008},{n:'Woodlands',l:'NSL/TEL',lat:1.4374,lng:103.7866},{n:'Woodlands North',l:'TEL',lat:1.4481,lng:103.7861},{n:'Woodlands South',l:'TEL',lat:1.4243,lng:103.7867},{n:'Marsiling',l:'NSL',lat:1.4327,lng:103.7742},{n:'Kranji',l:'NSL',lat:1.4253,lng:103.7619},{n:'Bukit Panjang',l:'DTL/LRT',lat:1.3784,lng:103.7628},{n:'Cashew',l:'DTL',lat:1.3692,lng:103.7646},{n:'Hillview',l:'DTL',lat:1.3622,lng:103.7676},{n:'Beauty World',l:'DTL',lat:1.3412,lng:103.7760},{n:'King Albert Park',l:'DTL',lat:1.3355,lng:103.7831},{n:'Sixth Avenue',l:'DTL',lat:1.3317,lng:103.7961},{n:'Tan Kah Kee',l:'DTL',lat:1.3259,lng:103.8075},{n:'Botanic Gardens',l:'CCL/DTL',lat:1.3224,lng:103.8154},{n:'Farrer Road',l:'CCL',lat:1.3176,lng:103.8074},{n:'Holland Village',l:'CCL',lat:1.3124,lng:103.7961},{n:'one-north',l:'CCL',lat:1.2991,lng:103.7872},{n:'Kent Ridge',l:'CCL',lat:1.2935,lng:103.7843},{n:'Haw Par Villa',l:'CCL',lat:1.2827,lng:103.7820},{n:'Pasir Panjang',l:'CCL',lat:1.2762,lng:103.7919},{n:'Labrador Park',l:'CCL',lat:1.2722,lng:103.8025},{n:'Telok Blangah',l:'CCL',lat:1.2706,lng:103.8096},{n:'HarbourFront',l:'CCL/NEL',lat:1.2654,lng:103.8219},{n:'Keppel',l:'CEL',lat:1.2712,lng:103.8343},{n:'Cantonment',l:'CEL',lat:1.2742,lng:103.8413},{n:'Prince Edward Road',l:'CEL',lat:1.2778,lng:103.8449},{n:'Chinatown',l:'NEL/DTL',lat:1.2835,lng:103.8444},{n:'Clarke Quay',l:'NEL',lat:1.2882,lng:103.8464},{n:'Little India',l:'NEL/DTL',lat:1.3066,lng:103.8495},{n:'Farrer Park',l:'NEL',lat:1.3124,lng:103.8548},{n:'Boon Keng',l:'NEL',lat:1.3194,lng:103.8619},{n:'Potong Pasir',l:'NEL',lat:1.3313,lng:103.8695},{n:'Woodleigh',l:'NEL',lat:1.3397,lng:103.8705},{n:'Serangoon',l:'NEL/CCL',lat:1.3499,lng:103.8733},{n:'Kovan',l:'NEL',lat:1.3597,lng:103.8851},{n:'Hougang',l:'NEL',lat:1.3714,lng:103.8924},{n:'Buangkok',l:'NEL',lat:1.3832,lng:103.8929},{n:'Sengkang',l:'NEL/LRT',lat:1.3916,lng:103.8954},{n:'Punggol',l:'NEL/LRT',lat:1.4051,lng:103.9021},{n:'Tampines East',l:'DTL',lat:1.3559,lng:103.9555},{n:'Upper Changi',l:'DTL',lat:1.3413,lng:103.9614},{n:'Expo',l:'DTL/CEL',lat:1.3352,lng:103.9615},{n:'Changi Airport',l:'CEL',lat:1.3573,lng:103.9882},{n:'Stadium',l:'CCL',lat:1.3030,lng:103.8750},{n:'Mountbatten',l:'CCL',lat:1.3063,lng:103.8828},{n:'Dakota',l:'CCL',lat:1.3081,lng:103.8882},{n:'MacPherson',l:'CCL/DTL',lat:1.3264,lng:103.8900},{n:'Tai Seng',l:'CCL',lat:1.3355,lng:103.8882},{n:'Bartley',l:'CCL',lat:1.3424,lng:103.8800},{n:'Lorong Chuan',l:'CCL',lat:1.3515,lng:103.8641},{n:'Marymount',l:'CCL',lat:1.3494,lng:103.8396},{n:'Caldecott',l:'CCL/TEL',lat:1.3376,lng:103.8393},{n:'Springleaf',l:'TEL',lat:1.3993,lng:103.8193},{n:'Lentor',l:'TEL',lat:1.3846,lng:103.8358},{n:'Mayflower',l:'TEL',lat:1.3702,lng:103.8391},{n:'Bright Hill',l:'TEL',lat:1.3606,lng:103.8352},{n:'Upper Thomson',l:'TEL',lat:1.3529,lng:103.8327},{n:'Mount Pleasant',l:'TEL',lat:1.3236,lng:103.8292},{n:'Stevens',l:'TEL/DTL',lat:1.3196,lng:103.8259},{n:'Napier',l:'TEL',lat:1.3061,lng:103.8189},{n:'Orchard Boulevard',l:'TEL',lat:1.3019,lng:103.8240},{n:'Great World',l:'TEL',lat:1.2937,lng:103.8240},{n:'Havelock',l:'TEL',lat:1.2886,lng:103.8359},{n:'Maxwell',l:'TEL',lat:1.2793,lng:103.8445},{n:'Shenton Way',l:'TEL',lat:1.2769,lng:103.8499},{n:'Gardens by the Bay',l:'TEL',lat:1.2821,lng:103.8630},{n:'Tanjong Rhu',l:'TEL',lat:1.2993,lng:103.8716},{n:'Katong Park',l:'TEL',lat:1.3032,lng:103.8812},{n:'Tanjong Katong',l:'TEL',lat:1.3072,lng:103.8933},{n:'Marine Parade',l:'TEL',lat:1.3030,lng:103.9064},{n:'Marine Terrace',l:'TEL',lat:1.3063,lng:103.9198},{n:'Siglap',l:'TEL',lat:1.3121,lng:103.9282},{n:'Bayshore',l:'TEL',lat:1.3145,lng:103.9394},{n:'Bedok South',l:'TEL',lat:1.3216,lng:103.9474},{n:'Promenade',l:'CCL/DTL',lat:1.2934,lng:103.8609},{n:'Esplanade',l:'CCL',lat:1.2937,lng:103.8554},{n:'Bras Basah',l:'CCL',lat:1.2966,lng:103.8499},{n:'Tampines West',l:'DTL',lat:1.3463,lng:103.9380}
@@ -1057,6 +1055,39 @@ function logTabSwitch(newTab){try{
 window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')logTabSwitch(null);});
 window.addEventListener('pagehide',()=>logTabSwitch(null));
 function sgd(n){return'S$'+Math.round(n).toLocaleString();}
+// Estimate display uses nearest-S$1,000 rounding. Range low rounds DOWN, high rounds UP, and both
+// are clamped around the rounded price so the invariant (displayed low ≤ displayed price ≤ displayed
+// high) always holds, even when the raw range is narrow enough that naive nearest-1k rounding could
+// flip the ordering.
+function r1kNear(n){return Math.round(n/1000)*1000;}
+function r1kDown(n){return Math.floor(n/1000)*1000;}
+function r1kUp(n){return Math.ceil(n/1000)*1000;}
+function sgdK(n){return'S$'+r1kNear(n).toLocaleString();}
+function displayEstimate(price,low,high){
+  const dp=r1kNear(price);
+  const dl=Math.min(r1kDown(low),dp);
+  const dh=Math.max(r1kUp(high),dp);
+  return{price:dp,low:dl,high:dh};
+}
+function poolScopeWord(tier){
+  if(tier===1)return'this block, same storey band';
+  if(tier===2)return'this block, all floors';
+  if(tier===3)return`${resolvedStreet}, same storey band`;
+  if(tier===4)return`${resolvedStreet}, all floors`;
+  if(tier===5)return`${resolvedStreet}, similar unit size`;
+  if(tier===6)return`${resolvedTown} town-level`;
+  return'';
+}
+function methodNoteLine(est,floor,scope){
+  if(est.method==='regression'){
+    let s=`Floor ${floor}: regression on ${est.n} tx across ${est.bandCount} bands`;
+    if(est.perFloor!=null)s+=` · ~S$${r1kNear(est.perFloor).toLocaleString()}/floor in ${scope}`;
+    if(est.extrapolated)s+=` · floor ${floor} outside observed range — extrapolated, treat as rough`;
+    return s;
+  }
+  if(est.method==='band')return`Floor ${floor}: median of ${est.bandN} tx in band ${esc(est.bandLabel)}`;
+  return`${est.n} tx observed`;
+}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function psfCalc(p,s){return Math.round(p/(s*10.764));}
 function pct(arr,p){const s=[...arr].sort((a,b)=>a-b);const i=(p/100)*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);}
@@ -1076,9 +1107,11 @@ function linReg(xs,ys){
   const tSlope=SEslope>0?slope/SEslope:(slope!==0?Infinity:0);
   return{slope,intercept,n,mx,Sxx,s,R2,tSlope};
 }
-// Floor price model: given transactions for a flat type, predicts price by floor.
-// Tries regression first (PSF vs floor midpoint), falls back to band median, then hardcoded.
-function floorPriceModel(records,targetFloor,targetSqm){
+// Canonical estimator. Given a fallback-tier pool of records (already selected by pickPool),
+// returns a single estimate object regardless of method — 'regression' if the slope/fit gates
+// pass, else 'band' if the target-band has ≥2 tx, else 'none' (no point estimate). Consumers
+// render this object; they don't compute prices independently.
+function estimateFromPool(records,targetFloor,targetSqm,tier){
   if(!records||!records.length)return null;
   const txs=records.map(r=>{
     const m=smid(r.storey_range);
@@ -1087,63 +1120,42 @@ function floorPriceModel(records,targetFloor,targetSqm){
     return{floor:m,psf,price:+r.resale_price,area,storey:r.storey_range};
   }).filter(t=>t.floor>0&&t.psf>0);
   if(!txs.length)return null;
-  // Build band breakdown for transparency
   const bandMap={};
   txs.forEach(t=>{const k=t.storey;if(!bandMap[k])bandMap[k]={floor:t.floor,prices:[],psfs:[]};bandMap[k].prices.push(t.price);bandMap[k].psfs.push(t.psf);});
   const bands=Object.entries(bandMap).map(([label,b])=>({label,floor:b.floor,n:b.prices.length,medPrice:Math.round(pct(b.prices,50)),medPsf:Math.round(pct(b.psfs,50)),p25:Math.round(pct(b.prices,25)),p75:Math.round(pct(b.prices,75))})).sort((a,b)=>a.floor-b.floor);
-  const allPrices=txs.map(t=>t.price);
-  const blockMedian=Math.round(pct(allPrices,50));
-  const blockMin=Math.min(...allPrices);
-  const blockMax=Math.max(...allPrices);
-  // Use targetSqm if given, else median area from these txs
-  const sqm=targetSqm||(txs.map(t=>t.area).reduce((a,b)=>a+b,0)/txs.length);
+  const prices=txs.map(t=>t.price);
+  const observedLow=Math.min(...prices);
+  const observedHigh=Math.max(...prices);
+  const observedMedian=Math.round(pct(prices,50));
+  const areas=txs.map(t=>t.area);
+  const sqm=targetSqm||(areas.reduce((a,b)=>a+b,0)/areas.length);
   const sqft=sqm*10.764;
-  // Method 1: Regression (≥5 tx, ≥3 distinct bands) — gated by slope significance + fit
-  if(txs.length>=5&&bands.length>=3){
+  const observedMedPsf=Math.round(observedMedian/sqft);
+  const base={n:txs.length,pool_tier:tier==null?null:tier,bands,bandCount:bands.length,observedLow,observedHigh,observedMedian,observedMedPsf,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+  // Method 1: Regression (needs target floor, ≥5 tx, ≥3 bands, trusted slope)
+  if(targetFloor&&txs.length>=5&&bands.length>=3){
     const reg=linReg(txs.map(t=>t.floor),txs.map(t=>t.psf));
     const{slope,intercept,n,mx,Sxx,s,R2,tSlope}=reg;
-    const T=1.7; // ~80% band. Approximation across df; tunable.
-    const floors=txs.map(t=>t.floor);
-    const fLo=Math.min(...floors),fHi=Math.max(...floors);
     const slopeTrusted=Math.abs(tSlope)>=1.7&&R2>=0.3;
-    if(targetFloor&&slopeTrusted){
-      const extrapolated=targetFloor<fLo||targetFloor>fHi;
+    if(slopeTrusted){
+      const T=1.7;
+      const floors=txs.map(t=>t.floor);
+      const fLo=Math.min(...floors),fHi=Math.max(...floors);
       const predPsf=intercept+slope*targetFloor;
       const SEpred=s*Math.sqrt(1+1/n+((targetFloor-mx)**2)/Sxx);
       const halfPsf=T*SEpred;
-      const rawPrice=predPsf*sqft;
-      const price=Math.round(rawPrice/1000)*1000; // nearest S$1,000 — no false precision
-      const low=Math.round((predPsf-halfPsf)*sqft);
-      const high=Math.round((predPsf+halfPsf)*sqft);
-      return{method:'regression',price,low,high,slope,intercept,
-             perFloor:Math.round(slope*sqft),perFloorTrusted:true,
-             predPsf:Math.round(predPsf),R2:+R2.toFixed(2),extrapolated,
-             txCount:txs.length,bandCount:bands.length,bands,
-             blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+      return{...base,method:'regression',price:predPsf*sqft,low:(predPsf-halfPsf)*sqft,high:(predPsf+halfPsf)*sqft,slope,intercept,perFloor:slope*sqft,predPsf:Math.round(predPsf),R2:+R2.toFixed(2),extrapolated:targetFloor<fLo||targetFloor>fHi};
     }
-    if(!targetFloor){
-      return{method:'regression-noflr',blockMedian,blockMin,blockMax,slope,
-             perFloor:slopeTrusted?Math.round(slope*sqft):null,
-             perFloorTrusted:slopeTrusted,
-             txCount:txs.length,bandCount:bands.length,bands,
-             sqm:Math.round(sqm),sqft:Math.round(sqft)};
-    }
-    // targetFloor present but slope not trusted → fall through to Method 2
   }
-  // Method 2: Band median (≥2 tx in target's band)
+  // Method 2: Band median (needs target floor and ≥2 tx in the matching band)
   if(targetFloor){
     const targetBand=bands.find(b=>{const m=b.label.match(/(\d+)\s*TO\s*(\d+)/i);return m&&targetFloor>=+m[1]&&targetFloor<=+m[2];});
     if(targetBand&&targetBand.n>=2){
-      return{method:'band',price:targetBand.medPrice,low:targetBand.p25,high:targetBand.p75,bandLabel:targetBand.label,bandN:targetBand.n,txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+      return{...base,method:'band',price:targetBand.medPrice,low:targetBand.p25,high:targetBand.p75,bandLabel:targetBand.label,bandN:targetBand.n};
     }
   }
-  // Method 3: Hardcoded fallback (sparse data)
-  if(targetFloor){
-    const adj=targetFloor>=20?1.07:targetFloor>=13?1.04:targetFloor>=7?1.01:0.96;
-    const adjPrice=Math.round(blockMedian*adj);
-    return{method:'fallback',price:adjPrice,low:blockMin,high:blockMax,adjPct:Math.round((adj-1)*100),txCount:txs.length,bandCount:bands.length,bands,blockMedian,blockMin,blockMax,sqm:Math.round(sqm),sqft:Math.round(sqft)};
-  }
-  return{method:'noflr',blockMedian,blockMin,blockMax,txCount:txs.length,bandCount:bands.length,bands,sqm:Math.round(sqm),sqft:Math.round(sqft)};
+  // Method 3: none — no point estimate. Range = observed pool span.
+  return{...base,method:'none',price:null,low:observedLow,high:observedHigh};
 }
 function normStr(s){if(!s)return'';return s.toUpperCase().replace(/\bAVENUE\b/g,'AVE').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR').replace(/\bCLOSE\b/g,'CL').replace(/\bCRESCENT\b/g,'CRES').replace(/\bSTREET\b/g,'ST').replace(/\bPLACE\b/g,'PL').replace(/\s+/g,' ').trim();}
 function smid(r){if(!r)return 0;const m=r.match(/(\d+)\s*TO\s*(\d+)/i);if(m)return(+m[1]+ +m[2])/2;const s=r.match(/(\d+)/);return s?+s[1]:0;}
@@ -1223,57 +1235,6 @@ async function geocodeOM(query){
   }
 }
 
-// ── Estimation Engine ──────────────────────────────────────
-function estimateFromComparables(targetFlatType,comparableRecs,comparableFlatType){
-  if(!comparableRecs.length)return null;
-  const prices=comparableRecs.map(r=>+r.resale_price);
-  const areas=comparableRecs.map(r=>+r.floor_area_sqm);
-  const medPrice=pct(prices,50);
-  const medArea=areas.reduce((a,b)=>a+b,0)/areas.length;
-  const medPsf=psfCalc(medPrice,medArea);
-
-  // Target unit size — use actual block data if available, else typical
-  const targetBlockSqm=allBlockRecs.filter(r=>r.flat_type===targetFlatType).map(r=>+r.floor_area_sqm);
-  const targetSqm=targetBlockSqm.length
-    ?targetBlockSqm.reduce((a,b)=>a+b,0)/targetBlockSqm.length
-    :(FLAT_SQM[targetFlatType]||100);
-  const targetSqft=targetSqm*10.764;
-
-  // PSF adjustment: larger units have slightly lower PSF (~4% per flat type step)
-  const ftIdx=ALL_FLAT_TYPES.indexOf(targetFlatType);
-  const compIdx=ALL_FLAT_TYPES.indexOf(comparableFlatType);
-  const sizeDiff=ftIdx-compIdx;
-  const psfAdjFactor=1-(sizeDiff*0.04);
-  const adjustedPsf=Math.round(medPsf*psfAdjFactor);
-  const estMid=Math.round(adjustedPsf*targetSqft);
-  // Range derived from the comparable-PSF quartile spread, scaled to target unit size.
-  const compPsfs=comparableRecs.map(r=>+r.resale_price/(+r.floor_area_sqm*10.764));
-  const psfQ25=pct(compPsfs,25),psfQ75=pct(compPsfs,75);
-  const estLow=Math.round(psfQ25*psfAdjFactor*targetSqft);
-  const estHigh=Math.round(psfQ75*psfAdjFactor*targetSqft);
-  const confidence=comparableRecs.length>=10&&Math.abs(sizeDiff)===1?'Medium':comparableRecs.length>=5?'Low':'Very low';
-
-  return{estLow,estMid,estHigh,medPsf,adjustedPsf,targetSqm:Math.round(targetSqm),targetSqft:Math.round(targetSqft),comparableFlatType,comparableCount:comparableRecs.length,comparableMedian:medPrice,psfAdjPct:Math.round((psfAdjFactor-1)*100),sizeDiff,confidence};
-}
-
-function buildEstimate(targetFlatType){
-  // Only use same-street data for estimation — never town-level
-  // allStreetRecs may only contain block data; filter to same street by street_name
-  const streetName=resolvedStreet;
-  const streetRecs=allStreetRecs.filter(r=>{
-    const s=normStr(r.street_name),n=normStr(streetName);
-    return s===n||s.includes(n)||n.includes(s);
-  });
-  const ftIdx=ALL_FLAT_TYPES.indexOf(targetFlatType);
-  const candidates=[ftIdx-1,ftIdx+1,ftIdx-2,ftIdx+2].filter(i=>i>=0&&i<ALL_FLAT_TYPES.length);
-  for(const ci of candidates){
-    const compType=ALL_FLAT_TYPES[ci];
-    const recs=streetRecs.filter(r=>r.flat_type===compType);
-    if(recs.length>=3)return estimateFromComparables(targetFlatType,recs,compType);
-  }
-  return null; // not enough local data — don't estimate from town level
-}
-
 // ── Step 1: Quick Search ───────────────────────────────────
 async function doQuickSearch(){
   const now=Date.now();
@@ -1331,7 +1292,11 @@ async function doQuickSearch(){
       showStatus('',false);
     }
     const userFloorQuick=+document.getElementById('quick_floor').value||0;
-    const qResult=await runQuickFallback(flatType);
+    // Same fallback progression the full analysis uses, so identical inputs land on the identical
+    // pool and the two screens can't diverge on numbers. Skip the async tier-6 town fetch to keep
+    // the quick check fast; full analysis will retry with tier 6 if needed.
+    const quickBands=userFloorQuick?getAdj(getBand(userFloorQuick)):[];
+    const qResult=await runFullFallback(flatType,quickBands,mb,false);
     renderQuickResult(qResult,userFloorQuick,flatType);
     document.getElementById('quickResult').style.display='block';
     // If floor already entered, skip step 2 and pre-populate for full analysis
@@ -1343,81 +1308,49 @@ async function doQuickSearch(){
   btn.disabled=false;btn.textContent='Get ballpark price';
 }
 
-async function runQuickFallback(flatType){
-  const tiers=[
-    {id:1,desc:`Block ${resolvedBlock}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)},
-    {id:2,desc:resolvedStreet,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet))},
-  ];
-  for(const t of tiers){const recs=t.fn();if(recs.length>=2)return{...t,records:recs};}
-  return null;
-}
-
 function renderQuickResult(qResult,floor,flatType){
   const estBannerEl=document.getElementById('qr-est-banner');
   const heroPrice=document.getElementById('qr-hero-price');
   const heroRange=document.getElementById('qr-hero-range');
-
+  estBannerEl.innerHTML='';
+  // No pool at any tier → no comparable data
   if(!qResult){
-    const est=buildEstimate(flatType);
     document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock}`;
-    if(!est){
-      estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">No ${esc(flatType)} transactions found</div><div style="font-size:12px;margin-top:3px">No comparable data available. Try extending the date range to 24–36 months.</div></div>`;
-      heroPrice.textContent='—';heroRange.textContent='No data available.';
-      document.getElementById('qr-count').textContent='0';document.getElementById('qr-psf').textContent='—';document.getElementById('qr-lease').textContent='—';
-      document.getElementById('qr-source').textContent='';document.getElementById('qr-verdict').style.display='none';return;
-    }
-    // Apply floor adjustment if floor provided
-    const floorAdj=floor>=13?1.05:floor>=7?1.02:floor>=1?0.97:1.0; // no floor = neutral
-    const adjMid=floor?Math.round(est.estMid*floorAdj):est.estMid;
-    // Scale the data-derived quartile band by the same floor adjustment.
-    const adjLow=floor?Math.round(est.estLow*floorAdj):est.estLow;
-    const adjHigh=floor?Math.round(est.estHigh*floorAdj):est.estHigh;
-    const floorNote=floor?` · floor ${floor} applied (${floorAdj>=1?'+':''}${Math.round((floorAdj-1)*100)}%)`:'· mid-floor assumed';
-    estBannerEl.innerHTML=`<div class="est-banner"><div class="est-banner-title">⚠️ No ${esc(flatType)} transactions found — estimated range only</div><div style="font-size:12px;margin-top:3px">Based on ${est.comparableCount} ${esc(est.comparableFlatType)} transactions on ${esc(resolvedStreet)}${floorNote}. Confidence: ${esc(est.confidence)}. Not a formal valuation.</div></div>`;
-    heroPrice.textContent=sgd(adjMid);
-    heroRange.textContent=`Estimated range: ${sgd(adjLow)} – ${sgd(adjHigh)}`;
-    document.getElementById('qr-count').textContent='Est.';document.getElementById('qr-psf').textContent='S$'+est.adjustedPsf;document.getElementById('qr-lease').textContent='—';
-    document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock} · Estimated`;
-    document.getElementById('qr-source').textContent=`From ${est.comparableFlatType} comparables · S$${est.medPsf}/sqft · ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% size adj · ${est.targetSqm} sqm${floor?' · floor '+floor+' adj':' · mid-floor assumed'}`;
+    heroPrice.textContent='—';
+    heroRange.textContent='No comparable data found. Try extending the date range to 24–36 months.';
+    document.getElementById('qr-count').textContent='0';
+    document.getElementById('qr-psf').textContent='—';
+    document.getElementById('qr-lease').textContent='—';
+    document.getElementById('qr-source').textContent='';
     document.getElementById('qr-verdict').style.display='none';
     return;
   }
-
-  estBannerEl.innerHTML='';
-  const{id,desc,records}=qResult;
-  const prices=records.map(r=>+r.resale_price);
-  const med=pct(prices,50),p25=pct(prices,25),p75=pct(prices,75);
+  const{tier,records,attempted}=qResult;
   const areas=records.map(r=>+r.floor_area_sqm);
-  const medArea=areas.reduce((a,b)=>a+b,0)/areas.length;
-  const medPsf=psfCalc(med,medArea);
+  const medArea=areas.length?areas.reduce((a,b)=>a+b,0)/areas.length:null;
   const leaseYrs=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null);
   const medLease=leaseYrs.length?Math.round(pct(leaseYrs,50)):null;
-  // Floor-aware estimate
-  const fm=floorPriceModel(records,floor,medArea);
-  if(floor&&fm&&fm.price){
-    heroPrice.textContent=sgd(fm.price);
-    const scopeWord=(qResult&&qResult.id===1)?'in this block':`on ${qResult.desc}`;
-    let methodNote='';
-    if(fm.method==='regression'){
-      methodNote=`Floor ${floor} estimate: regression on ${fm.txCount} tx across ${fm.bandCount} storey bands`;
-      if(fm.perFloorTrusted&&fm.perFloor!=null)methodNote+=` · ~S$${fm.perFloor.toLocaleString()}/floor ${scopeWord}`;
-      if(fm.extrapolated)methodNote+=` · floor ${floor} is outside observed range — extrapolated, treat as rough`;
-    }
-    else if(fm.method==='band')methodNote=`Floor ${floor} estimate: median of ${fm.bandN} tx in band ${esc(fm.bandLabel)}`;
-    else if(fm.method==='fallback')methodNote=`Floor ${floor} estimate: ${fm.adjPct>=0?'+':''}${fm.adjPct}% heuristic (only ${fm.txCount} tx, low confidence)`;
-    heroRange.textContent=`Range: ${sgd(fm.low)} – ${sgd(fm.high)} · ${methodNote}`;
+  const est=estimateFromPool(records,floor,medArea,tier);
+  const scope=poolScopeWord(tier);
+  const usedDesc=attempted?.find(t=>t.used)?.desc||scope;
+  if(est.method==='regression'||est.method==='band'){
+    const d=displayEstimate(est.price,est.low,est.high);
+    heroPrice.textContent=sgdK(d.price);
+    heroRange.textContent=`${sgdK(d.low)} – ${sgdK(d.high)} · ${methodNoteLine(est,floor,scope)}`;
   } else {
-    // No floor — show full block range
-    heroPrice.textContent=sgd(med);
-    heroRange.textContent=`${sgd(p25)} – ${sgd(p75)} (median ${sgd(med)}) across ${records.length} transactions, all floors. Enter a floor for a tighter estimate.`;
+    // method === 'none' — same numbers/labels as full analysis's estimation card
+    const dl=r1kDown(est.observedLow),dh=r1kUp(est.observedHigh);
+    heroPrice.textContent='—';
+    heroRange.textContent=floor
+      ?`${sgdK(dl)} – ${sgdK(dh)} · Too few comparable sales to estimate for floor ${floor}. Pool median: ${sgdK(est.observedMedian)} across ${est.n} tx (${scope}).`
+      :`${sgdK(dl)} – ${sgdK(dh)} (median ${sgdK(est.observedMedian)}) across ${est.n} tx, all floors. Enter a floor to refine.`;
   }
-  document.getElementById('qr-count').textContent=records.length;
-  document.getElementById('qr-psf').textContent='S$'+medPsf;
+  document.getElementById('qr-count').textContent=est.n;
+  document.getElementById('qr-psf').textContent='S$'+est.observedMedPsf;
   document.getElementById('qr-lease').textContent=medLease?medLease+'y':'—';
-  document.getElementById('qr-scope').textContent=`${quickFlatType} · ${desc}`;
+  document.getElementById('qr-scope').textContent=`${quickFlatType} · ${usedDesc}`;
   document.getElementById('qr-verdict').style.display='none';
-  const sourceNote=id===1?`Block ${resolvedBlock} only`:`Street-level (${desc}) — no block-specific data in this period`;
-  document.getElementById('qr-source').textContent=sourceNote;
+  document.getElementById('qr-source').textContent=`Pool tier ${tier} · ${scope}`;
 }
 
 function goToFullAnalysis(){
@@ -1509,7 +1442,7 @@ async function doFullAnalysis(){
   btn.disabled=false;btn.textContent='Full analysis';
 }
 
-async function runFullFallback(flatType,bands,mb){
+async function runFullFallback(flatType,bands,mb,allowTownFetch=true){
   const blockSqms=allBlockRecs.filter(r=>r.flat_type===flatType).map(r=>+r.floor_area_sqm);
   const avgSqm=blockSqms.length?blockSqms.reduce((a,b)=>a+b,0)/blockSqms.length:null;
   const tiers=[
@@ -1518,10 +1451,15 @@ async function runFullFallback(flatType,bands,mb){
     {id:3,label:'Nearby blocks, same flat type, similar floor',desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet)&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
     {id:4,label:'Nearby blocks, same flat type, any floor',desc:`${resolvedStreet} · ${flatType}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet))},
     {id:5,label:'Nearby blocks, similar unit size',desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'}`,fn:()=>avgSqm?allStreetRecs.filter(r=>normStr(r.street_name)===normStr(resolvedStreet)&&Math.abs(+r.floor_area_sqm-avgSqm)<=15):[]},
-    {id:6,label:'Same town, same flat type',desc:`${resolvedTown} · ${flatType}`,fn:async()=>{showStatus(`Fetching town data for ${resolvedTown}...`);const r=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);showStatus('',false);return r;}}
+    {id:6,label:'Same town, same flat type',desc:`${resolvedTown} · ${flatType}`,skipIfQuick:true,fn:async()=>{showStatus(`Fetching town data for ${resolvedTown}...`);const r=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);showStatus('',false);return r;}}
   ];
   const attempted=[];
-  for(const t of tiers){let recs;try{recs=await t.fn();}catch(e){recs=[];}attempted.push({...t,count:recs.length,used:false});if(recs.length>=3){attempted[attempted.length-1].used=true;return{tier:t.id,records:recs,attempted};}}
+  for(const t of tiers){
+    if(t.skipIfQuick&&!allowTownFetch)continue;
+    let recs;try{recs=await t.fn();}catch(e){recs=[];}
+    attempted.push({...t,count:recs.length,used:false});
+    if(recs.length>=3){attempted[attempted.length-1].used=true;return{tier:t.id,records:recs,attempted};}
+  }
   return null;
 }
 
@@ -1530,30 +1468,10 @@ async function renderPriceTab(result,asking,flatType,mb){
   const estCardEl=document.getElementById('estimationCard');
   _lastEstimMethod=null;_trendWindow=null;
   if(!result){
-    // No direct data — show estimation
-    const est=buildEstimate(flatType);
-    _lastEstimMethod=est?'estimate':null;
-    document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No ${esc(flatType)} transactions found for Block ${esc(resolvedBlock)} in this period</div><div style="font-size:12px;opacity:0.85;margin-top:2px">Showing estimated value range based on comparable flat types nearby. Try extending the date range for actual transactions.</div></div>`;
-    if(est){
-      estCardEl.innerHTML=`
-        <div class="card">
-          <p class="sl">Estimated value range — no direct transactions found</p>
-          <div style="font-size:28px;font-weight:500;color:var(--text);margin-bottom:4px">${sgd(est.estMid)}</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Estimated range: ${sgd(est.estLow)} – ${sgd(est.estHigh)}</div>
-          <div class="est-method">
-            <div class="est-method-title">How this estimate was calculated</div>
-            <div class="est-step"><div class="est-step-num">1</div><div><strong>Comparable data:</strong> ${est.comparableCount} ${esc(est.comparableFlatType)} transactions on ${esc(resolvedStreet)}. Median price ${sgd(est.comparableMedian)}, median PSF S$${est.medPsf}/sqft.</div></div>
-            <div class="est-step"><div class="est-step-num">2</div><div><strong>Size adjustment:</strong> ${esc(flatType)} units are typically ~${est.targetSqm} sqm (${est.targetSqft} sqft). Larger units trade at a lower PSF — applied ${est.psfAdjPct>0?'+':''}${est.psfAdjPct}% PSF adjustment = S$${est.adjustedPsf}/sqft.</div></div>
-            <div class="est-step"><div class="est-step-num">3</div><div><strong>Estimated midpoint:</strong> S$${est.adjustedPsf}/sqft × ${est.targetSqft} sqft = ${sgd(est.estMid)}.</div></div>
-            <div class="est-step"><div class="est-step-num">4</div><div><strong>Range:</strong> 25th–75th percentile of comparable PSFs (${est.comparableCount} tx) scaled to target size = ${sgd(est.estLow)} to ${sgd(est.estHigh)}.</div></div>
-          </div>
-          <div style="font-size:11px;padding:8px 10px;background:var(--err-bg);color:var(--err-text);border-radius:var(--radius)">
-            Confidence: ${est.confidence}. This is a market-based estimate — not a formal valuation. Actual prices may differ significantly based on unit condition, renovation, floor, facing, and remaining lease. Verify with a licensed valuer before making financial decisions.
-          </div>
-        </div>`;
-    }else{
-      estCardEl.innerHTML=`<div class="card"><p style="font-size:13px;color:var(--text2)">Insufficient comparable data to generate an estimate. Try extending the date range to 24–36 months.</p></div>`;
-    }
+    // No pool at any tier — no synthesised estimate. Show the honest state.
+    _lastEstimMethod=null;
+    document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No comparable ${esc(flatType)} data found</div><div style="font-size:12px;opacity:0.85;margin-top:2px">No pool matched at block, street, or town level. Try extending the date range to 24–36 months, or check a different flat type.</div></div>`;
+    estCardEl.innerHTML=`<div class="card"><p style="font-size:13px;color:var(--text2)">No transactions to render.</p></div>`;
     document.getElementById('metricsRow').innerHTML='';document.getElementById('verdictBox').innerHTML='';
     document.getElementById('trendSummary').textContent='';document.getElementById('chartLegend').innerHTML='';document.getElementById('txBody').innerHTML='';
     if(chartInstance){chartInstance.destroy();chartInstance=null;}
@@ -1573,38 +1491,39 @@ async function renderPriceTab(result,asking,flatType,mb){
   const areas=records.map(r=>+r.floor_area_sqm),avgArea=areas.reduce((a,b)=>a+b,0)/areas.length,medPsf=psfCalc(med,avgArea);
   const lys=records.map(r=>remLease(r.lease_commence_date,r.month)).filter(x=>x!==null),medLease=lys.length?Math.round(pct(lys,50)):null;
 
-  // Floor-aware estimate card (only for direct match, tier ≤ 4)
+  // Floor-aware estimate — same canonical pipeline the quick check uses, so labels line up.
   const userFloor=+document.getElementById('floor_num').value||0;
-  if(tier<=4&&userFloor){
-    const fm=floorPriceModel(records,userFloor,avgArea);
-    if(fm&&fm.price){
-      _lastEstimMethod=fm.method;
-      let methodTitle='',methodDetail='';
-      if(fm.method==='regression'){
-        methodTitle='Floor-adjusted estimate (regression)';
-        const scopeWord=tier<=2?'in this block':`across nearby blocks on ${esc(resolvedStreet)}`;
-        methodDetail=`Linear regression on ${fm.txCount} transactions across ${fm.bandCount} storey bands. Each floor adds ~S$${fm.perFloor.toLocaleString()} ${scopeWord}. Predicted PSF for floor ${userFloor}: S$${fm.predPsf}/sqft.`;
-        if(fm.extrapolated)methodDetail+=` Floor ${userFloor} is outside the observed range — extrapolated, treat as rough.`;
-      } else if(fm.method==='band'){
-        methodTitle='Floor-adjusted estimate (band median)';
-        methodDetail=`Median of ${fm.bandN} transactions in storey band ${esc(fm.bandLabel)}. Insufficient spread for regression (${fm.bandCount} band${fm.bandCount===1?'':'s'} in data).`;
-      } else if(fm.method==='fallback'){
-        methodTitle='Floor-adjusted estimate (heuristic — low confidence)';
-        methodDetail=`Only ${fm.txCount} transaction${fm.txCount===1?'':'s'} available — too sparse for regression or band median. Applied ${fm.adjPct>=0?'+':''}${fm.adjPct}% adjustment to block median based on standard floor premiums.`;
-      }
-      const bandRows=fm.bands.map(b=>`<tr><td>${esc(b.label)}</td><td>${b.n}</td><td>${sgd(b.medPrice)}</td><td>S$${b.medPsf}</td></tr>`).join('');
-      estCardEl.innerHTML=`
-        <div class="card">
+  if(userFloor){
+    const est=estimateFromPool(records,userFloor,avgArea,tier);
+    if(est){
+      _lastEstimMethod=est.method;
+      const scope=poolScopeWord(tier);
+      let cardHtml;
+      if(est.method==='regression'||est.method==='band'){
+        const d=displayEstimate(est.price,est.low,est.high);
+        const methodTitle=est.method==='regression'?'Floor-adjusted estimate (regression)':'Floor-adjusted estimate (band median)';
+        const bandRows=est.bands.map(b=>`<tr><td>${esc(b.label)}</td><td>${b.n}</td><td>${sgdK(b.medPrice)}</td><td>S$${b.medPsf}</td></tr>`).join('');
+        cardHtml=`<div class="card">
           <p class="sl">${methodTitle}</p>
-          <div style="font-size:28px;font-weight:500;color:var(--text);margin-bottom:4px">${sgd(fm.price)}</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Estimated range: ${sgd(fm.low)} – ${sgd(fm.high)} <span style="color:var(--text3);font-size:11px">(wider = less data / more scatter)</span></div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:0.75rem">${methodDetail}</div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:0.5rem">Block-wide median (all floors): <strong style="color:var(--text2)">${sgd(fm.blockMedian)}</strong> · Range across all floors: ${sgd(fm.blockMin)} – ${sgd(fm.blockMax)}</div>
+          <div style="font-size:28px;font-weight:500;color:var(--text);margin-bottom:4px">${sgdK(d.price)}</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">${sgdK(d.low)} – ${sgdK(d.high)} <span style="color:var(--text3);font-size:11px">(wider = less data / more scatter)</span></div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:0.75rem">${methodNoteLine(est,userFloor,scope)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:0.5rem">Pool median (all floors in scope): <strong style="color:var(--text2)">${sgdK(est.observedMedian)}</strong> · Observed range: ${sgdK(r1kDown(est.observedLow))} – ${sgdK(r1kUp(est.observedHigh))}</div>
           <details style="margin-top:0.75rem">
             <summary style="cursor:pointer;font-size:12px;color:#378ADD;padding:4px 0">View transaction breakdown by storey band</summary>
             <table style="width:100%;font-size:11px;margin-top:8px;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--border);text-align:left"><th style="padding:4px">Storey band</th><th>Transactions</th><th>Median price</th><th>Median PSF</th></tr></thead><tbody>${bandRows}</tbody></table>
           </details>
         </div>`;
+      } else {
+        // method === 'none' — honest treatment, no synthesised point estimate
+        cardHtml=`<div class="card">
+          <p class="sl">No floor-adjusted estimate</p>
+          <div style="font-size:28px;font-weight:500;color:var(--text);margin-bottom:4px">—</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">${sgdK(r1kDown(est.observedLow))} – ${sgdK(r1kUp(est.observedHigh))}</div>
+          <div style="font-size:12px;color:var(--text2)">Too few comparable sales to estimate for floor ${userFloor}. Pool median: <strong>${sgdK(est.observedMedian)}</strong> across ${est.n} tx (${scope}).</div>
+        </div>`;
+      }
+      estCardEl.innerHTML=cardHtml;
     }
   }
 
