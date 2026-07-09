@@ -31,11 +31,6 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .tabs{display:flex;gap:6px;margin-bottom:1rem}
 .tab{flex:1;padding:7px 4px;font-size:13px;font-weight:500;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);cursor:pointer;text-align:center;transition:all 0.15s}
 .tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}.tab:hover:not(.active){background:var(--bg3)}
-.steps{display:flex;flex-direction:column;gap:6px;margin-bottom:1.25rem}
-.step{display:flex;align-items:center;gap:10px}
-.sn{width:24px;height:24px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text2);flex-shrink:0}
-.sn.active{background:var(--text);color:var(--bg);border-color:var(--text)}.sn.done{background:var(--ok-bg);color:var(--ok-text);border-color:transparent}
-.sl2{font-size:13px;color:var(--text2)}.sl2.active{color:var(--text);font-weight:500}
 .tag{display:inline-block;font-size:12px;padding:4px 10px;border-radius:var(--radius);font-weight:500;margin-bottom:0.75rem}
 .t-ok{background:var(--ok-bg);color:var(--ok-text)}.t-err{background:var(--err-bg);color:var(--err-text)}.t-info{background:var(--info-bg);color:var(--info-text)}.t-warn{background:var(--warn-bg);color:var(--warn-text)}
 .quick-result{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
@@ -89,7 +84,6 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .kofi-bar{background:var(--bg2);border-radius:var(--radius);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:0.75rem;flex-wrap:wrap}
 .kofi-bar span{font-size:12px;color:var(--text2)}.kofi-btn{font-size:12px;padding:5px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer;font-weight:500}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#ad-slot{text-align:center;padding:0.5rem;font-size:11px;color:var(--text3);border:0.5px dashed var(--border2);border-radius:var(--radius);margin-bottom:1rem}
 .attribution{font-size:11px;color:var(--text3);margin-top:2rem;padding-top:1rem;border-top:0.5px solid var(--border);line-height:1.7}.attribution a{color:#378ADD;text-decoration:none}
 @media(max-width:480px){
   .quick-metrics{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}
@@ -105,14 +99,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 <div class="page">
   <h1>HDB Resale Analyser</h1>
   <p class="subtitle">Price comparables, nearby amenities, and value signals for any HDB block</p>
-  <div id="ad-slot"><!-- Google AdSense --></div>
-
   <div class="card" id="inputCard">
-    <div class="steps" id="stepsIndicator">
-      <div class="step"><div class="sn active" id="sn1"></div><div class="sl2 active" id="sl1">Enter block details</div></div>
-      <div class="step" id="step2row" style="display:none"><div class="sn" id="sn2"></div><div class="sl2" id="sl2">Confirm flat type &amp; floor</div></div>
-      <div class="step"><div class="sn" id="sn3"></div><div class="sl2" id="sl3">Full analysis</div></div>
-    </div>
     <div id="step1-panel">
       <div class="form-row">
         <div class="field"><label>Postal code</label><input type="text" id="postal" maxlength="6" inputmode="numeric" oninput="onPostalInput()"/></div>
@@ -1162,21 +1149,6 @@ function remLease(yr,mo){if(!yr)return null;const[y,m]=mo.split('-');return Math
 function leaseFlag(y){if(y===null)return{cls:'p-band',txt:'?'};if(y>=60)return{cls:'p-green',txt:y+'y'};if(y>=30)return{cls:'p-amber',txt:y+'y'};return{cls:'p-red',txt:y+'y'};}
 function cleanStr(v){return(v||'').toString().replace(/^"|"$/g,'').trim();}
 function showStatus(msg,vis=true){const e=document.getElementById('statusMsg');e.textContent=msg;e.style.display=vis?'block':'none';}
-function setStep(n){
-  const hasFloor=!!(+document.getElementById('quick_floor')?.value||0);
-  const step2row=document.getElementById('step2row');
-  // Show step 2 row only when floor not provided and we're at step 2
-  if(step2row)step2row.style.display=(!hasFloor&&n===2)?'flex':'none';
-  // All step circles show no numbers - just color changes
-  [1,2,3].forEach(i=>{
-    const num=document.getElementById('sn'+i),lbl=document.getElementById('sl'+i);
-    if(!num)return;
-    num.textContent='';
-    if(i<n){num.className='sn done';num.innerHTML='✓';lbl.className='sl2';}
-    else if(i===n){num.className='sn active';lbl.className='sl2 active';}
-    else{num.className='sn';lbl.className='sl2';}
-  });
-}
 function showTab(t){['price','amenities','value'].forEach(x=>{document.getElementById('tab-'+x).style.display=x===t?'block':'none';document.getElementById('nav-'+x).className='tab'+(x===t?' active':'');});logTabSwitch(t);}
 function onPostalInput(){resolvedBlock='';document.getElementById('resolved-tag').innerHTML='';}
 function cacheGet(k){try{const v=sessionStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -1363,7 +1335,6 @@ async function doQuickSearch(){
       document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label===getBand(userFloorQuick).label?' selected':''}>${b.label}</option>`).join('');
       document.getElementById('floor_num').value=userFloorQuick;
     }
-    setStep(2);
   }catch(e){showStatus('Connection error. Try again.');logError({postal_2:sector(),flat_type:flatType,error_type:'connection_error'});}
   btn.disabled=false;btn.textContent='Get ballpark price';
 }
@@ -1457,7 +1428,6 @@ function goToFullAnalysis(){
     adjBands=getAdj(selectedBand);
     document.getElementById('floor_num').value=qFloor;
     document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label===selectedBand.label?' selected':''}>${b.label}</option>`).join('');
-    setStep(3);
     const mb=+document.getElementById('months_back').value;
     const asking=null;
     // Run full analysis directly
@@ -1481,14 +1451,13 @@ function goToFullAnalysis(){
     document.getElementById('step2-panel').style.display='block';
     document.getElementById('storey_band_sel').innerHTML=BANDS.map(b=>`<option value="${b.label}"${b.label==='Mid-low (7–12)'?' selected':''}>${b.label}</option>`).join('');
     document.getElementById('step2-tag').innerHTML=`<div class="tag t-info">Flat type: ${esc(quickFlatType)}. Enter your floor to refine the analysis.</div>`;
-    setStep(2);
   }
 }
 
 function resetToStep1(){
   document.getElementById('step1-panel').style.display='block';document.getElementById('step2-panel').style.display='none';
   document.getElementById('quickResult').style.display='none';document.getElementById('fullResults').style.display='none';
-  showStatus('',false);setStep(1);
+  showStatus('',false);
 }
 
 // ── Step 2: Full Analysis ──────────────────────────────────
@@ -1504,7 +1473,7 @@ async function doFullAnalysis(){
   renderPriceTab(result,asking,selectedFlatType,mb);
   renderAmenitiesTab();
   renderValueTab(result?result.records:[],mb);
-  document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');setStep(3);
+  document.getElementById('step2-panel').style.display='none';document.getElementById('fullResults').style.display='block';showTab('price');
   logSearch({town:coarseTown(),flat_type:selectedFlatType,floor_entered:!!userFloorRaw,months_back:mb,result_tier:result?result.tier:null,result_count:result?result.records.length:0,estimation_method:_lastEstimMethod});
   btn.disabled=false;btn.textContent='Full analysis';
 }
