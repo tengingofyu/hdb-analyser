@@ -46,7 +46,7 @@ jobs:
             const headers = process.env.DATAGOV_API_KEY ? {'x-api-key': process.env.DATAGOV_API_KEY} : {};
             let all = [], offset = 0;
             while (true) {
-              const r = await fetch(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}&offset=${offset}`, {headers});
+              const r = await fetchWithTimeout(`https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${limit}&offset=${offset}`, {headers}, 15000);
               const d = await r.json();
               if (!d.result?.records) throw new Error('Dataset fetch failed: ' + id + ' response: ' + JSON.stringify(d).slice(0,200));
               all = all.concat(d.result.records);
@@ -58,21 +58,36 @@ jobs:
             return all;
           }
 
+          // fetch() in Node has no default timeout — a connection OneMap opens but never
+          // completes will hang the whole workflow. Wrap every network call in a hard
+          // per-request cap so a stall fails fast into the retry loop instead.
+          async function fetchWithTimeout(url, opts={}, timeoutMs=10000) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+            try {
+              return await fetch(url, { ...opts, signal: ctrl.signal });
+            } finally {
+              clearTimeout(timer);
+            }
+          }
+
           // Retry a single OneMap postal lookup with 1s/2s/4s backoff on any failure
-          // (non-200, empty results, JSON error, network). Throws on final failure.
+          // (non-200, empty results, JSON error, network, timeout). Throws on final failure.
           async function geocodePostalOnce(p) {
             const delays = [1000, 2000, 4000];
             let lastErr = null;
             for (let attempt = 0; attempt < 4; attempt++) {
               try {
-                const r = await fetch(`https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${p}&returnGeom=Y&getAddrDetails=Y&pageNum=1`);
+                const r = await fetchWithTimeout(`https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${p}&returnGeom=Y&getAddrDetails=Y&pageNum=1`);
                 if (!r.ok) { lastErr = 'HTTP ' + r.status; }
                 else {
                   const d = await r.json();
                   if (d.results?.length) return [parseFloat(d.results[0].LATITUDE), parseFloat(d.results[0].LONGITUDE)];
                   lastErr = 'empty results';
                 }
-              } catch(e) { lastErr = e.message; }
+              } catch(e) {
+                lastErr = e.name === 'AbortError' ? 'timeout after 10s' : e.message;
+              }
               if (attempt < 3) await sleep(delays[attempt]);
             }
             throw new Error(lastErr || 'unknown');
@@ -199,7 +214,7 @@ jobs:
           // Skip any MK already present in ECDA KN (case-insensitive name match).
           const keyof = s => s.toUpperCase().replace(/[^A-Z0-9]/g,'');
           const ecdaKnKeys = new Set(ecdaKindergartens.map(k=>keyof(k.n)));
-          const mkPage = await (await fetch('https://www.moe.gov.sg/preschool/moe-kindergarten/locations')).text();
+          const mkPage = await (await fetchWithTimeout('https://www.moe.gov.sg/preschool/moe-kindergarten/locations', {}, 15000)).text();
           const mkNames = [...new Set([...mkPage.matchAll(/MOE Kindergarten @ ([A-Za-z][A-Za-z0-9 \-]{0,40})/g)].map(m=>m[1].trim()))].filter(s=>!/ceased|will open/i.test(s));
           const norm = s => s.toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();
           const priIdx = {};
