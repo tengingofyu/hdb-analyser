@@ -27,7 +27,7 @@ In the sheet, click **Extensions → Apps Script**. A new tab opens with a code 
 const SCHEMAS = {
   search: ['ts', 'session_id', 'is_returning', 'town', 'flat_type',
            'floor_entered', 'months_back', 'result_tier', 'result_count',
-           'estimation_method'],
+           'estimation_method', 'trend_window'],
   tab:    ['ts', 'session_id', 'tab', 'dwell_seconds'],
   error:  ['ts', 'postal_2', 'flat_type', 'error_type'],
 };
@@ -37,8 +37,8 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
     const type = body.event_type;
     const schema = SCHEMAS[type];
-    if (!schema) return ok();              // unknown event_type → drop
-    if (!validate(body, schema)) return ok(); // bad shape → drop
+    if (!schema) return ok();
+    if (!validate(body, schema)) return ok();
 
     const lock = LockService.getScriptLock();
     lock.tryLock(5000);
@@ -63,16 +63,16 @@ function validate(body, schema) {
     if (!(k in body)) return false;
     const v = body[k];
     if (v === null || v === undefined) continue;
-    if (typeof v === 'object') return false;            // no nested objects
+    if (typeof v === 'object') return false;
     const s = String(v);
-    if (s.length > 200) return false;                   // length cap
+    if (s.length > 200) return false;
   }
   if ('postal_2' in body && body.postal_2 != null) {
     const p = String(body.postal_2);
-    if (!/^\d{2}$/.test(p)) return false;               // 2-digit sector only
+    if (!/^\d{2}$/.test(p)) return false;
   }
   if ('town' in body && body.town != null) {
-    if (String(body.town).length > 40) return false;    // dataset towns are short
+    if (String(body.town).length > 40) return false;
   }
   if ('session_id' in body && body.session_id != null) {
     if (!/^[A-Za-z0-9_-]{4,40}$/.test(String(body.session_id))) return false;
@@ -83,7 +83,7 @@ function validate(body, schema) {
 function sanitize(v) {
   if (v === null || v === undefined) return '';
   const s = String(v);
-  return /^[=+\-@]/.test(s) ? "'" + s : s;             // formula-injection guard
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
 function getOrCreateSheet(name, schema) {
@@ -159,6 +159,7 @@ If `ANALYTICS_URL` is left empty, all logging is silently no-ops — no errors, 
 | result_tier | `1` (1=same block, 6=town fallback, null=no comps) |
 | result_count | `7` |
 | estimation_method | `regression` / `band` / `fallback` / `estimate` / `null` |
+| trend_window | `12` (12-month pool met the trend gate) / `24` (fell back to 24-month refetch for trend chart) / `"none"` (both windows too sparse) |
 
 ### `tab` (one row per tab leave / page hide)
 | Field | Example |
@@ -189,6 +190,8 @@ The client also short-circuits all beacons when the browser signals Do Not Track
 ## Updating the script later
 
 If you change `SCHEMAS` or any logic in the Apps Script, you must **Deploy → Manage deployments → pencil icon → Version: New version → Deploy**. Otherwise the live URL keeps serving the old code. Don't create a new deployment — that gives you a fresh URL and you'd have to update `index.html` again.
+
+When you add a new column to a schema (like `trend_window`), the sheet's header row is written only on first sheet creation — existing sheets keep the stale header. Either manually append the new column name to row 1, or add a `migrateHeaders()` helper and Run it once from the Apps Script editor.
 
 ## Troubleshooting
 
