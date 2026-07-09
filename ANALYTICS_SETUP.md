@@ -25,11 +25,11 @@ In the sheet, click **Extensions → Apps Script**. A new tab opens with a code 
 // ──────────────────────────────────────────────────────────────
 
 const SCHEMAS = {
-  search: ['ts', 'postal', 'flat_type', 'floor_entered', 'months_back',
-           'result_tier', 'result_count', 'estimation_method',
-           'is_returning', 'session_id'],
+  search: ['ts', 'session_id', 'is_returning', 'town', 'flat_type',
+           'floor_entered', 'months_back', 'result_tier', 'result_count',
+           'estimation_method'],
   tab:    ['ts', 'session_id', 'tab', 'dwell_seconds'],
-  error:  ['ts', 'postal', 'flat_type', 'error_type'],
+  error:  ['ts', 'postal_2', 'flat_type', 'error_type'],
 };
 
 function doPost(e) {
@@ -67,9 +67,12 @@ function validate(body, schema) {
     const s = String(v);
     if (s.length > 200) return false;                   // length cap
   }
-  if ('postal' in body && body.postal != null) {
-    const p = String(body.postal);
-    if (!/^\d{6}$/.test(p)) return false;               // exactly 6 digits
+  if ('postal_2' in body && body.postal_2 != null) {
+    const p = String(body.postal_2);
+    if (!/^\d{2}$/.test(p)) return false;               // 2-digit sector only
+  }
+  if ('town' in body && body.town != null) {
+    if (String(body.town).length > 40) return false;    // dataset towns are short
   }
   if ('session_id' in body && body.session_id != null) {
     if (!/^[A-Za-z0-9_-]{4,40}$/.test(String(body.session_id))) return false;
@@ -147,15 +150,15 @@ If `ANALYTICS_URL` is left empty, all logging is silently no-ops — no errors, 
 | Field | Example |
 |---|---|
 | ts | `2026-05-03T11:42:18.901Z` |
-| postal | `123311` (full 6-digit postal — block-level granularity, hundreds of units per block) |
+| session_id | random per page-load |
+| is_returning | `true` (localStorage flag) |
+| town | `ANG MO KIO` (~26 valid values from the HDB dataset) |
 | flat_type | `4 ROOM` |
 | floor_entered | `true` |
 | months_back | `12` |
 | result_tier | `1` (1=same block, 6=town fallback, null=no comps) |
 | result_count | `7` |
 | estimation_method | `regression` / `band` / `fallback` / `estimate` / `null` |
-| is_returning | `true` (localStorage flag) |
-| session_id | random per page-load |
 
 ### `tab` (one row per tab leave / page hide)
 | Field | Example |
@@ -169,18 +172,19 @@ If `ANALYTICS_URL` is left empty, all logging is silently no-ops — no errors, 
 | Field | Example |
 |---|---|
 | ts | `2026-05-03T11:42:00.000Z` |
-| postal | `123311` (or null) |
+| postal_2 | `12` (first two digits of the postal — sector, thousands of blocks per sector) or null |
 | flat_type | `4 ROOM` (or null) |
 | error_type | `postal_not_found` / `connection_error` / `session_cap_hit` |
 
 ## What is **not** logged
 
 - Asking prices entered by the user
+- The full 6-digit postal (that identifies a specific HDB block). Search events carry `town` only; error events carry the 2-digit postal sector only.
 - IP addresses (Apps Script `doPost` doesn't expose them)
 - User-agent strings
 - Cookies or persistent identifiers (session_id is random per page-load and lives only in memory)
 
-The full 6-digit postal code is logged. In Singapore, a 6-digit postal identifies a specific HDB block (typically hundreds of units), not an individual household.
+The client also short-circuits all beacons when the browser signals Do Not Track (`navigator.doNotTrack === '1'`).
 
 ## Updating the script later
 
@@ -188,6 +192,6 @@ If you change `SCHEMAS` or any logic in the Apps Script, you must **Deploy → M
 
 ## Troubleshooting
 
-- **Spreadsheet doesn't get rows:** check Apps Script execution log (View → Executions). Common causes: schema mismatch (check the field names match `SCHEMAS` exactly), or the `ANALYTICS_URL` in `index.html` still points to a stale deployment.
-- **Browser console shows CORS errors:** ignore them. `sendBeacon` and `fetch keepalive` POSTs don't read responses, so CORS doesn't apply. Rows still appear in the sheet.
+- **Spreadsheet doesn't get rows:** check Apps Script execution log (View → Executions). Common causes: schema mismatch (check the field names match `SCHEMAS` exactly — the client sends `town` on searches and `postal_2` on errors, not `postal`), or the `ANALYTICS_URL` in `index.html` still points to a stale deployment.
+- **Browser console shows CORS errors on `/exec`:** the client-side Blob type or fetch `Content-Type` has drifted from `text/plain` back to `application/json`. Both must stay CORS-safelisted so the browser skips the OPTIONS preflight (Apps Script returns 405 to OPTIONS and drops the event).
 - **Sheet fills with junk rows:** the validation should drop malformed events. If you're seeing junk anyway, check that you redeployed the latest version of the script.
