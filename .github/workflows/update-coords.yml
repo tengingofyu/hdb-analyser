@@ -117,19 +117,28 @@ jobs:
             const coords = {};
             const failed = [];
             let done = 0;
-            for (const p of postals) {
-              try {
-                coords[p] = await geocodePostalOnce(p);
-              } catch(e) {
-                failed.push({postal: p, reason: e.message});
+            // Bounded parallelism: 4 concurrent workers each pulling from a shared
+            // queue. Each worker naturally paces itself at OneMap's response time
+            // (~750ms per request unauth'd), yielding ~5 req/s aggregate — well
+            // below what OneMap tolerates, but 4× the previous serial throughput.
+            // First (serial) run took 30m53s for ~1700 postals; this should land
+            // near 7-8 min for the same input.
+            let cursor = 0;
+            const CONCURRENCY = 4;
+            async function worker() {
+              while (cursor < postals.length) {
+                const i = cursor++;
+                const p = postals[i];
+                try {
+                  coords[p] = await geocodePostalOnce(p);
+                } catch(e) {
+                  failed.push({postal: p, reason: e.message});
+                }
+                done++;
+                if (done % 100 === 0) console.log(`  ${done}/${postals.length} (${failed.length} still failed after retries)`);
               }
-              done++;
-              if (done % 100 === 0) console.log(`  ${done}/${postals.length} (${failed.length} still failed after retries)`);
-              // 250ms baseline cadence — the 150ms rate was tripping OneMap partway
-              // through the ~1700-postal run. Slower baseline reduces the trigger
-              // rather than only handling its symptoms.
-              await sleep(250);
             }
+            await Promise.all(Array.from({length: CONCURRENCY}, () => worker()));
 
             if (failed.length) {
               console.log(`  ${failed.length} postal(s) failed all 4 attempts:`);
