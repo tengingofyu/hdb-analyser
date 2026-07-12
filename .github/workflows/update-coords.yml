@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 2 1 * *'
   workflow_dispatch:
+  # Self-serve trigger via commit: touch .github/dispatch-coords (any content)
+  # and push. The path filter isolates this from other main pushes so routine
+  # commits don't fire the 15-min job.
+  push:
+    branches: [main]
+    paths: ['.github/dispatch-coords']
 
 # Self-overlap protection. Each run takes ~10–15 min and pushes to main;
 # two concurrent runs would race each other's rebase-and-push. Queue the
