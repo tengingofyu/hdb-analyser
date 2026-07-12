@@ -34,6 +34,25 @@ Success (200):
 
 `DIST_CODE` is OneMap's HSD band code: `"1"` = within 1 km, `"2"` = within 1–2 km. That's the exact same categorisation shown on onemap.gov.sg/school.
 
+### hbn is required and semantic
+
+HSD is per-building. `hbn` MUST be the block number that actually lives at that postal — the client should pass the block returned by OneMap's own geocoder for the postal, not a guess.
+
+Empirically against OneMap:
+
+- `postalcode=560472&hbn=472` (correct) → 9 schools with proper DIST_CODEs.
+- `postalcode=560472&hbn=471` (a real neighbouring block, wrong for this postal) → OneMap returns `[{"Results":"No result found. "}]`. **Silent zero-schools answer with no error.**
+- `postalcode=560472&hbn=999` (bogus) → same silent sentinel.
+- `postalcode=560472` (hbn missing) → OneMap 400 "Your House Block No.(hbn) is missing". The Worker's validator rejects this before ever calling upstream (`bad_hbn` 400).
+
+The Worker normalises the "No result found" sentinel to an actual empty `SearchResults` array so downstream code doesn't iterate a phantom row. But there is no way for the Worker to detect *"the client passed the wrong hbn for this postal"* — that would require its own postal→block index and re-derives complexity we're trying to remove. The correctness responsibility for `hbn` sits with the caller.
+
+### Rate limit
+
+30 requests/min per IP (from `cf-connecting-ip`, so per real client not per Worker frontend). Backed by the Cache API — not atomic, so bursty legitimate load may see approximate accounting, but any sustained scrape crosses the threshold within a couple of seconds and gets stuck at 429 until the 60s window rolls over. Rejected responses set `Retry-After: 60`.
+
+The CORS lock (`Access-Control-Allow-Origin: https://tengingofyu.github.io`) stops a browser at any other origin from *reading* our response — but a scripted caller with a spoofed `Origin` header would still get through CORS. The rate limit is the origin-independent abuse control.
+
 Errors are structured JSON with a stable `error` code:
 
 | HTTP | code | when |
@@ -41,6 +60,7 @@ Errors are structured JSON with a stable `error` code:
 | 400 | `bad_postal` | postalcode is missing or not exactly 6 digits |
 | 400 | `bad_hbn` | hbn is missing or not 1–4 digits with optional single upper-case suffix |
 | 405 | `method_not_allowed` | non-GET, non-OPTIONS request |
+| 429 | `rate_limited` | more than 30 requests/min from the same IP; `Retry-After: 60` header set |
 | 502 | `upstream_timeout` | OneMap fetch didn't complete within 10s |
 | 502 | `upstream_error` | fetch threw (DNS, network, TLS) |
 | 502 | `upstream_status` | OneMap returned non-2xx |

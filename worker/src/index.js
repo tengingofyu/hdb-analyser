@@ -23,6 +23,18 @@ const UPSTREAM_REFERER = 'https://www.onemap.gov.sg/school';
 const UPSTREAM_TIMEOUT_MS = 10_000;
 const CACHE_TTL_SECONDS   = 24 * 60 * 60;
 
+// Per-IP rate limit. CORS lock stops browser abuse from other origins, but any
+// scripted caller can spoof Origin, so we still need an origin-independent
+// abuse control. 30 req/min per IP is generous for a legit page user (a real
+// search only fires 1 lookup per postal change) and hard-blocks scraping runs.
+const RATE_LIMIT_PER_MINUTE = 30;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+
+// OneMap's "no schools for this address" sentinel — a one-element array with
+// a Results text instead of a school row. Normalise to an actual empty array
+// so downstream iteration doesn't hit a phantom row.
+const NO_RESULT_SENTINEL_TEXT = /^No result found/i;
+
 function corsHeaders() {
   return {
     'access-control-allow-origin': ALLOWED_ORIGIN,
@@ -54,6 +66,34 @@ function validate(postal, hbn) {
   if (!postal || !/^\d{6}$/.test(postal)) return { ok: false, code: 'bad_postal', msg: 'postalcode must be 6 digits' };
   if (!hbn    || !/^\d{1,4}[A-Z]?$/.test(hbn))   return { ok: false, code: 'bad_hbn',    msg: 'hbn must be 1-4 digits with an optional single uppercase letter suffix' };
   return { ok: true };
+}
+
+// Coarse per-IP rate limit backed by the Cache API. Not atomically-correct —
+// two requests inside a sub-second window can both read the same count and
+// each increment to N+1 — but that's fine for abuse control. Under legitimate
+// load the counter still reflects roughly-current traffic; under an attack
+// the counter crosses the limit within a few requests and stays over it.
+async function checkRateLimit(ip, ctx) {
+  if (!ip) return { ok: true, count: 0 }; // no IP header (unusual but possible)
+  const key = new Request(
+    `https://ratelimit.internal/ip/${encodeURIComponent(ip)}`,
+    { method: 'GET' }
+  );
+  const cache = caches.default;
+  const cached = await cache.match(key);
+  let count = 0;
+  if (cached) {
+    try { count = parseInt(await cached.text(), 10) || 0; } catch(e) {}
+  }
+  if (count >= RATE_LIMIT_PER_MINUTE) {
+    return { ok: false, count };
+  }
+  const next = count + 1;
+  const cachedResp = new Response(String(next), {
+    headers: { 'cache-control': `public, max-age=${RATE_LIMIT_WINDOW_SECONDS}` },
+  });
+  ctx.waitUntil(cache.put(key, cachedResp));
+  return { ok: true, count: next };
 }
 
 async function fetchUpstream(postal, hbn, signal) {
@@ -89,6 +129,16 @@ export default {
 
     const v = validate(postal, hbn);
     if (!v.ok) return errorResponse(v.code, v.msg, 400);
+
+    // Abuse guard runs BEFORE the cache lookup — a scraper can't get free cache
+    // hits either (both would count against OneMap's identity when they miss).
+    const ip = request.headers.get('cf-connecting-ip') || '';
+    const rl = await checkRateLimit(ip, ctx);
+    if (!rl.ok) {
+      const resp = errorResponse('rate_limited', `Rate limit exceeded (${RATE_LIMIT_PER_MINUTE}/min per IP)`, 429);
+      resp.headers.set('retry-after', String(RATE_LIMIT_WINDOW_SECONDS));
+      return resp;
+    }
 
     // Cache key: synthetic same-origin URL so the Cache API keys deterministically.
     // The real client URL isn't a good key because different query-param orderings
@@ -146,7 +196,17 @@ export default {
       return errorResponse('upstream_shape', 'Upstream response missing SearchResults array', 502);
     }
 
-    const responseBody = JSON.stringify(payload);
+    // Normalise OneMap's "no result" sentinel [{Results:"No result found. "}]
+    // into an actual empty array. Downstream code should iterate SearchResults
+    // as school rows; a phantom row with a Results text is a silent trap when
+    // (for example) the client passes a syntactically-valid but wrong hbn for
+    // the postal — OneMap returns 200 with the sentinel, not an error.
+    if (payload.SearchResults.length === 1 &&
+        typeof payload.SearchResults[0]?.Results === 'string' &&
+        NO_RESULT_SENTINEL_TEXT.test(payload.SearchResults[0].Results)) {
+      payload.SearchResults = [];
+    }
+
     const response = jsonResponse(200, payload, {
       'cache-control': `public, max-age=${CACHE_TTL_SECONDS}`,
       'x-cache': 'MISS',
