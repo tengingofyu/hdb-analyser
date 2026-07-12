@@ -143,12 +143,6 @@ jobs:
                 }
                 done++;
                 if (done % 100 === 0) console.log(`  ${done}/${postals.length} (${failed.length} still failed after retries)`);
-                // Per-worker throttle: prior 4-way no-sleep run took 16 min vs the
-                // 7-min budget, implying OneMap was returning 429s and eating cycles
-                // in the retry backoff. A small pause here keeps the aggregate rate
-                // under ~5 req/s even when responses are fast, which is well below
-                // the earlier serial 150ms rate that first tripped the throttle.
-                await sleep(200);
               }
             }
             await Promise.all(Array.from({length: CONCURRENCY}, () => worker()));
