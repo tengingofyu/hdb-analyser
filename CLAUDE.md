@@ -1,0 +1,59 @@
+# CLAUDE.md — working agreement for this repo
+
+## Standing autonomy (effective permanently)
+
+Commit, push, deploy, verify, and fix failures without pausing to ask. Loop until done.
+
+**Only stop and check first for:**
+
+- **Money.** Any spending, subscription, or account upgrade.
+- **New external accounts.** Creating a Cloudflare / GitHub / Google / other third-party account.
+- **Data deletion.** Destructive git ops (force push, hard reset, branch -D on shared branches), dropping DB tables, `rm -rf` outside `/tmp`.
+- **Genuinely stuck.** When you need a decision or domain knowledge you can't derive from the code, docs, or observed behaviour.
+
+Everything else — regular commits, pushes, PRs, workflow triggers, headless verification, secret rotation on personal-scope tokens — is pre-authorised. Report results at the end, not intent at the start.
+
+## Working conventions (non-negotiable)
+
+### 1. Evidence-first verification
+
+Never call something "done" or "green" without exercising the code path and reading the output. Harness log, curl, headless Chrome, or the deployed URL — pick the one that proves the behaviour. "Should work" is not a status.
+
+### 2. One fix = one commit
+
+Each commit has one atomic reason. Related follow-ups that a change requires can ride along; unrelated cleanup gets its own commit. This makes `git bisect` and `git revert` actually useful.
+
+### 3. Fresh workflow runs, never re-runs
+
+If a workflow needs to re-execute, push a fresh commit (empty commit is fine). Do NOT use `gh run rerun` — a rerun replays with the OLD commit's tree, hiding races and stale-state bugs. Every workflow run must map 1:1 to a commit.
+
+### 4. Don't push to main mid-workflow-run
+
+Before every push, check `gh run list --branch main --status in_progress` (or the equivalent). If any workflow is running, wait for it to finish or coordinate the ordering. Otherwise a long-running workflow (e.g. `update-coords.yml` at ~30 min) can land its own push, and your push will be rejected non-fast-forward or the workflow's push will be rejected — either way is a stall.
+
+### 5. Schools data must be manually verified against onemap.gov.sg/school after changes
+
+Any change to `PRIMARY_SCHOOLS`, the Worker upstream contract, the schools rendering block, or `update-coords.yml` requires a manual spot-check against onemap.gov.sg/school for at least three known-answer postals before it ships:
+
+- **560472** (Ang Mo Kio blk 472) — the exact MOE answer is 9 schools: Rosyth in the 1–2 km band, Townsville absent from either band.
+- **123311** (Clementi Ave 4 blk 311C) — Henry Park Primary must appear in the 1–2 km band.
+- **600268** (Toh Guan Rd blk 268) — Yuhua Primary and Princess Elizabeth Primary must appear in the 1 km band.
+
+Automated tests catch shape drift; the manual OneMap parity check catches semantic drift. Both are required.
+
+## Two-source schools architecture (Phase 2, shipped 2026-07-12)
+
+The schools section calls the Cloudflare Worker at `https://hdb-schools-parity.hdb-analyser.workers.dev` first. On any failure (3 s timeout, non-200 including 429, malformed JSON, empty-sentinel for a resolvable block), the client falls back instantly to the static straight-line list computed from the in-page `PRIMARY_SCHOOLS` constant.
+
+- **Live path** — green badge: `Source: OneMap School Query · as of <Timestamp>`. HSD bands rendered verbatim.
+- **Fallback path** — amber badge: `Approximate (straight-line) — live data unavailable`. Static list with straight-line distances. OneMap link preserved in both paths.
+
+CSP `connect-src` in `index.html` must include the Worker origin.
+
+Worker CORS is locked to `https://tengingofyu.github.io`. Local tests use `--disable-web-security`.
+
+## References
+
+- Worker source & contract: `worker/README.md`
+- Historical context and open threads: `HANDOFF.md`
+- Analytics setup: `ANALYTICS_SETUP.md`
