@@ -136,6 +136,12 @@ jobs:
                 }
                 done++;
                 if (done % 100 === 0) console.log(`  ${done}/${postals.length} (${failed.length} still failed after retries)`);
+                // Per-worker throttle: prior 4-way no-sleep run took 16 min vs the
+                // 7-min budget, implying OneMap was returning 429s and eating cycles
+                // in the retry backoff. A small pause here keeps the aggregate rate
+                // under ~5 req/s even when responses are fast, which is well below
+                // the earlier serial 150ms rate that first tripped the throttle.
+                await sleep(200);
               }
             }
             await Promise.all(Array.from({length: CONCURRENCY}, () => worker()));
@@ -280,5 +286,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git diff --staged --quiet || git commit -m "chore: update school and childcare coordinates [$(date '+%Y-%m-%d')]"
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: update school and childcare coordinates [$(date '+%Y-%m-%d')]"
+          # Handle race with a concurrent push to main (this workflow is 15+ min long;
+          # human tail-link edits or other workflows can land in the meantime). If the
+          # first push fails, rebase onto the current main and retry once. The workflow
+          # only touches the amenity constants — any human change lives elsewhere in
+          # the file, so the rebase is expected to be conflict-free.
+          if ! git push; then
+            echo "push rejected, rebasing onto latest main and retrying"
+            git pull --rebase origin main
+            git push
+          fi
