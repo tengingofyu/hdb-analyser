@@ -5,6 +5,13 @@ on:
     - cron: '0 2 1 * *'
   workflow_dispatch:
 
+# Self-overlap protection. Each run takes ~10–15 min and pushes to main;
+# two concurrent runs would race each other's rebase-and-push. Queue the
+# second one instead of cancelling — the geocode work isn't cheap to waste.
+concurrency:
+  group: update-coords
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -291,13 +298,15 @@ jobs:
             exit 0
           fi
           git commit -m "chore: update school and childcare coordinates [$(date '+%Y-%m-%d')]"
-          # Handle race with a concurrent push to main (this workflow is 15+ min long;
-          # human tail-link edits or other workflows can land in the meantime). If the
-          # first push fails, rebase onto the current main and retry once. The workflow
-          # only touches the amenity constants — any human change lives elsewhere in
-          # the file, so the rebase is expected to be conflict-free.
-          if ! git push; then
-            echo "push rejected, rebasing onto latest main and retrying"
-            git pull --rebase origin main
-            git push
+          # This workflow runs ~10–15 min. Human edits or other workflows can land
+          # on main in that window (that's how run #11 failed). Proactively rebase
+          # onto the current main before pushing so we never depend on a stale ref.
+          # If the rebase hits a conflict (someone edited the same constant lines
+          # we just rewrote), fail LOUDLY without force-pushing — force-push here
+          # would silently clobber the human edit.
+          if ! git pull --rebase origin main; then
+            echo "::error::Rebase conflict — a concurrent commit touched the amenity constants this workflow rewrites. Aborting without force-push. Resolve manually and re-trigger."
+            git rebase --abort || true
+            exit 1
           fi
+          git push
