@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://data.gov.sg https://www.onemap.gov.sg https://script.google.com https://script.googleusercontent.com; img-src 'self' data:; font-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://data.gov.sg https://www.onemap.gov.sg https://script.google.com https://script.googleusercontent.com https://hdb-schools-parity.hdb-analyser.workers.dev; img-src 'self' data:; font-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"/>
 <title>HDB Resale Analyser — Price, Schools & Value Signals</title>
 <meta name="description" content="Free tool to research HDB resale prices, nearby amenities, and value signals for any Singapore HDB block."/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
@@ -70,6 +70,9 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
 .ah-mrt{background:#E8F4FD;color:#0A3D6B}.ah-school{background:var(--ok-bg);color:var(--ok-text)}.ah-school-2km{background:var(--warn-bg);color:var(--warn-text)}.ah-childcare{background:#F0EBF8;color:#4A1B7A}.ah-kindergarten{background:#FFF3E0;color:#7B3F00}.ah-mk{background:#E0F2E9;color:#1D5E3F}
 .amenity-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px}.amenity-item:last-child{border-bottom:none}
 .amenity-name{color:var(--text);font-weight:500;font-size:12px;line-height:1.3;flex:1}.amenity-meta{text-align:right;flex-shrink:0;margin-left:8px}.amenity-dist{font-size:12px;color:var(--text);font-weight:500}.amenity-walk{font-size:10px;color:var(--text3)}.amenity-none{font-size:13px;color:var(--text3);padding:0.5rem 0}
+.schools-source-badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:var(--radius);margin-bottom:8px;display:inline-block;line-height:1.4;max-width:100%}
+.schools-source-live{background:var(--ok-bg);color:var(--ok-text)}
+.schools-source-fallback{background:var(--warn-bg);color:var(--warn-text)}
 .signal-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0;border-bottom:0.5px solid var(--border)}.signal-item:last-child{border-bottom:none}
 .signal-left{display:flex;align-items:flex-start;gap:10px}
 .signal-icon{width:32px;height:32px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
@@ -2130,6 +2133,8 @@ const PRIMARY_SCHOOLS=[
 ];
 const AMENITY_DATA_DATE='May 2026'; // UPDATE THIS when refreshing static data
 const ONEMAP='https://www.onemap.gov.sg/api/common/elastic/search';
+const SCHOOLS_WORKER_URL='https://hdb-schools-parity.hdb-analyser.workers.dev';
+const SCHOOLS_WORKER_TIMEOUT_MS=3000;
 const BANDS=[{label:'Low (1–6)',min:1,max:6},{label:'Mid-low (7–12)',min:7,max:12},{label:'Mid-high (13–18)',min:13,max:18},{label:'High (19–24)',min:19,max:24},{label:'Very high (25+)',min:25,max:99}];
 
 const MRT_STATIONS=[
@@ -2748,6 +2753,24 @@ function renderTable(records,med){
   }).join('');
 }
 
+async function fetchOneMapSchools(){
+  if(!resolvedBlock||resolvedLat===null||resolvedLng===null)return null;
+  const rawPostal=document.getElementById('postal').value.trim();
+  const postal=/^\d{4,5}$/.test(rawPostal)?rawPostal.padStart(6,'0'):rawPostal;
+  if(!/^\d{6}$/.test(postal))return null;
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),SCHOOLS_WORKER_TIMEOUT_MS);
+  try{
+    const url=`${SCHOOLS_WORKER_URL}/?postalcode=${encodeURIComponent(postal)}&hbn=${encodeURIComponent(resolvedBlock)}`;
+    const r=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(timer);
+    if(!r.ok)return null;
+    const j=await r.json();
+    if(!Array.isArray(j?.SearchResults)||j.SearchResults.length===0)return null;
+    return j;
+  }catch(e){clearTimeout(timer);return null;}
+}
+
 async function renderAmenitiesTab(){
   if(!resolvedLat||!resolvedLng){document.getElementById('amenitiesContent').innerHTML='<p style="color:var(--text2);font-size:13px">Location unavailable.</p>';return;}
   const mrtNearby=MRT_STATIONS.map(s=>({...s,km:hkm(resolvedLat,resolvedLng,s.lat,s.lng)})).filter(s=>s.km<=2.0).sort((a,b)=>a.km-b.km).slice(0,5);
@@ -2763,18 +2786,33 @@ async function renderAmenitiesTab(){
     <div class="amenity-section" id="schoolsSection"><span class="amenity-header ah-school">🏫 Primary schools nearby</span><p style="font-size:12px;color:var(--text2)">Geocoding schools...</p></div>
     <div class="amenity-section" id="kindergartenSection"><span class="amenity-header ah-kindergarten">🎓 Kindergartens within 1km</span><p style="font-size:12px;color:var(--text2)">Loading kindergartens...</p></div>
     <div class="amenity-section" id="childcareSection"><span class="amenity-header ah-childcare">🧒 Childcare centres within 1km</span><p style="font-size:12px;color:var(--text2)">Loading childcare centres...</p></div>`;
-  // Primary schools — static lookup, no API calls needed
-  const schoolNearby = PRIMARY_SCHOOLS
+  // Primary schools — Worker-first (authoritative HSD), fall back to static straight-line on ANY failure
+  const staticNearby = PRIMARY_SCHOOLS
     .map(s => ({...s, km: hkm(resolvedLat, resolvedLng, s.lat, s.lng)}))
     .filter(s => s.km <= 2.0)
     .sort((a, b) => a.km - b.km);
-  const s1km = schoolNearby.filter(s => s.km <= 1.0);
-  const s2km = schoolNearby.filter(s => s.km > 1.0 && s.km <= 2.0);
-  document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools nearby</span>
-    <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km (straight-line)</div>${s1km.length?s1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${esc(s.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
-    <div style="margin-bottom:0.5rem"><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km (straight-line)</div>${s2km.length?s2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${esc(s.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>
-    <p style="font-size:11px;color:var(--text3);margin-top:0.5rem;line-height:1.5">Approximate straight-line distances. For the authoritative Home-School Distance list used in P1 registration, use <a href="https://www.onemap.gov.sg/school" target="_blank" rel="noopener" style="color:#378ADD">OneMap School Query</a>.</p>`;
-  updateSchoolSignal(s1km, s2km);
+  const staticS1km = staticNearby.filter(s => s.km <= 1.0);
+  const staticS2km = staticNearby.filter(s => s.km > 1.0 && s.km <= 2.0);
+  const oneMapSchools = await fetchOneMapSchools();
+  if(oneMapSchools){
+    const live1 = oneMapSchools.SearchResults.filter(s => s.DIST_CODE === '1');
+    const live2 = oneMapSchools.SearchResults.filter(s => s.DIST_CODE === '2');
+    const ts = oneMapSchools.Timestamp ? String(oneMapSchools.Timestamp).trim() : 'today';
+    const row = s => `<div class="amenity-item"><div class="amenity-name">${esc(s.SCHOOLNAME)}</div></div>`;
+    document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools nearby</span>
+      <div><span class="schools-source-badge schools-source-live">Source: OneMap School Query · as of ${esc(ts)}</span></div>
+      <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km (HSD)</div>${live1.length?live1.map(row).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
+      <div style="margin-bottom:0.5rem"><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km (HSD)</div>${live2.length?live2.map(row).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>
+      <p style="font-size:11px;color:var(--text3);margin-top:0.5rem;line-height:1.5">HSD = Home-School Distance, the authoritative measure used in P1 registration. See <a href="https://www.onemap.gov.sg/school" target="_blank" rel="noopener" style="color:#378ADD">OneMap School Query</a>.</p>`;
+    updateSchoolSignal(live1.map(s => ({name: s.SCHOOLNAME})), live2.map(s => ({name: s.SCHOOLNAME})));
+  } else {
+    document.getElementById('schoolsSection').innerHTML=`<span class="amenity-header ah-school">🏫 Primary schools nearby</span>
+      <div><span class="schools-source-badge schools-source-fallback">Approximate (straight-line) — live data unavailable</span></div>
+      <div style="margin-bottom:0.75rem"><div class="amenity-header ah-school" style="margin-bottom:8px">Within 1km (straight-line)</div>${staticS1km.length?staticS1km.map(s=>`<div class="amenity-item"><div class="amenity-name">${esc(s.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1km</p>'}</div>
+      <div style="margin-bottom:0.5rem"><div class="amenity-header ah-school-2km" style="margin-bottom:8px">1–2km (straight-line)</div>${staticS2km.length?staticS2km.map(s=>`<div class="amenity-item"><div class="amenity-name">${esc(s.n)}</div><div class="amenity-meta"><div class="amenity-dist">${Math.round(s.km*1000)}m</div></div></div>`).join(''):'<p class="amenity-none">None within 1–2km</p>'}</div>
+      <p style="font-size:11px;color:var(--text3);margin-top:0.5rem;line-height:1.5">Approximate straight-line distances. For the authoritative Home-School Distance list used in P1 registration, use <a href="https://www.onemap.gov.sg/school" target="_blank" rel="noopener" style="color:#378ADD">OneMap School Query</a>.</p>`;
+    updateSchoolSignal(staticS1km.map(s => ({name: s.n})), staticS2km.map(s => ({name: s.n})));
+  }
   // Kindergartens (ECDA KN + MOE MK) - static lookup updated monthly by GitHub Actions
   const kgNearby = KINDERGARTENS
     .map(k => ({...k, km: hkm(resolvedLat, resolvedLng, k.lat, k.lng), isMK: k.n.startsWith('MOE KINDERGARTEN @ ')}))
@@ -2857,6 +2895,29 @@ function updateSchoolSignal(s1km,s2km){
   const desc=has1?`${s1km.length} school${s1km.length!==1?'s':''} within 1km (Phase 2B): ${s1km.slice(0,3).map(s=>esc(s.name)).join(', ')}${s1km.length>3?'…':''}.${has2?` Plus ${s2km.length} within 2km (Phase 2C).`:''}`
     :has2?`No schools within 1km. ${s2km.length} within 2km (Phase 2C): ${s2km.slice(0,3).map(s=>esc(s.name)).join(', ')}${s2km.length>3?'…':''}.`:'No primary schools within 2km.';
   el.innerHTML=`<div class="signal-left"><div class="signal-icon ${iconCls}">🏫</div><div><div class="signal-name">Primary school proximity</div><div class="signal-desc">${desc}</div></div></div><span class="signal-badge ${badgeCls}">${badge}</span>`;
+  updateValueSummary();
+}
+
+// Recompute the value-tab summary bar from live DOM signal badges. Called after any
+// async signal update (currently only updateSchoolSignal) so the summary stays honest
+// once the Worker resolves and schools flip from Loading to Positive/Neutral.
+function updateValueSummary(){
+  const sumEl=document.getElementById('valueSummary');if(!sumEl)return;
+  const badges=[...document.querySelectorAll('#valueSignals .signal-badge')];
+  if(!badges.length)return;
+  const has=(b,c)=>b.classList.contains(c);
+  const pos=badges.filter(b=>has(b,'sb-pos')).length;
+  const neg=badges.filter(b=>has(b,'sb-neg')).length;
+  const cau=badges.filter(b=>has(b,'sb-cau')).length;
+  const bg=neg>=2?'var(--err-bg)':cau>=2?'var(--warn-bg)':pos>0?'var(--ok-bg)':'var(--neu-bg)';
+  const tc=neg>=2?'var(--err-text)':cau>=2?'var(--warn-text)':pos>0?'var(--ok-text)':'var(--text)';
+  const msg=
+    neg>=2?`${neg} signals requiring attention`:
+    cau>=2?`${cau} factors worth checking`:
+    pos>0?`${pos} positive signal${pos!==1?'s':''} — broadly favourable`:
+    neg+cau>0?`${neg+cau} mixed signal${neg+cau!==1?'s':''} — see details below`:
+    `Neutral outlook — no strong signals either way`;
+  sumEl.innerHTML=`<div class="summary-bar" style="background:${bg};color:${tc}"><div class="summary-dots">${Array(pos).fill(`<div class="dot" style="background:#1D9E75"></div>`).join('')}${Array(cau).fill(`<div class="dot" style="background:#BA7517"></div>`).join('')}${Array(neg).fill(`<div class="dot" style="background:#E24B4A"></div>`).join('')}</div><span style="font-weight:500">${msg}</span></div>`;
 }
 </script>
 </body>
