@@ -1,0 +1,7 @@
+name = "hdb-schools-parity"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+# No routes/domain here — deploys to the workers.dev subdomain by default,
+# giving us a URL like https://hdb-schools-parity.<account>.workers.dev
+# which is what the Phase 1 verification hits directly.
