@@ -1,0 +1,18 @@
+{
+  "_comment": "Canonical MOE answer for 560472 (Ang Mo Kio blk 472), 4 ROOM. Fetched from OneMap School Query on 2026-07-12 and cross-checked against onemap.gov.sg/school. Fields that change over time (Timestamp, GEOMETRY, LATITUDE, LONGITUDE) are intentionally excluded — the watchdog only compares SCHOOLNAME + DIST_CODE + SCH_POSTAL_CODE. If MOE reshuffles zoning, update this file in the same commit as any related PRIMARY_SCHOOLS change; document why in the commit message.",
+  "source": "OneMap School Query via hdb-schools-parity Worker",
+  "postalcode": "560472",
+  "hbn": "472",
+  "captured_at": "2026-07-12",
+  "schools": [
+    { "SCHOOLNAME": "CHIJ OUR LADY OF GOOD COUNSEL",         "DIST_CODE": "1", "SCH_POSTAL_CODE": "558979" },
+    { "SCHOOLNAME": "TECK GHEE PRIMARY SCHOOL",              "DIST_CODE": "1", "SCH_POSTAL_CODE": "569299" },
+    { "SCHOOLNAME": "CATHOLIC HIGH SCHOOL",                  "DIST_CODE": "2", "SCH_POSTAL_CODE": "579767" },
+    { "SCHOOLNAME": "JING SHAN PRIMARY SCHOOL",              "DIST_CODE": "2", "SCH_POSTAL_CODE": "569228" },
+    { "SCHOOLNAME": "KUO CHUAN PRESBYTERIAN PRIMARY SCHOOL", "DIST_CODE": "2", "SCH_POSTAL_CODE": "579793" },
+    { "SCHOOLNAME": "ROSYTH SCHOOL",                         "DIST_CODE": "2", "SCH_POSTAL_CODE": "555855" },
+    { "SCHOOLNAME": "ST. GABRIEL'S PRIMARY SCHOOL",          "DIST_CODE": "2", "SCH_POSTAL_CODE": "556742" },
+    { "SCHOOLNAME": "YANGZHENG PRIMARY SCHOOL",              "DIST_CODE": "2", "SCH_POSTAL_CODE": "556108" },
+    { "SCHOOLNAME": "ZHONGHUA PRIMARY SCHOOL",               "DIST_CODE": "2", "SCH_POSTAL_CODE": "556095" }
+  ]
+}

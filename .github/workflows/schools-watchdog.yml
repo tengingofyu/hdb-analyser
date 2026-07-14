@@ -1,0 +1,52 @@
+name: Schools watchdog
+
+# Weekly parity check. Verifies the OneMap-backed schools pipeline end-to-end:
+#   1. Worker returns the exact known answer for 560472 (Ang Mo Kio blk 472).
+#   2. Worker cache is warm on repeat calls (health signal).
+#   3. Live site renders the green "Source: OneMap School Query" badge.
+#
+# Fails loudly on ANY drift — shape OR content. When it fires, someone should
+# hit onemap.gov.sg/school for 560472 manually to confirm whether MOE rezoned
+# or the pipeline broke, then either update .github/data/known-schools-560472.json
+# in a commit (with the reason) or fix the pipeline.
+
+on:
+  schedule:
+    # Every Monday 03:00 UTC (Singapore Monday 11:00 SGT). Non-peak, catches drift within a week.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: schools-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Install puppeteer-core
+        run: npm install --prefix scripts --no-save puppeteer-core@22
+
+      - name: Run watchdog
+        env:
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+          WORKER_URL: https://hdb-schools-parity.hdb-analyser.workers.dev
+          SITE_URL: https://tengingofyu.github.io/hdb-analyser/
+          NODE_PATH: scripts/node_modules
+        run: node scripts/schools-watchdog.mjs
