@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:data.gov.sg)",
+      "WebFetch(domain:www.onemap.gov.sg)",
+      "WebFetch(domain:onemap.gov.sg)",
+      "WebFetch(domain:tengingofyu.github.io)",
+      "WebFetch(domain:hdb-schools-parity.hdb-analyser.workers.dev)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:script.google.com)",
+      "WebFetch(domain:script.googleusercontent.com)",
+
+      "Bash(curl:*data.gov.sg*)",
+      "Bash(curl:*www.onemap.gov.sg*)",
+      "Bash(curl:*onemap.gov.sg*)",
+      "Bash(curl:*tengingofyu.github.io*)",
+      "Bash(curl:*hdb-schools-parity.hdb-analyser.workers.dev*)",
+      "Bash(curl:*api.github.com*)",
+      "Bash(curl:*raw.githubusercontent.com*)",
+      "Bash(curl:*script.google.com*)",
+      "Bash(curl:*script.googleusercontent.com*)"
+    ]
+  }
+}
