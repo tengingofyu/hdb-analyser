@@ -5,7 +5,7 @@ Living doc. If you're picking this up cold, `CLAUDE.md` has the working rules; t
 ## What ships where
 
 - **Frontend** — single-file `index.html`, deployed to GitHub Pages at `https://tengingofyu.github.io/hdb-analyser/` on every push to `main` via `.github/workflows/deploy.yml`.
-- **Schools proxy Worker** — `worker/` — Cloudflare Worker at `https://hdb-schools-parity.hdb-analyser.workers.dev` proxying OneMap's School Query API. CORS-locked to the Pages origin. Deploy via `cd worker && CLOUDFLARE_API_TOKEN=... npx wrangler deploy`.
+- **Schools proxy Worker** — `worker/` — Cloudflare Worker at `https://hdb-schools-parity.hdb-analyser.workers.dev` proxying OneMap's School Query API. CORS-locked to the Pages origin AND behind an Origin/Referer allowlist + per-IP rate limit + daily upstream circuit breaker (see `RINGFENCE.md`). Deploy via `cd worker && CLOUDFLARE_API_TOKEN=... npx wrangler deploy`.
 - **Monthly geocode refresh** — `.github/workflows/update-coords.yml` — re-geocodes MRT / MOE schools / kindergartens / childcare via OneMap and writes the constants back into `index.html`. Scheduled 02:00 UTC on the 1st. Manual trigger: `touch .github/dispatch-coords && git commit -m ... && git push`.
 - **Weekly watchdog** — `.github/workflows/schools-watchdog.yml` — verifies the Worker + live-site schools pipeline every Monday 03:00 UTC. Detailed below.
 - **Analytics** — Google Apps Script beacon at the URL in `ANALYTICS_URL` (see `ANALYTICS_SETUP.md`).
@@ -40,20 +40,24 @@ Triggers on ANY failure of the live path: 3 s timeout, non-2xx (including 429), 
 | Failure | Client renders | Watchdog catches |
 |---|---|---|
 | Worker down / DNS | amber fallback | ✓ live-site DOM check would fail |
+| Worker returns 403 forbidden_origin | amber fallback | ✓ live-site DOM check would fail (client browsers naturally send Origin) |
 | Worker returns 429 | amber fallback | ✓ live-site DOM check would fail; health check would also |
 | Worker returns 502 (OneMap flaky) | amber fallback | ✓ (only if the flaky condition persists across the run) |
+| Worker returns 503 daily_upstream_cap (breaker tripped) | amber fallback | ✓ live-site DOM check would fail; usage-report headroom warning fires earlier at 80% |
 | MOE rezones a postal | green live badge with new list | ✓ known-answer diff for 560472 fires |
 | Client CSP misses Worker origin | amber fallback | ✓ live-site DOM check would fail |
+| Sustained traffic spike (real growth OR abuse) | green or amber depending on breaker state | ✓ usage report flags yesterday > 3× trailing avg |
 
 ### Editing this system
 
 - **Don't touch `PRIMARY_SCHOOLS` without also running Phase 0 verification.** The workflow is `update-coords.yml`; running it manually is the safe path.
-- **Don't touch the Worker's CORS lock** — it's the only origin-independent abuse control alongside the rate limiter.
+- **Don't touch the Worker's CORS lock, Origin gate, or circuit breaker without re-reading `RINGFENCE.md`.** Each layer stops a specific attack shape; removing one silently downgrades everything else.
+- **Any Worker change must be verified against RINGFENCE.md's checklist before deploy.**
 - **Any change to any of the above requires the manual OneMap parity check** (see CLAUDE.md convention 5).
 
 ## Weekly watchdog — how to read a failure
 
-`.github/workflows/schools-watchdog.yml` runs 3 checks and fails loud on drift. If it fires:
+`.github/workflows/schools-watchdog.yml` runs 4 checks and fails loud on drift. If it fires:
 
 1. **Open the run** from the `Actions` tab and scroll to the `Run watchdog` step.
 2. **Section 1 failures** (`worker-content`, `worker-shape`) mean the Worker's answer for 560472 differs from `.github/data/known-schools-560472.json`.
@@ -61,6 +65,7 @@ Triggers on ANY failure of the live path: 3 s timeout, non-2xx (including 429), 
    - **Likely cause B: pipeline broke.** Check `worker/src/index.js`, recent OneMap upstream headers, and whether the Worker is being blocked by OneMap's Referer check.
 3. **Section 2 failures** (`worker-health`) mean the Worker is unreachable or the cache path is broken. Check the Cloudflare dashboard.
 4. **Section 3 failures** (`site-render`) mean the client-side wiring diverged from the Worker output. Check CSP, `fetchOneMapSchools`, and the badge CSS classes.
+5. **Section 4 failures** (`usage`) mean the traffic pattern shifted meaningfully. A yesterday-vs-trailing spike alert plus an upstream-headroom warning together are the trigger criterion for reaching for Cloudflare Turnstile — see `RINGFENCE.md` for the enable-in-half-a-day runbook.
 
 ## Open threads
 
