@@ -204,12 +204,75 @@ jobs:
             throw new Error(`Cannot find ${name} in index.html`);
           }
 
+          // ── Property-info street canonicaliser ──────────────────────────────────
+          //    HDB's "street" field uses ABBREVIATIONS (AVE, RD, JLN, ...) while
+          //    OneMap's ROAD_NAME returns them SPELLED OUT (AVENUE, ROAD, JALAN, ...).
+          //    Client-side lookup joins on the canonical form, so both sides must
+          //    apply the same map. Kept intentionally small — every entry here has
+          //    been sighted in real HDB street strings.
+          const STREET_ABBREVIATIONS = [
+            [/\bAVE\b/g,'AVENUE'],   [/\bBT\b/g,'BUKIT'],    [/\bCL\b/g,'CLOSE'],
+            [/\bCRES\b/g,'CRESCENT'],[/\bCTRL\b/g,'CENTRAL'],[/\bDR\b/g,'DRIVE'],
+            [/\bJLN\b/g,'JALAN'],    [/\bKG\b/g,'KAMPONG'],  [/\bLOR\b/g,'LORONG'],
+            [/\bNTH\b/g,'NORTH'],    [/\bPK\b/g,'PARK'],     [/\bPL\b/g,'PLACE'],
+            [/\bRD\b/g,'ROAD'],      [/\bST\b/g,'STREET'],   [/\bSTH\b/g,'SOUTH'],
+            [/\bTER\b/g,'TERRACE'],  [/\bTG\b/g,'TANJONG'],  [/\bMKT\b/g,'MARKET'],
+            [/\bC'WEALTH\b/g,'COMMONWEALTH'], [/\bUPP\b/g,'UPPER'],
+          ];
+          function canonStreet(s) {
+            let out = (s||'').toUpperCase();
+            for (const [re, w] of STREET_ABBREVIATIONS) out = out.replace(re, w);
+            return out.replace(/\s+/g,' ').trim();
+          }
+
+          // Load existing PROPERTY_INFO as a fallback if the fetch fails or drifts.
+          // Format in the file is: const PROPERTY_INFO={"STREET NAME":{"BLK":"mixStr",...},...};
+          function parsePropertyInfo(html) {
+            const m = html.match(/const PROPERTY_INFO=(\{[\s\S]*?\});/m);
+            if (!m) return {};
+            try { return JSON.parse(m[1]); }
+            catch(e) { console.log('  WARN: failed to parse existing PROPERTY_INFO:', e.message); return {}; }
+          }
+
+          function buildPropertyInfo(records) {
+            const fields = ['1room_sold','2room_sold','3room_sold','4room_sold','5room_sold','exec_sold','multigen_sold'];
+            const codes  = ['1','2','3','4','5','e','g'];
+            const byStreet = {};
+            let counted = 0;
+            for (const r of records) {
+              if (r.residential !== 'Y') continue;
+              if (+(r.total_dwelling_units||'0') <= 0) continue;
+              const parts = [];
+              for (let i = 0; i < fields.length; i++) {
+                const n = +(r[fields[i]] || '0');
+                if (n > 0) parts.push(`${codes[i]}:${n}`);
+              }
+              if (!parts.length) continue;
+              const street = canonStreet(r.street);
+              const blk = (r.blk_no||'').toUpperCase();
+              if (!street || !blk) continue;
+              (byStreet[street] ||= {})[blk] = parts.join(',');
+              counted++;
+            }
+            return { byStreet, counted };
+          }
+
+          function buildPropertyInfoConst(byStreet) {
+            const lines = [];
+            for (const s of Object.keys(byStreet).sort()) {
+              lines.push(`${JSON.stringify(s)}:${JSON.stringify(byStreet[s])}`);
+            }
+            return `const PROPERTY_INFO={\n${lines.join(',\n')}\n};`;
+          }
+
           // ── Main ────────────────────────────────────────────────────────────────
           let html = fs.readFileSync('index.html','utf8');
           const prevSchools       = parseExistingConstant(html, 'PRIMARY_SCHOOLS');
           const prevChildcare     = parseExistingConstant(html, 'CHILDCARE_CENTRES');
           const prevKindergartens = parseExistingConstant(html, 'KINDERGARTENS');
-          console.log(`Existing constants: schools=${prevSchools.length}, childcare=${prevChildcare.length}, kindergartens=${prevKindergartens.length}`);
+          const prevPropertyInfo  = parsePropertyInfo(html);
+          const prevPropertyCount = Object.values(prevPropertyInfo).reduce((a,o) => a + Object.keys(o).length, 0);
+          console.log(`Existing constants: schools=${prevSchools.length}, childcare=${prevChildcare.length}, kindergartens=${prevKindergartens.length}, property-info=${prevPropertyCount}`);
 
           // Primary schools
           const schoolRecs = await fetchDataset('d_688b934f82c1059ed0a6993d2a829089');
@@ -268,10 +331,20 @@ jobs:
           gate('CHILDCARE_CENTRES', childcareR.entries.length, prevChildcare.length);
           gate('KINDERGARTENS', kindergartens.length, prevKindergartens.length);
 
+          // HDB Property Information — block-level dwelling-unit counts by flat type.
+          // Refreshed alongside amenities so we always know each block's real mix.
+          const propRecs = await fetchDataset('d_17f5382f26140b1fdae0ba2ef6239d2f');
+          const { byStreet: propertyInfo, counted: propertyCount } = buildPropertyInfo(propRecs);
+          console.log(`PROPERTY_INFO: ${Object.keys(propertyInfo).length} streets, ${propertyCount} blocks with any sold flats`);
+          gate('PROPERTY_INFO', propertyCount, prevPropertyCount);
+
           // Write
           html = inject(html, 'PRIMARY_SCHOOLS', buildConst('PRIMARY_SCHOOLS', schoolsR.entries));
           html = inject(html, 'CHILDCARE_CENTRES', buildConst('CHILDCARE_CENTRES', childcareR.entries));
           html = inject(html, 'KINDERGARTENS', buildConst('KINDERGARTENS', kindergartens));
+          const propRegex = /const PROPERTY_INFO=\{[\s\S]*?\n\};/m;
+          if (!propRegex.test(html)) throw new Error('Cannot find PROPERTY_INFO in index.html');
+          html = html.replace(propRegex, buildPropertyInfoConst(propertyInfo));
           fs.writeFileSync('index.html', html);
 
           // One-glance monthly summary — the workflow commits to main unattended,
@@ -285,7 +358,8 @@ jobs:
             return `${name} ${prev}→${r.entries.length}` + (parts.length ? ` (${parts.join(', ')})` : '');
           }
           const kSumm = `KINDERGARTENS ${prevKindergartens.length}→${kindergartens.length} (${moeMKs.length} MOE MK)`;
-          console.log(`\n=== SUMMARY ===\n${summ('SCHOOLS', prevSchools.length, schoolsR)} | ${summ('CHILDCARE', prevChildcare.length, childcareR)} | ${kSumm}`);
+          const pSumm = `PROPERTY_INFO ${prevPropertyCount}→${propertyCount} blocks (${Object.keys(propertyInfo).length} streets)`;
+          console.log(`\n=== SUMMARY ===\n${summ('SCHOOLS', prevSchools.length, schoolsR)} | ${summ('CHILDCARE', prevChildcare.length, childcareR)} | ${kSumm} | ${pSumm}`);
           EOF
 
       - name: Commit and push if changed
