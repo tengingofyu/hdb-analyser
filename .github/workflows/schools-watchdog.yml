@@ -15,6 +15,15 @@ on:
     # Every Monday 03:00 UTC (Singapore Monday 11:00 SGT). Non-peak, catches drift within a week.
     - cron: '0 3 * * 1'
   workflow_dispatch:
+  push:
+    # Self-serve trigger: any change to the watchdog itself re-runs it. Touching
+    # .github/dispatch-watchdog is the manual-trigger escape hatch since gh CLI
+    # is not always available.
+    paths:
+      - '.github/workflows/schools-watchdog.yml'
+      - '.github/data/known-schools-560472.json'
+      - 'scripts/schools-watchdog.mjs'
+      - '.github/dispatch-watchdog'
 
 concurrency:
   group: schools-watchdog
