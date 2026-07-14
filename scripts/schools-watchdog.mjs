@@ -4,6 +4,13 @@
 //   1. Worker returns the exact known answer for 560472 (shape + content, sorted).
 //   2. Worker cache is warm (second call returns x-cache: HIT).
 //   3. Live site renders the green "Source: OneMap School Query" badge for 560472.
+//   4. Usage report from /_stats — yesterday's request + upstream counts;
+//      flag loudly if yesterday's request count exceeds 3× the trailing 7-day
+//      average (excluding zero-day preambles right after deploy).
+//
+// The watchdog sends `Origin: https://tengingofyu.github.io` on every Worker
+// call — the Worker's ringfence rejects requests without a matching Origin or
+// Referer with a 403. See RINGFENCE.md for the full layer stack.
 //
 // Fails loudly (process.exit(1)) on ANY drift and prints a machine-readable + human-readable
 // diff. Reruns are OK — the check is idempotent modulo Worker cache and OneMap Timestamp.
@@ -21,7 +28,14 @@ import puppeteer from 'puppeteer-core';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_URL = process.env.WORKER_URL || 'https://hdb-schools-parity.hdb-analyser.workers.dev';
 const SITE_URL = process.env.SITE_URL || 'https://tengingofyu.github.io/hdb-analyser/';
+const PAGES_ORIGIN = 'https://tengingofyu.github.io';
 const CHROME_BIN = process.env.CHROME_BIN;
+
+// Every Worker call from the watchdog sends this Origin so the ringfence 403
+// doesn't block us. The Worker is trusting our stated Origin here (nothing
+// stops a spoof), which is by design — the Origin gate filters casual traffic,
+// it doesn't stand in for real auth.
+const WORKER_HEADERS = { Accept: 'application/json', Origin: PAGES_ORIGIN };
 
 const failures = [];
 function fail(section, message, extra) {
@@ -47,7 +61,7 @@ console.log('\n── 1) Worker known-answer parity (postal 560472, hbn 472) ─
 const workerUrl = `${WORKER_URL}/?postalcode=560472&hbn=472`;
 let workerBody = null;
 {
-  const r = await fetch(workerUrl, { headers: { Accept: 'application/json' } }).catch(e => ({ ok: false, err: e.message }));
+  const r = await fetch(workerUrl, { headers: WORKER_HEADERS }).catch(e => ({ ok: false, err: e.message }));
   if (r.err) { fail('worker-fetch', `Worker fetch threw: ${r.err}`); }
   else if (!r.ok) { fail('worker-fetch', `Worker returned HTTP ${r.status}`); }
   else {
@@ -111,9 +125,9 @@ if (workerBody) {
 // ── 2. Worker health: cache warm on repeat call ────────────────────────────
 console.log('\n── 2) Worker health: cache warm on repeat call ──');
 {
-  const first = await fetch(workerUrl).catch(e => ({ err: e.message }));
+  const first = await fetch(workerUrl, { headers: WORKER_HEADERS }).catch(e => ({ err: e.message }));
   await new Promise(r => setTimeout(r, 500));
-  const second = await fetch(workerUrl).catch(e => ({ err: e.message }));
+  const second = await fetch(workerUrl, { headers: WORKER_HEADERS }).catch(e => ({ err: e.message }));
   if (first.err || second.err) fail('worker-health', `Repeat call threw: ${first.err || second.err}`);
   else {
     const c1 = first.headers.get('x-cache'); const c2 = second.headers.get('x-cache');
@@ -187,6 +201,57 @@ if (!CHROME_BIN) {
       fail('site-render', `Browser flow threw: ${e.message}`);
     } finally {
       await browser.close();
+    }
+  }
+}
+
+// ── 4. Usage report + spike detection ──────────────────────────────────────
+console.log('\n── 4) Usage report (yesterday vs. trailing 7-day average) ──');
+{
+  const statsUrl = `${WORKER_URL}/_stats`;
+  const r = await fetch(statsUrl, { headers: WORKER_HEADERS }).catch(e => ({ err: e.message }));
+  if (r.err) { fail('usage', `/_stats fetch threw: ${r.err}`); }
+  else if (!r.ok) { fail('usage', `/_stats returned HTTP ${r.status}`); }
+  else {
+    const stats = await r.json();
+    const days = stats.days || [];
+    if (!days.length) fail('usage', '/_stats returned no days');
+    else {
+      // Days are today-first, descending. Report today + yesterday + last 7.
+      const today = days[0];
+      const yesterday = days[1];
+      console.log(`  today       : requests=${today?.requests ?? '?'} upstream_misses=${today?.upstream_misses ?? '?'}`);
+      console.log(`  yesterday   : requests=${yesterday?.requests ?? '?'} upstream_misses=${yesterday?.upstream_misses ?? '?'}`);
+
+      // Trailing average over days 2..8 (indices 2..7 in 8-day window),
+      // excluding zero-day preambles (a fresh deploy has all-zero counters).
+      const trail = days.slice(2, 8).filter(d => d.requests > 0);
+      if (trail.length < 2) {
+        pass('usage', `Trailing window has <2 non-zero days (${trail.length}), spike-detection deferred until data accumulates`);
+      } else {
+        const trailAvg = trail.reduce((a, d) => a + d.requests, 0) / trail.length;
+        const spikeThreshold = trailAvg * 3;
+        const yReq = yesterday?.requests ?? 0;
+        console.log(`  trail-avg   : ${trailAvg.toFixed(1)} req/day (n=${trail.length}); spike threshold = ${spikeThreshold.toFixed(1)}`);
+        if (yReq > spikeThreshold && yReq > 100) {
+          // 100-request floor guards against alerting on 1→10 amplification when
+          // both numbers are tiny; a real spike moves into meaningful volume.
+          fail('usage', `Yesterday's requests ${yReq} > 3× trailing avg ${trailAvg.toFixed(1)}`,
+            `days: ${JSON.stringify(days, null, 2)}`);
+        } else {
+          pass('usage', `Yesterday's ${yReq} req is within 3× of trailing avg ${trailAvg.toFixed(1)}`);
+        }
+      }
+
+      // Independent upstream check — if yesterday's upstream_misses is above 80%
+      // of the daily cap, we're close to tripping the breaker. Not a failure per
+      // se, but a heads-up warning.
+      if (yesterday && yesterday.upstream_misses >= stats.daily_upstream_cap * 0.8) {
+        fail('usage', `Yesterday's upstream_misses ${yesterday.upstream_misses} >= 80% of daily cap ${stats.daily_upstream_cap} — breaker close to tripping`);
+      } else if (yesterday) {
+        const pct = ((yesterday.upstream_misses / stats.daily_upstream_cap) * 100).toFixed(1);
+        pass('usage', `Yesterday's upstream ${yesterday.upstream_misses} = ${pct}% of daily cap ${stats.daily_upstream_cap}`);
+      }
     }
   }
 }
