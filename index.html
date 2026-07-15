@@ -3090,7 +3090,21 @@ async function doQuickSearch(){
       if(code && !(resolvedBlockMix[code]>0)){
         const availableTypes=Object.keys(resolvedBlockMix).map(c=>FLAT_CODE_TO_LABEL[c]).filter(Boolean);
         const availableBadges=availableTypes.map(t=>`<button type="button" class="pill p-band" onclick="pickFlatType('${esc(t)}')" style="cursor:pointer;font-size:11px;padding:3px 8px;margin-right:4px;margin-top:4px;border:0.5px solid var(--border2);background:var(--bg2)">${esc(t)}</button>`).join('');
-        document.getElementById('resolved-tag').innerHTML=`<div class="tag t-warn"><div style="font-weight:500">Block ${esc(resolvedBlock)} has no ${esc(flatType)} flats</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Block mix: ${esc(describeMix(resolvedBlockMix))}</div><div style="font-size:11px;color:var(--text3);margin-top:6px">Try:</div><div>${availableBadges}</div></div>`;
+        // Copy design: AFFIRM the block first (green chip stays visible so the user
+        // reads "block found" before "wrong flat type") — the previous copy led with
+        // "Block X has no Y" and got mis-read as "postal not found" in the field.
+        // Structure: green chip on top, warning card underneath with the mix
+        // description ("only" when the block is single-type, plain when multi-type).
+        const oneType=Object.keys(resolvedBlockMix).length===1;
+        const mixSentence=oneType
+          ? `It's ${esc(describeMix(resolvedBlockMix))} only.`
+          : `It has ${esc(describeMix(resolvedBlockMix))}.`;
+        document.getElementById('resolved-tag').innerHTML=
+          `<div class="tag t-ok"><span aria-hidden="true">✓</span> Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)} — found.</div>`+
+          `<div class="tag t-warn" style="margin-top:6px;display:block"><div style="font-weight:500">This block has no ${esc(flatType)} flats</div>`+
+          `<div style="font-size:12px;color:var(--warn-text);opacity:0.85;margin-top:4px">${mixSentence}</div>`+
+          `<div style="font-size:11px;color:var(--warn-text);opacity:0.7;margin-top:6px">Try:</div>`+
+          `<div>${availableBadges}</div></div>`;
         document.getElementById('quickResult').style.display='none';
         showStatus('',false);btn.disabled=false;btn.textContent='Get ballpark price';
         logError({postal_2:sector(),flat_type:flatType,error_type:'no_flat_type_at_block'});
