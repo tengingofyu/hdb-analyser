@@ -3068,11 +3068,23 @@ async function doQuickSearch(){
     resolvedBlock=(res.BLK_NO||'').toUpperCase();resolvedStreet=(res.ROAD_NAME||'').toUpperCase();
     resolvedLat=parseFloat(res.LATITUDE);resolvedLng=parseFloat(res.LONGITUDE);
     resolvedBlockMix=getBlockMix(resolvedBlock, resolvedStreet);
-    // Flat-type existence short-circuit: if the HDB Property Info says this block has
-    // ZERO of the selected type, don't waste a transactions fetch or run the ladder —
-    // just tell the user the block's real mix and let them pick a real type. Skips
-    // silently when the mix lookup misses (unknown block) so unmapped stock never
-    // falls off a cliff.
+    // Flat-type existence short-circuit — POSITIVE-EVIDENCE-ONLY CONTRACT.
+    //
+    // Fires ONLY when both:
+    //   (a) `resolvedBlockMix` is non-null — the block is present in PROPERTY_INFO,
+    //       i.e., HDB tracks sold-unit counts for this block. If the block is
+    //       ABSENT (rental-only, brand-new BTO not yet in the dataset, non-
+    //       residential, or otherwise not-in-scope), `getBlockMix` returns null
+    //       and we skip this entire check — the normal ladder still runs.
+    //   (b) `resolvedBlockMix[code]>0` is false — the mix explicitly reports zero
+    //       (or unlisted, which our workflow encodes as zero) units of the selected
+    //       type. A missing code in the mix means "explicitly none" because
+    //       buildPropertyInfo omits zero entries at ingest time.
+    //
+    // The invariant: absent-from-dataset never blocks a search. Only *positive*
+    // evidence of absence short-circuits. If you add another gate that fires on
+    // `!resolvedBlockMix` you WILL block legitimate searches on rental blocks
+    // and fresh BTOs — that's a regression, not a feature.
     if(resolvedBlockMix){
       const code=flatTypeToMixCode(flatType);
       if(code && !(resolvedBlockMix[code]>0)){
