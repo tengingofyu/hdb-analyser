@@ -67,13 +67,36 @@ Triggers on ANY failure of the live path: 3 s timeout, non-2xx (including 429), 
 4. **Section 3 failures** (`site-render`) mean the client-side wiring diverged from the Worker output. Check CSP, `fetchOneMapSchools`, and the badge CSS classes.
 5. **Section 4 failures** (`usage`) mean the traffic pattern shifted meaningfully. A yesterday-vs-trailing spike alert plus an upstream-headroom warning together are the trigger criterion for reaching for Cloudflare Turnstile — see `RINGFENCE.md` for the enable-in-half-a-day runbook.
 
+## Exact-match street pipeline (shipped 2026-07-17, commits `4173f2a` / `e911e25` / `bfb4099`)
+
+Root cause of the 650118 field failure: the app had TWO street normalizers — `normStr` (7 abbreviations) and `canonStreet` (20 abbreviations) — plus an `includes()` partial-match fallback and a `towns[0]` silent-town-substitution fallback. For postal 650118, OneMap returned `"BUKIT BATOK WEST AVENUE 6"`, the resale dataset stores `"BT BATOK WEST AVE 6"`, `normStr` didn't handle `BT`/`AVE`, `includes()` also missed, and `towns[0]` silently rebuilt the analysis on Woodlands data.
+
+Fix — exact translation table only, no fuzzy matching anywhere in the valuation path:
+
+- **`canonStreet` / `abbrevStreet`** are exact inverses (source of truth: `scripts/street-normalizers.mjs`). ST-hazard fix `\bST\b(?!\.)` prevents `"ST. GEORGE'S"` from being rewritten to `"STREET. GEORGE'S"` at ingest. SAINT exception `\bSAINT\b → "ST."` in `canonStreet` only, so OneMap's `"SAINT GEORGE'S LANE"` maps to the same canonical form as HDB's `"ST. GEORGE'S LANE"`.
+- **`doQuickSearch`** does one exact-match server-side query: `fetchRecs({block, street_name: abbrevStreet(canonStreet(resolvedStreet))}, 500)` for the block pool + one for the street pool. Zero results → honest empty state. No `includes()`. No `towns[0]`.
+- **`qr-scope`** reflects the actual pool tier: `Block N` for tier 1-2, street name for tier 3-5, town for tier 6.
+- **`#blockFactsPanel`** at the top of results always shows the exact block's in-window transactions verbatim (or `"No FLAT sales at Block N, STREET, in this N-month window."` for n=0). Facts, not aggregation.
+- **`buildPropertyInfoConst`** in `update-coords.yml` sorts BOTH street keys and block keys before stringify — future PROPERTY_INFO diffs are byte-deterministic.
+- **Verification gate** (`scripts/verify-street-table.mjs`) runs monthly in the workflow: asserts every PROPERTY_INFO street's `abbrevStreet` output exists in the HDB resale distinct-street list (fixture at `.github/data/hdb-resale-street-names.json`, 595 streets union across all 5 HDB resale datasets 1990-present). Report-only in the workflow log — surfaces vocabulary drift (e.g. Tengah's first resales post-MOP) at refresh time.
+- **Mirror-consistency tripwire** (`scripts/test-mirror-consistency.mjs`) asserts the abbreviation table is byte-identical in all three copies (`.mjs` source of truth, `index.html` inline, `update-coords.yml` inline).
+
+Do NOT reintroduce `includes()` / `startsWith` / Levenshtein-style street matching. CLAUDE.md §6 codifies this. Vocabulary edits go into `scripts/street-normalizers.mjs` and both mirrors get updated in the same commit — the tripwire enforces it.
+
 ## Open threads
 
 - **Phase 3 dashboarding.** The watchdog fails-loud but doesn't summarise. If drift becomes common, add a metrics push to whatever observability we have.
 - **Multiple known-answer postals.** Currently the watchdog checks only 560472. If HSD boundaries drift, one postal may be a lagging indicator. Consider adding 123311 (Henry Park in 1–2 km) and 600268 (Yuhua in 1 km) as second and third canaries.
+- **GEO_FAIL localStorage caching.** Failures currently cached 6 months (`GEO_CACHE_TTL=180d`) — that's the root cause of the 650118 field report chain. Separate decision pending (proposal: ~1h TTL for failures, 180d for successes). Out of scope of the exact-match work order.
+- **Demolished-block residual.** Blocks present in old resale transactions but absent from PROPERTY_INFO. Fallback deletion (Commit 1) closes the corruption vector anyway; low priority.
+
+## Closed threads (former open items resolved)
+
+- **Exact street matching + block-facts panel** — closed 2026-07-17 (Commit 1 `4173f2a`, Commit 2 `e911e25`, Commit 2b `bfb4099`). All work-order acceptance criteria met: exact-match pipeline shipped, PROPERTY_INFO regenerated with the corrupted Saint keys renamed, deterministic ordering, mirror-consistency tripwire, monthly gate integration in `update-coords.yml`.
 
 ## Historical incidents worth remembering
 
+- **650118 field failure (2026-07-15)**: builder search on postal 650118 (Bukit Batok blk 118) silently pulled Woodlands comparables. Traced to `normStr` (7 abbrevs) vs `canonStreet` (20 abbrevs) mismatch + `includes()` fallback + `towns[0]` silent substitution. Fixed by the exact-match pipeline (see section above).
 - **560472 → 449 m Yuhua ambiguity**: Traced to a truncated `PRIMARY_SCHOOLS` constant, not a bad calculation. Fix in commit `82ea750`.
 - **Workflow #11 push race**: Long-running geocode finished after a human tail-link commit landed. Fixed with proactive rebase in `update-coords.yml`. Do not skip the check `gh run list --branch main --status in_progress` before pushing (Convention 4).
 - **False parity bug for Henry Park at 123311**: Mis-attribution — user was comparing OneMap site to our static list, not to Worker output. Confirmed Worker is clean; static list omits Henry Park because straight-line ≠ HSD.
