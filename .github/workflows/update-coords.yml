@@ -208,19 +208,30 @@ jobs:
           //    HDB's "street" field uses ABBREVIATIONS (AVE, RD, JLN, ...) while
           //    OneMap's ROAD_NAME returns them SPELLED OUT (AVENUE, ROAD, JALAN, ...).
           //    Client-side lookup joins on the canonical form, so both sides must
-          //    apply the same map. Kept intentionally small — every entry here has
-          //    been sighted in real HDB street strings.
+          //    apply the same map. Verbatim-mirrors scripts/street-normalizers.mjs
+          //    (single source of truth) — if you change one, change both.
+          //
+          //    ST-hazard fix: \bST\b(?!\.) so "ST. GEORGE'S" is NOT rewritten to
+          //    "STREET. GEORGE'S" at ingest. That bug shipped two corrupted
+          //    PROPERTY_INFO keys until this commit (2026-07-17).
+          //    SAINT exception: canon-only rewrite applied BEFORE the abbrev
+          //    table so OneMap's "SAINT" input maps to the same canonical form
+          //    as HDB's "ST." input.
+          const CANON_EXCEPTIONS = [
+            [/\bSAINT\b/g, 'ST.'],
+          ];
           const STREET_ABBREVIATIONS = [
             [/\bAVE\b/g,'AVENUE'],   [/\bBT\b/g,'BUKIT'],    [/\bCL\b/g,'CLOSE'],
             [/\bCRES\b/g,'CRESCENT'],[/\bCTRL\b/g,'CENTRAL'],[/\bDR\b/g,'DRIVE'],
             [/\bJLN\b/g,'JALAN'],    [/\bKG\b/g,'KAMPONG'],  [/\bLOR\b/g,'LORONG'],
             [/\bNTH\b/g,'NORTH'],    [/\bPK\b/g,'PARK'],     [/\bPL\b/g,'PLACE'],
-            [/\bRD\b/g,'ROAD'],      [/\bST\b/g,'STREET'],   [/\bSTH\b/g,'SOUTH'],
+            [/\bRD\b/g,'ROAD'],      [/\bST\b(?!\.)/g,'STREET'], [/\bSTH\b/g,'SOUTH'],
             [/\bTER\b/g,'TERRACE'],  [/\bTG\b/g,'TANJONG'],  [/\bMKT\b/g,'MARKET'],
             [/\bC'WEALTH\b/g,'COMMONWEALTH'], [/\bUPP\b/g,'UPPER'],
           ];
           function canonStreet(s) {
             let out = (s||'').toUpperCase();
+            for (const [re, w] of CANON_EXCEPTIONS)     out = out.replace(re, w);
             for (const [re, w] of STREET_ABBREVIATIONS) out = out.replace(re, w);
             return out.replace(/\s+/g,' ').trim();
           }
