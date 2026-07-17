@@ -31,7 +31,11 @@ If a workflow needs to re-execute, push a fresh commit (empty commit is fine). D
 
 Before every push, check `gh run list --branch main --status in_progress` (or the equivalent). If any workflow is running, wait for it to finish or coordinate the ordering. Otherwise a long-running workflow (e.g. `update-coords.yml` at ~30 min) can land its own push, and your push will be rejected non-fast-forward or the workflow's push will be rejected — either way is a stall.
 
-### 5. Schools data must be manually verified against onemap.gov.sg/school after changes
+### 5. No fuzzy street matching in the valuation path
+
+Exact translation table only. `canonStreet` (spelled-out canonical form) and `abbrevStreet` (HDB abbreviated form) are exact inverses. Any unknown or edge-case street name is either added to the exceptions map or fails loudly — it is NEVER matched by `includes()`, `startsWith`, or Levenshtein-style similarity. Field failure (postal 650118, 2026-07-15) traced to `normStr` covering 7 abbreviations while `canonStreet` covered 20, followed by an `includes()` partial-match fallback then a silent `towns[0]` fallback that built the analysis on Woodlands data. Fuzzy matching is how that happens.
+
+### 6. Schools data must be manually verified against onemap.gov.sg/school after changes
 
 Any change to `PRIMARY_SCHOOLS`, the Worker upstream contract, the schools rendering block, or `update-coords.yml` requires a manual spot-check against onemap.gov.sg/school for at least three known-answer postals before it ships:
 
