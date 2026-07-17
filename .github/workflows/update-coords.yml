@@ -269,9 +269,17 @@ jobs:
           }
 
           function buildPropertyInfoConst(byStreet) {
+            // Deterministic output: sort street keys (outer) AND block keys
+            // (inner) before stringify. Data.gov.sg pagination doesn't
+            // guarantee row order, so without inner sorting the diff between
+            // two workflow runs on the same source shows spurious churn on
+            // whichever streets got paginated differently. Deterministic
+            // ordering makes the semantic diff-gate exact byte-diff.
             const lines = [];
             for (const s of Object.keys(byStreet).sort()) {
-              lines.push(`${JSON.stringify(s)}:${JSON.stringify(byStreet[s])}`);
+              const inner = {};
+              for (const b of Object.keys(byStreet[s]).sort()) inner[b] = byStreet[s][b];
+              lines.push(`${JSON.stringify(s)}:${JSON.stringify(inner)}`);
             }
             return `const PROPERTY_INFO={\n${lines.join(',\n')}\n};`;
           }
