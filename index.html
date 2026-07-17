@@ -161,6 +161,7 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
     </div>
     <div id="tab-price">
       <div id="fallbackBanner"></div>
+      <div id="blockFactsPanel"></div>
       <div id="estimationCard"></div>
       <div class="metrics" id="metricsRow"></div>
       <div id="verdictBox"></div>
@@ -2910,21 +2911,49 @@ function estimateFromPool(records,targetFloor,targetSqm,tier){
   return{...base,method:'none',price:null,low:observedLow,high:observedHigh};
 }
 function normStr(s){if(!s)return'';return s.toUpperCase().replace(/\bAVENUE\b/g,'AVE').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR').replace(/\bCLOSE\b/g,'CL').replace(/\bCRESCENT\b/g,'CRES').replace(/\bSTREET\b/g,'ST').replace(/\bPLACE\b/g,'PL').replace(/\s+/g,' ').trim();}
-// canonStreet canonicalises to SPELLED-OUT form for PROPERTY_INFO lookup — the
-// opposite direction from normStr, which abbreviates for the resale-transactions
-// match. Two normalizers because the two upstream datasets disagree on how they
-// spell street names, and one match set can't serve both.
+// canonStreet / abbrevStreet — the ONLY route between OneMap's spelled-out
+// form, our PROPERTY_INFO canonical form, and HDB's abbreviated street_name
+// form. See CLAUDE.md §5 ("no fuzzy matching in the valuation path") and
+// scripts/street-normalizers.mjs for the source-of-truth implementation +
+// exhaustive round-trip tests.
+//
+// This inline copy is verbatim-equivalent to the module (tests enforce it).
+// If you change one, change both — a divergence puts the runtime out of sync
+// with the pre-ship verification gate.
+//
+// ST-hazard: `\bST\b(?!\.)` so "ST. GEORGE'S" is NOT rewritten to
+// "STREET. GEORGE'S" (which was the ingest bug that put two corrupted keys
+// in PROPERTY_INFO). SAINT exception: OneMap returns "SAINT GEORGE'S LANE"
+// but HDB uses "ST." — applied in canonStreet BEFORE the abbrev table.
+const CANON_STREET_EXCEPTIONS=[[/\bSAINT\b/g,'ST.']];
+const STREET_ABBREV_TABLE=[
+  ['AVE','AVENUE'],['BT','BUKIT'],['CL','CLOSE'],['CRES','CRESCENT'],['CTRL','CENTRAL'],
+  ['DR','DRIVE'],['JLN','JALAN'],['KG','KAMPONG'],['LOR','LORONG'],['MKT','MARKET'],
+  ['NTH','NORTH'],['PK','PARK'],['PL','PLACE'],['RD','ROAD'],['ST','STREET'],
+  ['STH','SOUTH'],['TER','TERRACE'],['TG','TANJONG'],['UPP','UPPER'],["C'WEALTH",'COMMONWEALTH']
+];
+function _escRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function canonStreet(s){
   if(!s)return'';
-  return s.toUpperCase()
-    .replace(/\bAVE\b/g,'AVENUE').replace(/\bBT\b/g,'BUKIT').replace(/\bCL\b/g,'CLOSE')
-    .replace(/\bCRES\b/g,'CRESCENT').replace(/\bCTRL\b/g,'CENTRAL').replace(/\bDR\b/g,'DRIVE')
-    .replace(/\bJLN\b/g,'JALAN').replace(/\bKG\b/g,'KAMPONG').replace(/\bLOR\b/g,'LORONG')
-    .replace(/\bNTH\b/g,'NORTH').replace(/\bPK\b/g,'PARK').replace(/\bPL\b/g,'PLACE')
-    .replace(/\bRD\b/g,'ROAD').replace(/\bST\b/g,'STREET').replace(/\bSTH\b/g,'SOUTH')
-    .replace(/\bTER\b/g,'TERRACE').replace(/\bTG\b/g,'TANJONG').replace(/\bMKT\b/g,'MARKET')
-    .replace(/\bC'WEALTH\b/g,'COMMONWEALTH').replace(/\bUPP\b/g,'UPPER')
-    .replace(/\s+/g,' ').trim();
+  let out=s.toUpperCase();
+  for(const [pat,repl] of CANON_STREET_EXCEPTIONS)out=out.replace(pat,repl);
+  for(const [abbrev,full] of STREET_ABBREV_TABLE){
+    const pat=abbrev==='ST'?new RegExp('\\bST\\b(?!\\.)','g'):new RegExp('\\b'+_escRe(abbrev)+'\\b','g');
+    out=out.replace(pat,full);
+  }
+  return out.replace(/\s+/g,' ').trim();
+}
+// abbrevStreet: canonical (spelled out) → HDB abbreviated form. Used by
+// doQuickSearch to construct the server-side street_name filter — replaces
+// the old normStr / includes() / towns[0] chain that silently pulled
+// Woodlands data for a Bukit Batok postal in the 650118 field failure.
+function abbrevStreet(s){
+  if(!s)return'';
+  let out=s.toUpperCase();
+  for(const [abbrev,full] of STREET_ABBREV_TABLE){
+    out=out.replace(new RegExp('\\b'+_escRe(full)+'\\b','g'),abbrev);
+  }
+  return out.replace(/\s+/g,' ').trim();
 }
 // Map the app's flat_type string to the compact code used in PROPERTY_INFO mix strings.
 // "3 ROOM" → "3", "EXECUTIVE" → "e", etc. Returns null for unknown types (rental-only
@@ -3115,37 +3144,25 @@ async function doQuickSearch(){
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok"><div>Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)}</div>${mixTag}</div>`;
     showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
-    // Fetch all records for this block number (may include same block number from other towns)
-    const allBlockNumberRecs=await fetchRecs({block:resolvedBlock},mb,2000);
-    // Filter to correct town by matching street name from OneMap
-    const streetNorm=normStr(resolvedStreet);
-    allBlockRecs=allBlockNumberRecs.filter(r=>normStr(r.street_name)===streetNorm);
-    // If street filter returns nothing, try partial match
-    if(!allBlockRecs.length)allBlockRecs=allBlockNumberRecs.filter(r=>normStr(r.street_name).includes(streetNorm)||streetNorm.includes(normStr(r.street_name)));
-    if(allBlockRecs.length){
-      resolvedStreet=allBlockRecs[0]?.street_name?.toUpperCase()||resolvedStreet;
-      resolvedTown=allBlockRecs[0]?.town||'';
-      allStreetRecs=allBlockRecs;
-    } else {
-      // No block data at all — try town from HDB via coordinates not available, use block number records' towns
-      const towns=[...new Set(allBlockNumberRecs.map(r=>r.town).filter(Boolean))];
-      resolvedTown=towns[0]||'';
-      if(resolvedTown){
-        showStatus(`Fetching ${resolvedTown} data...`);
-        allStreetRecs=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,3000);
-      }
-    }
+    // EXACT-MATCH pipeline (design rule, CLAUDE.md §5). resolvedStreet is
+    // OneMap's spelled-out form; abbrevStreet converts to HDB's form for a
+    // server-side street_name filter. This replaces the previous
+    //   fetchRecs({block:resolvedBlock},2000)  → normStr eq → includes() → towns[0]
+    // ladder that silently rebuilt the pool on Woodlands data for postal
+    // 650118 (Bukit Batok blk 118). Zero results → honest empty state; the
+    // labelled ladder inside runFullFallback handles widening.
+    const hdbStreet=abbrevStreet(canonStreet(resolvedStreet));
+    allBlockRecs=await fetchRecs({block:resolvedBlock,street_name:hdbStreet},mb,500);
+    // Same-street pool for the estimation ladder — fetched once, filtered
+    // in-memory per flat_type. No town/all-block widening here; the ladder
+    // does that with proper tier labelling.
+    allStreetRecs=await fetchRecs({street_name:hdbStreet},mb,3000);
+    // Town comes from the pool if any transactions exist; otherwise OneMap's
+    // street already tells us the town by prefix (informational — no filter
+    // consequences downstream).
+    resolvedTown=(allBlockRecs[0]?.town)||(allStreetRecs[0]?.town)||'';
     showStatus('',false);
-    if(!resolvedTown&&allStreetRecs.length)resolvedTown=allStreetRecs[0]?.town||'';
     quickFlatType=flatType;
-    // If no target flat type found in current data, fetch full street for estimation
-    const hasTargetType=allStreetRecs.some(r=>r.flat_type===flatType);
-    if(!hasTargetType&&resolvedStreet){
-      showStatus('Fetching street data for estimation...');
-      const streetData=await fetchRecs({street_name:resolvedStreet},mb,3000);
-      if(streetData.length)allStreetRecs=[...allBlockRecs,...streetData.filter(r=>r.block!==resolvedBlock)];
-      showStatus('',false);
-    }
     // Clamp to 0 — negative floor values fed to the pipeline otherwise pass through as truthy
     // and produce nonsense like "Floor -1: regression on ..."
     const userFloorQuick=Math.max(0,+document.getElementById('quick_floor').value||0);
@@ -3170,7 +3187,7 @@ function renderQuickResult(qResult,floor,flatType){
   const heroRange=document.getElementById('qr-hero-range');
   // No pool at any tier → no comparable data
   if(!qResult){
-    document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock}`;
+    document.getElementById('qr-scope').textContent=`${flatType} · Block ${resolvedBlock} (no pool)`;
     heroPrice.classList.remove('is-range');
     heroPrice.textContent='—';
     heroRange.textContent='No comparable data found. Try extending the date range to 24–36 months.';
@@ -3204,7 +3221,14 @@ function renderQuickResult(qResult,floor,flatType){
   document.getElementById('qr-count').textContent=est.n;
   document.getElementById('qr-psf').textContent='S$'+est.observedMedPsf;
   document.getElementById('qr-lease').textContent=medLease?medLease+'y':'—';
-  document.getElementById('qr-scope').textContent=`${quickFlatType} · Block ${resolvedBlock}`;
+  // Scope label reflects the POOL's actual tier (block / street / town) — not
+  // the user's requested block. Previous version always printed "FLAT · Block N"
+  // regardless of which tier supplied the pool, which made a street-level or
+  // town-level fallback pool look like block-exact data.
+  const scopeLabel=(tier<=2)?`Block ${resolvedBlock}`
+                 :(tier<=5)?esc(resolvedStreet)
+                          :`${esc(resolvedTown)} town-level`;
+  document.getElementById('qr-scope').textContent=`${quickFlatType} · ${scopeLabel}`;
   document.getElementById('qr-source').textContent=`Pool tier ${tier} · ${scope}`;
 }
 
@@ -3280,7 +3304,7 @@ function newSearch(){
   resolvedBlock='';resolvedStreet='';resolvedTown='';resolvedLat=null;resolvedLng=null;resolvedBlockMix=null;
   _lastEstimMethod=null;_trendWindow=null;
   // Clear residual result cards so the next analysis renders fresh
-  ['fallbackBanner','estimationCard','metricsRow','verdictBox','chartLegend','txBody','valueSummary','valueSignals','leaseContent','appreciationContent','amenitiesContent','trendSummary'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+  ['fallbackBanner','blockFactsPanel','estimationCard','metricsRow','verdictBox','chartLegend','txBody','valueSummary','valueSignals','leaseContent','appreciationContent','amenitiesContent','trendSummary'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
   // Reset visibility to the input form
   document.getElementById('inputCard').style.display='block';
   document.getElementById('step1-panel').style.display='block';
@@ -3315,9 +3339,11 @@ async function runFullFallback(flatType,bands,mb,allowTownFetch=true){
   const tiers=[
     {id:1,label:'Same block, same flat type, similar floor',desc:`Block ${resolvedBlock} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
     {id:2,label:'Same block, same flat type, any floor',desc:`Block ${resolvedBlock} · ${flatType}`,fn:()=>allBlockRecs.filter(r=>r.flat_type===flatType)},
-    {id:3,label:'Nearby blocks, same flat type, similar floor',desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet)&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
-    {id:4,label:'Nearby blocks, same flat type, any floor',desc:`${resolvedStreet} · ${flatType}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===normStr(resolvedStreet))},
-    {id:5,label:'Nearby blocks, similar unit size',desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'}`,fn:()=>avgSqm?allStreetRecs.filter(r=>normStr(r.street_name)===normStr(resolvedStreet)&&Math.abs(+r.floor_area_sqm-avgSqm)<=15):[]},
+    // allStreetRecs is already server-side filtered by street_name=hdbStreet
+    // (see doQuickSearch), so tiers 3-5 don't need another street predicate.
+    {id:3,label:'Nearby blocks, same flat type, similar floor',desc:`${resolvedStreet} · ${flatType} · ${bands.map(b=>b.label).join(' / ')}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType&&bands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;}))},
+    {id:4,label:'Nearby blocks, same flat type, any floor',desc:`${resolvedStreet} · ${flatType}`,fn:()=>allStreetRecs.filter(r=>r.flat_type===flatType)},
+    {id:5,label:'Nearby blocks, similar unit size',desc:`${resolvedStreet} · ~${avgSqm?Math.round(avgSqm)+'sqm':'similar size'}`,fn:()=>avgSqm?allStreetRecs.filter(r=>Math.abs(+r.floor_area_sqm-avgSqm)<=15):[]},
     {id:6,label:'Same town, same flat type',desc:`${resolvedTown} · ${flatType}`,skipIfQuick:true,fn:async()=>{showStatus(`Fetching town data for ${resolvedTown}...`);const r=await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);showStatus('',false);return r;}}
   ];
   const attempted=[];
@@ -3330,10 +3356,49 @@ async function runFullFallback(flatType,bands,mb,allowTownFetch=true){
   return null;
 }
 
+// This block facts panel — always renders, above the estimation card. Facts,
+// not statistics: n=0 says "No sales at Block N in this window", n=1 shows the
+// single sale as-is, n>=1 shows a table. NO median/PSF aggregation — that's
+// the estimation section's job. Uses the tier-1/tier-2 pool already fetched
+// server-side, filtered to this exact block + flat type.
+function renderBlockFactsPanel(flatType, mb){
+  const el = document.getElementById('blockFactsPanel'); if (!el) return;
+  const window = mb + '-month window';
+  // Anchor on allBlockRecs (already server-side filtered to block+street), then
+  // in-memory to the exact flat type.
+  const rows = (allBlockRecs || []).filter(r => r.flat_type === flatType);
+  if (!rows.length) {
+    el.innerHTML = `<div class="card" style="padding:0.75rem 1rem"><div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">This block · facts</div><p style="font-size:13px;color:var(--text2);margin:0">No ${esc(flatType)} sales at Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)}, in this ${window}.</p></div>`;
+    return;
+  }
+  const sorted = [...rows].sort((a,b) => b.month.localeCompare(a.month));
+  const rowHtml = sorted.map(r => {
+    const price = +r.resale_price;
+    const area = +r.floor_area_sqm;
+    const psf = psfCalc(price, area);
+    const rl = remLease(r.lease_commence_date, r.month);
+    const lease = rl==null ? '—' : (rl + 'y');
+    return `<tr><td>${esc(r.month)}</td><td>${esc(r.storey_range)}</td><td>${area}</td><td>${sgd(price)}</td><td>S$${psf}</td><td>${lease}</td></tr>`;
+  }).join('');
+  const label = sorted.length === 1
+    ? `1 ${esc(flatType)} sale at this block in this ${window}`
+    : `${sorted.length} ${esc(flatType)} sales at this block in this ${window}`;
+  el.innerHTML =
+    `<div class="card" style="padding:0.75rem 1rem">` +
+    `<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">This block · facts</div>` +
+    `<p style="font-size:13px;color:var(--text2);margin:0 0 8px">Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)} — ${label}</p>` +
+    `<div style="overflow-x:auto"><table class="tx-table" style="width:100%"><thead><tr><th>Month</th><th>Storey</th><th>sqm</th><th>Price</th><th>PSF</th><th>Lease left</th></tr></thead>` +
+    `<tbody>${rowHtml}</tbody></table></div>` +
+    `</div>`;
+}
+
 // ── Price Tab ──────────────────────────────────────────────
 async function renderPriceTab(result,asking,flatType,mb){
   const estCardEl=document.getElementById('estimationCard');
   _lastEstimMethod=null;_trendWindow=null;
+  // Facts panel always renders, independent of the ladder outcome — the exact
+  // block's transactions are stated verbatim before any estimation section.
+  renderBlockFactsPanel(flatType, mb);
   if(!result){
     // No pool at any tier — no synthesised estimate. Show the honest state.
     _lastEstimMethod=null;
@@ -3427,25 +3492,23 @@ async function renderPriceTab(result,asking,flatType,mb){
 // (only used to feed the trend chart's 24-month extension — the rest of the analysis stays on 12).
 async function refetchTierPool(tier,mb){
   const flatType=selectedFlatType;
-  const streetNorm=normStr(resolvedStreet);
+  // Same exact-match filter shape as doQuickSearch: convert OneMap spelled-out
+  // to HDB abbreviated form and query server-side. No normStr fuzz.
+  const hdbStreet=abbrevStreet(canonStreet(resolvedStreet));
   const inBand=r=>adjBands&&adjBands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;});
   if(tier===1||tier===2){
-    const all=await fetchRecs({block:resolvedBlock},mb,2000);
-    let same=all.filter(r=>normStr(r.street_name)===streetNorm);
-    if(!same.length)same=all.filter(r=>normStr(r.street_name).includes(streetNorm)||streetNorm.includes(normStr(r.street_name)));
-    same=same.filter(r=>r.flat_type===flatType);
+    const same=await fetchRecs({block:resolvedBlock,street_name:hdbStreet,flat_type:flatType},mb,500);
     return tier===1?same.filter(inBand):same;
   }
   if(tier===3||tier===4){
-    const all=await fetchRecs({street_name:resolvedStreet},mb,3000);
-    const same=all.filter(r=>r.flat_type===flatType&&normStr(r.street_name)===streetNorm);
+    const same=await fetchRecs({street_name:hdbStreet,flat_type:flatType},mb,3000);
     return tier===3?same.filter(inBand):same;
   }
   if(tier===5){
-    const all=await fetchRecs({street_name:resolvedStreet},mb,3000);
+    const all=await fetchRecs({street_name:hdbStreet},mb,3000);
     const blockSqms=allBlockRecs.filter(r=>r.flat_type===flatType).map(r=>+r.floor_area_sqm);
     const avgSqm=blockSqms.length?blockSqms.reduce((a,b)=>a+b,0)/blockSqms.length:null;
-    return avgSqm?all.filter(r=>normStr(r.street_name)===streetNorm&&Math.abs(+r.floor_area_sqm-avgSqm)<=15):[];
+    return avgSqm?all.filter(r=>Math.abs(+r.floor_area_sqm-avgSqm)<=15):[];
   }
   if(tier===6){return await fetchRecs({town:resolvedTown,flat_type:flatType},mb,5000);}
   return [];

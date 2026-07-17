@@ -19,7 +19,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { canonStreet, abbrevStreet, ABBREVIATIONS, STREET_EXCEPTIONS } from './street-normalizers.mjs';
+import { canonStreet, abbrevStreet, ABBREVIATIONS, CANON_EXCEPTIONS } from './street-normalizers.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '..');
@@ -51,7 +51,7 @@ console.log(`  fixture rows       : ${fixture.row_count_at_pull}`);
 console.log(`  fixture streets    : ${hdbSet.size} distinct`);
 console.log(`PROPERTY_INFO streets: ${canonKeys.length}`);
 console.log(`Abbreviation pairs   : ${ABBREVIATIONS.length}`);
-console.log(`Explicit exceptions  : ${STREET_EXCEPTIONS.length}`);
+console.log(`Canon exceptions     : ${CANON_EXCEPTIONS.length}`);
 console.log();
 
 // ── (1) Injectivity ────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ console.log('===================== COPY BACK =====================');
 console.log(`date            : ${new Date().toISOString().slice(0,10)}`);
 console.log(`fixture pulled  : ${fixture.pulled_at} (${fixture.row_count_at_pull} rows, ${hdbSet.size} distinct streets)`);
 console.log(`PROPERTY_INFO   : ${canonKeys.length} streets`);
-console.log(`abbrevs         : ${ABBREVIATIONS.length} pairs, ${STREET_EXCEPTIONS.length} exceptions`);
+console.log(`abbrevs         : ${ABBREVIATIONS.length} pairs, ${CANON_EXCEPTIONS.length} exceptions`);
 console.log(`injectivity     : ${injective ? 'PASS' : `FAIL — ${collisions.size} collision(s)`}`);
 console.log(`existence       : ${misses.length === 0 ? 'PASS' : `FAIL — ${misses.length} miss(es)`}`);
 if (misses.length) {

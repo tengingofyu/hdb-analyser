@@ -362,11 +362,97 @@ jobs:
           console.log(`\n=== SUMMARY ===\n${summ('SCHOOLS', prevSchools.length, schoolsR)} | ${summ('CHILDCARE', prevChildcare.length, childcareR)} | ${kSumm} | ${pSumm}`);
           EOF
 
+      # Refresh the HDB resale distinct-street fixture across all five HDB
+      # resale datasets (1990→present). The verification gate reads this
+      # fixture to catch two things at monthly cadence:
+      #   * NEW misses in the current PROPERTY_INFO — surfacing potential
+      #     translation/abbreviation drift the moment new HDB stock ships.
+      #   * MISSES flipping to hits (e.g. Tengah blocks getting their first
+      #     resales post-MOP), captured in the COPY BACK log.
+      # Fixture pull takes ~10 min single-threaded (rate-limit aware). Gate
+      # is always run in report-only mode — never fails this workflow, only
+      # logs the COPY BACK. Owner eyeballs the log; a durable drift becomes
+      # a follow-up PR to street-normalizers.mjs.
+      - name: Refresh resale-street fixture + run verification gate
+        env:
+          DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
+        run: |
+          node --input-type=module << 'EOF'
+          import fs from 'fs';
+          import fetch from 'node-fetch';
+          const DATASETS = [
+            ['d_ebc5ab87086db484f88045b47411ebc5', '1990-Dec1999'],
+            ['d_43f493c6c50d54243cc1eab0df142d6a', '2000-Feb2012'],
+            ['d_2d5ff9ea31397b66239f245f57751537', 'Mar2012-Dec2014'],
+            ['d_ea9ed51da2787afaf8e51f827c304208', '2015-Dec2016'],
+            ['d_8b84c4ee58e3cfc0ece0d773c8ca6abc', '2017-present'],
+          ];
+          const STEP = 5000;
+          const headers = process.env.DATAGOV_API_KEY ? {'x-api-key': process.env.DATAGOV_API_KEY} : {};
+
+          async function fetchWithTimeout(url, timeoutMs=15000) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+            try { return await fetch(url, { headers, signal: ctrl.signal }); }
+            finally { clearTimeout(timer); }
+          }
+
+          async function pullDataset(id, label) {
+            const streets = new Set();
+            let offset = 0, rows = 0, total = null;
+            while (true) {
+              const url = `https://data.gov.sg/api/action/datastore_search?resource_id=${id}&limit=${STEP}&offset=${offset}&fields=street_name`;
+              let d = null;
+              for (let attempt = 0; attempt < 6; attempt++) {
+                try {
+                  const r = await fetchWithTimeout(url);
+                  d = await r.json();
+                  if (d.success) break;
+                  if (d.name === 'TOO_MANY_REQUESTS') { await new Promise(r => setTimeout(r, 12000)); continue; }
+                  break;
+                } catch (e) { await new Promise(r => setTimeout(r, 4000)); }
+              }
+              if (!d?.success) throw new Error(`fixture pull failed: ${label} offset ${offset}`);
+              const recs = d.result?.records || [];
+              for (const rec of recs) { const s = (rec.street_name || '').trim(); if (s) streets.add(s); }
+              rows += recs.length;
+              if (total === null) total = d.result.total;
+              if (recs.length < STEP) break;
+              offset += STEP;
+              await new Promise(r => setTimeout(r, 300));
+            }
+            console.log(`  ${label.padEnd(18)} : ${rows} rows, ${streets.size} distinct streets`);
+            return { rows, streets };
+          }
+
+          const perDataset = [];
+          const union = new Set();
+          for (const [id, label] of DATASETS) {
+            const { rows, streets } = await pullDataset(id, label);
+            perDataset.push({ resource_id: id, label, rows, distinct_in_this_dataset: streets.size });
+            for (const s of streets) union.add(s);
+          }
+
+          const payload = {
+            pulled_at: new Date().toISOString().slice(0, 10),
+            pull_scope: 'FULL HISTORY 1990-01 → present across all 5 HDB resale datasets',
+            total_rows_across_datasets: perDataset.reduce((n, p) => n + p.rows, 0),
+            per_dataset: perDataset,
+            distinct_street_names: [...union].sort(),
+          };
+          fs.mkdirSync('.github/data', { recursive: true });
+          fs.writeFileSync('.github/data/hdb-resale-street-names.json', JSON.stringify(payload, null, 2));
+          console.log(`Fixture: ${union.size} distinct streets union across all ${DATASETS.length} datasets`);
+          EOF
+          # Always report; never fail this workflow on gate misses. Owner
+          # reviews the COPY BACK log to spot durable drift.
+          node scripts/verify-street-table.mjs || true
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
+          git add index.html .github/data/hdb-resale-street-names.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0

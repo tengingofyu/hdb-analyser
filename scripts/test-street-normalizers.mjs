@@ -6,7 +6,7 @@
 // bare "ST." to "STREET." That was the ingest bug that put the two corrupted
 // "STREET. GEORGE'S …" keys into PROPERTY_INFO.
 
-import { canonStreet, abbrevStreet, ABBREVIATIONS, STREET_EXCEPTIONS } from './street-normalizers.mjs';
+import { canonStreet, abbrevStreet, ABBREVIATIONS, CANON_EXCEPTIONS } from './street-normalizers.mjs';
 
 let failed = 0;
 
@@ -69,6 +69,24 @@ eq("ST. GEORGE'S RD (round-trip)", abbrevStreet(canonStreet("ST. GEORGE'S RD")),
 console.log('\n=== Round-trip: canonStreet(abbrevStreet(y)) === y  for canon inputs ===');
 for (const [, canon] of canonCases) eq(`${canon}`, canonStreet(abbrevStreet(canon)), canon);
 eq("ST. GEORGE'S ROAD (round-trip)", canonStreet(abbrevStreet("ST. GEORGE'S ROAD")), "ST. GEORGE'S ROAD");
+
+console.log('\n=== SAINT exception (CANON_EXCEPTIONS[0]) ===');
+// OneMap returns "SAINT" (spelled out); HDB and our canonical form use "ST."
+eq('canonStreet("SAINT GEORGE\'S LANE") → "ST. GEORGE\'S LANE"',
+   canonStreet("SAINT GEORGE'S LANE"), "ST. GEORGE'S LANE");
+eq('canonStreet("SAINT GEORGE\'S ROAD") → "ST. GEORGE\'S ROAD"',
+   canonStreet("SAINT GEORGE'S ROAD"), "ST. GEORGE'S ROAD");
+// OneMap-form → HDB-form via the full canon→abbrev pipeline
+eq('canonStreet + abbrevStreet composed on OneMap "SAINT GEORGE\'S ROAD" → HDB "ST. GEORGE\'S RD"',
+   abbrevStreet(canonStreet("SAINT GEORGE'S ROAD")), "ST. GEORGE'S RD");
+eq('canonStreet + abbrevStreet composed on OneMap "SAINT GEORGE\'S LANE" → HDB "ST. GEORGE\'S LANE"',
+   abbrevStreet(canonStreet("SAINT GEORGE'S LANE")), "ST. GEORGE'S LANE");
+// Rule-ordering: SAINT output ("ST.") must not be re-hit by the \bST\b(?!\.) rule
+eq('SAINT rule output not re-hit by ST rule (idempotent under canon)',
+   canonStreet(canonStreet("SAINT GEORGE'S ROAD")), "ST. GEORGE'S ROAD");
+// Generic SAINT (not GEORGE'S specifically) still transforms
+eq('canonStreet("SAINT MICHAEL\'S ROAD") → "ST. MICHAEL\'S ROAD" (rule is generic)',
+   canonStreet("SAINT MICHAEL'S ROAD"), "ST. MICHAEL'S ROAD");
 
 console.log('\n=== Regression: 650118 street name ===');
 // OneMap returns "BUKIT BATOK WEST AVENUE 6"; HDB has "BT BATOK WEST AVE 6".

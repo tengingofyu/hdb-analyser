@@ -40,15 +40,19 @@ export const ABBREVIATIONS = [
   ["C'WEALTH", 'COMMONWEALTH'],
 ];
 
-// STREET_EXCEPTIONS — apex-level explicit rewrites applied AFTER the abbreviation
-// table on the way in (canonStreet) and BEFORE it on the way out (abbrevStreet).
-// Each entry documents: canonical form ↔ HDB abbreviated form. Add here — never
-// add a fuzzy rule elsewhere.
+// CANON_EXCEPTIONS — one-way rewrites applied in canonStreet ONLY, BEFORE the
+// abbreviation table. Use for asymmetric mappings where the canonical form is
+// unambiguous but the HDB / OneMap inputs disagree (and the disagreement is
+// NOT captured by any abbreviation pair).
 //
-// Empty for now — the ST-hazard is handled by the regex itself (see canonStreet).
-// A separate audit is required before adding here.
-export const STREET_EXCEPTIONS = [
-  // {canon: 'ST. GEORGE\'S ROAD', hdb: "ST. GEORGE'S RD"},  // handled by ST-hazard, not exception
+// SAINT → "ST.": approved 2026-07-17 after live OneMap probe confirmed
+// postal 328047 → "SAINT GEORGE'S LANE" and postal 320003 → "SAINT GEORGE'S
+// ROAD". HDB stores "ST." with a period. Canonical form is "ST." (matches
+// HDB, minimal transformation). Applied BEFORE the ABBREVIATIONS table so
+// the ST-hazard fix `\bST\b(?!\.)` protects the "ST." output from being
+// re-expanded to "STREET." Rule-ordering test: scripts/experiment-saint.mjs.
+export const CANON_EXCEPTIONS = [
+  [/\bSAINT\b/g, 'ST.'],
 ];
 
 // canonStreet: OneMap spelled-out OR HDB abbreviated  →  canonical (spelled out).
@@ -58,6 +62,8 @@ export const STREET_EXCEPTIONS = [
 export function canonStreet(s) {
   if (!s) return '';
   let out = s.toUpperCase();
+  // Exceptions first, so their output participates in the ST-hazard protection.
+  for (const [pat, repl] of CANON_EXCEPTIONS) out = out.replace(pat, repl);
   for (const [abbrev, full] of ABBREVIATIONS) {
     const pat = abbrev === 'ST'
       ? new RegExp(`\\bST\\b(?!\\.)`, 'g')                      // ST-hazard fix
