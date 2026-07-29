@@ -172,15 +172,10 @@ h1{font-size:20px;font-weight:500;margin-bottom:4px}
         <div id="chartLegend" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text2)"></div>
       </div>
       <div class="card">
-        <p class="sl">Comparable transactions</p>
+        <p class="sl" id="comparablesTitle">Comparable transactions</p>
         <div style="overflow-x:auto">
           <table class="tx-table">
-            <thead><tr>
-              <th style="width:54px">Month</th><th style="width:38px">Blk</th><th style="width:62px">Storey</th>
-              <th style="width:40px" class="hide-mobile">sqm</th><th style="width:78px">Price</th>
-              <th style="width:46px" class="hide-mobile">PSF</th><th style="width:46px" class="hide-mobile">Lease</th>
-              <th style="width:44px">Remain</th><th style="width:46px" class="hide-mobile">Band</th><th style="width:46px">vs med</th>
-            </tr></thead>
+            <thead id="txHead"></thead>
             <tbody id="txBody"></tbody>
           </table>
         </div>
@@ -2967,6 +2962,51 @@ function flatTypeToMixCode(t){
   return m?m[1]:null;
 }
 const FLAT_CODE_TO_LABEL={'1':'1 ROOM','2':'2 ROOM','3':'3 ROOM','4':'4 ROOM','5':'5 ROOM','e':'EXECUTIVE','g':'MULTI-GENERATION'};
+
+// ── Display helpers (state-grid hardening) ─────────────────────────────────
+// Small pure functions used by facts panel, comparables table, and estimate
+// card. Kept near the other formatters so tests can call them directly.
+
+const _MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// "2025-09" → "Sep 25". Compact form for mobile; fits in the tightest column.
+function formatMonth(s){
+  if(!s)return'';
+  const m=s.match(/^(\d{4})-(\d{2})/);
+  if(!m)return s;
+  return `${_MONTHS[+m[2]-1]} ${m[1].slice(2)}`;
+}
+// "07 TO 09" → "7–9" (en-dash, no zero-pad). Storey ranges in the resale
+// dataset are always "NN TO NN"; unrecognised strings pass through unchanged.
+function formatStorey(s){
+  if(!s)return'';
+  const m=s.match(/^0*(\d+)\s*TO\s*0*(\d+)$/i);
+  if(!m)return s;
+  return `${m[1]}–${m[2]}`;
+}
+// Price cells drop the "S$" prefix (moved to the column header). Exact
+// figure, no rounding, comma-thousands.
+function formatPriceCell(n){
+  const x=+n;
+  return Number.isFinite(x)?x.toLocaleString('en-SG'):String(n);
+}
+// Scope-emphasis: weighted line under the estimate figure. Only fires when
+// the pool tier is ≥ 3 — tier 1-2 (block-exact pools) keep quiet treatment
+// because the block-facts panel above already tells the honest local story.
+function scopeEmphasisLine(tier, blk, street, town){
+  if(tier<3||tier==null)return'';
+  const b=esc(blk||''), s=esc(street||''), t=esc(town||'');
+  if(tier<=4)return `Based on nearby <strong>${s}</strong> blocks — not Block ${b} itself.`;
+  if(tier===5)return `Based on similar-sized units on <strong>${s}</strong> — not Block ${b} itself.`;
+  return `Based on <strong>${t}</strong> town-level comparables — not Block ${b} or ${s} specifically.`;
+}
+// Empty-state copy (whole ladder failed → result === null). Widens the
+// suggestion depending on how much history the user has already asked for.
+// mb is the current months-back window (12, 24, or 36).
+function emptyStateCopy(mb){
+  const base = "Not enough recent sales nearby to estimate this one honestly yet. Try widening to 24 or 36 months — older sales, but more to go on.";
+  if(+mb>=36) return base + " As more sales are recorded, check back — this fills in over time.";
+  return base;
+}
 // Returns {code: count} for the block or null if not found. Mix strings are stored
 // as "3:74,4:148,5:74" and parsed on demand — the tradeoff is a tiny per-lookup
 // cost against a ~50% smaller embedded constant.
@@ -3364,31 +3404,52 @@ async function runFullFallback(flatType,bands,mb,allowTownFetch=true){
 function renderBlockFactsPanel(flatType, mb){
   const el = document.getElementById('blockFactsPanel'); if (!el) return;
   const window = mb + '-month window';
-  // Anchor on allBlockRecs (already server-side filtered to block+street), then
-  // in-memory to the exact flat type.
   const rows = (allBlockRecs || []).filter(r => r.flat_type === flatType);
   if (!rows.length) {
     el.innerHTML = `<div class="card" style="padding:0.75rem 1rem"><div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">This block · facts</div><p style="font-size:13px;color:var(--text2);margin:0">No ${esc(flatType)} sales at Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)}, in this ${window}.</p></div>`;
     return;
   }
   const sorted = [...rows].sort((a,b) => b.month.localeCompare(a.month));
+  // Cell J: show Model column ONLY when rows disagree on flat_model.
+  const modelCounts = {};
+  for (const r of sorted) { const m = (r.flat_model || '').trim() || '—'; modelCounts[m] = (modelCounts[m] || 0) + 1; }
+  const modelKeys = Object.keys(modelCounts);
+  const showModel = modelKeys.length > 1;
+  // Mobile column budget at 390px: Month, Storey, Price, Lease. sqm, PSF, and
+  // Model all drop via hide-mobile. Model gets an outlier NOTE below the
+  // table instead so the info isn't lost — never squeeze "Prem…" in a col.
   const rowHtml = sorted.map(r => {
     const price = +r.resale_price;
     const area = +r.floor_area_sqm;
     const psf = psfCalc(price, area);
     const rl = remLease(r.lease_commence_date, r.month);
     const lease = rl==null ? '—' : (rl + 'y');
-    return `<tr><td>${esc(r.month)}</td><td>${esc(r.storey_range)}</td><td>${area}</td><td>${sgd(price)}</td><td>S$${psf}</td><td>${lease}</td></tr>`;
+    const modelCell = showModel ? `<td class="hide-mobile">${esc(r.flat_model||'—')}</td>` : '';
+    return `<tr><td>${formatMonth(r.month)}</td><td>${formatStorey(r.storey_range)}</td>${modelCell}<td class="hide-mobile">${area}</td><td>${formatPriceCell(price)}</td><td class="hide-mobile">${psf}</td><td>${lease}</td></tr>`;
   }).join('');
+  const modelHead = showModel ? '<th class="hide-mobile">Model</th>' : '';
   const label = sorted.length === 1
     ? `1 ${esc(flatType)} sale at this block in this ${window}`
     : `${sorted.length} ${esc(flatType)} sales at this block in this ${window}`;
+  // Outlier note: when Model column is mixed, the mobile viewport hides the
+  // column, but the odd-one-out is still market-relevant (Dawson loft, 3Gen,
+  // etc.). Render a compact note below the table so users on any device see
+  // the explanation for the price gap they observe in the Price column.
+  let outlierNote = '';
+  if (showModel) {
+    const sortedByCount = modelKeys.map(m => ({m, n: modelCounts[m]})).sort((a,b) => b.n - a.n);
+    const majority = sortedByCount[0];
+    const outliers = sortedByCount.slice(1);
+    const oneOrMany = outliers.reduce((s, o) => s + o.n, 0);
+    outlierNote = `<p style="font-size:11px;color:var(--text3);margin:6px 0 0;line-height:1.4">Note: ${oneOrMany} of ${sorted.length} sales ${oneOrMany===1?'is':'are'} <strong>${outliers.map(o => esc(o.m)+(o.n>1?` (×${o.n})`:'')).join(', ')}</strong> — the rest are ${esc(majority.m)}. Different flat models trade at different price points.</p>`;
+  }
   el.innerHTML =
     `<div class="card" style="padding:0.75rem 1rem">` +
     `<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">This block · facts</div>` +
     `<p style="font-size:13px;color:var(--text2);margin:0 0 8px">Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)} — ${label}</p>` +
-    `<div style="overflow-x:auto"><table class="tx-table" style="width:100%"><thead><tr><th>Month</th><th>Storey</th><th>sqm</th><th>Price</th><th>PSF</th><th>Lease left</th></tr></thead>` +
+    `<div style="overflow-x:auto"><table class="tx-table" style="width:100%"><thead><tr><th>Month</th><th>Storey</th>${modelHead}<th class="hide-mobile">sqm</th><th>Price (S$)</th><th class="hide-mobile">PSF (S$)</th><th>Lease left</th></tr></thead>` +
     `<tbody>${rowHtml}</tbody></table></div>` +
+    outlierNote +
     `</div>`;
 }
 
@@ -3400,9 +3461,12 @@ async function renderPriceTab(result,asking,flatType,mb){
   // block's transactions are stated verbatim before any estimation section.
   renderBlockFactsPanel(flatType, mb);
   if(!result){
-    // No pool at any tier — no synthesised estimate. Show the honest state.
+    // Cells H/F/I — whole ladder failed. Honest empty state, no synthesised
+    // estimate. Copy widens the suggestion depending on how much history the
+    // user has already asked for; at 36mo we've exhausted the widening
+    // option and just tell them the truth (this fills in over time).
     _lastEstimMethod=null;
-    document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No comparable ${esc(flatType)} data found</div><div style="font-size:12px;opacity:0.85;margin-top:2px">No pool matched at block, street, or town level. Try extending the date range to 24–36 months, or check a different flat type.</div></div>`;
+    document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner fb-street"><div class="fb-title">No comparable ${esc(flatType)} data found</div><div style="font-size:12px;opacity:0.85;margin-top:2px">${esc(emptyStateCopy(mb))}</div></div>`;
     estCardEl.innerHTML=`<div class="card"><p style="font-size:13px;color:var(--text2)">No transactions to render.</p></div>`;
     document.getElementById('metricsRow').innerHTML='';document.getElementById('verdictBox').innerHTML='';
     document.getElementById('trendSummary').textContent='';document.getElementById('chartLegend').innerHTML='';document.getElementById('txBody').innerHTML='';
@@ -3413,15 +3477,31 @@ async function renderPriceTab(result,asking,flatType,mb){
   estCardEl.innerHTML='';
   const{tier,records,attempted}=result;
   const bannerClass=tier<=2?'fb-exact':tier<=4?'fb-block':tier===5?'fb-street':'fb-town';
-  // When we fell back off the block (tier ≥ 3) BECAUSE there are no in-window
-  // transactions for a type this block DOES have, surface the unit count — otherwise
-  // the banner reads like the block lacks the type entirely, which it doesn't.
-  const typeCode=flatTypeToMixCode(selectedFlatType);
-  const unitsAtBlock=(tier>=3 && resolvedBlockMix && typeCode) ? (resolvedBlockMix[typeCode]||0) : 0;
-  const inventoryClause=unitsAtBlock>0?` (${unitsAtBlock} ${esc(selectedFlatType)} unit${unitsAtBlock!==1?'s':''} here)`:'';
-  const bannerTitle=tier<=2?`Block ${esc(resolvedBlock)} transactions`:tier<=4?`No ${esc(selectedFlatType)} at Block ${esc(resolvedBlock)}${inventoryClause} in this period — showing nearby blocks on ${esc(resolvedStreet)}`:tier===5?`No ${esc(selectedFlatType)} data on ${esc(resolvedStreet)}${inventoryClause} — showing similar-sized units nearby`:`Limited local data — showing ${esc(resolvedTown)} town-level comparables`;
+  // Cell C fix: when the ladder falls off the block (tier ≥ 3), the banner
+  // must reflect the block's ACTUAL recent-sales count of the selected type,
+  // not assume zero. n=0 → "No recent sales at Block X"; n=1-2 → "Only N
+  // recent sale(s) at Block X — not enough on its own for a reliable
+  // estimate". Anything ≥ 3 would have stopped the ladder at tier 1-2, so
+  // this branch never sees it.
+  const blockOwnRecs=(allBlockRecs||[]).filter(r=>r.flat_type===selectedFlatType);
+  const blockOwnCount=blockOwnRecs.length;
   const used=attempted.find(t=>t.used);
-  const bannerBody=tier<=2?`${used.count} transaction${used.count!==1?'s':''} found. ${tier===1?'Floor band matched.':'All floors included — higher floors typically command a premium.'}`:tier<=4?`${used.count} transaction${used.count!==1?'s':''} across nearby blocks. ${tier===3?'Floor band matched.':'All floors included.'}`:tier===5?`Matched by unit size (±15sqm). Use as directional only.`:`Town-level context only. Not unit-specific.`;
+  let bannerTitle, bannerBody;
+  if(tier<=2){
+    bannerTitle=`Block ${esc(resolvedBlock)} transactions`;
+    bannerBody=`${used.count} transaction${used.count!==1?'s':''} found. ${tier===1?'Floor band matched.':'All floors included — higher floors typically command a premium.'}`;
+  } else if(tier<=4){
+    bannerTitle = blockOwnCount===0
+      ? `No recent sales at Block ${esc(resolvedBlock)} — showing nearby blocks on ${esc(resolvedStreet)}.`
+      : `Only ${blockOwnCount} recent sale${blockOwnCount!==1?'s':''} at Block ${esc(resolvedBlock)} — not enough on its own for a reliable estimate, so we're showing similar nearby blocks on ${esc(resolvedStreet)}.`;
+    bannerBody=`${used.count} transaction${used.count!==1?'s':''} across nearby blocks. ${tier===3?'Floor band matched.':'All floors included.'}`;
+  } else if(tier===5){
+    bannerTitle = `No ${esc(selectedFlatType)} data on ${esc(resolvedStreet)} — showing similar-sized units nearby.`;
+    bannerBody=`Matched by unit size (±15sqm). Use as directional only.`;
+  } else {
+    bannerTitle=`Limited local data — showing ${esc(resolvedTown)} town-level comparables.`;
+    bannerBody=`Town-level context only. Not unit-specific.`;
+  }
   document.getElementById('fallbackBanner').innerHTML=`<div class="fallback-banner ${bannerClass}"><div class="fb-title">${bannerTitle}</div><div style="font-size:12px;opacity:0.85;margin-top:2px">${bannerBody}</div></div>`;
 
   const prices=records.map(r=>+r.resale_price);
@@ -3437,6 +3517,13 @@ async function renderPriceTab(result,asking,flatType,mb){
       _lastEstimMethod=est.method;
       const scope=poolScopeWord(tier);
       let cardHtml;
+      // Scope-emphasis (cells C-G, tier ≥ 3): weighted line under the estimate
+      // figure so the user reads "this isn't your block" BEFORE they read the
+      // number. Tier 1-2 keep the quiet treatment.
+      const scopeEmph = scopeEmphasisLine(tier, resolvedBlock, resolvedStreet, resolvedTown);
+      const scopeEmphHtml = scopeEmph
+        ? `<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:0.5rem;padding:8px 10px;background:var(--warn-bg);color:var(--warn-text);border-radius:var(--radius)">${scopeEmph}</div>`
+        : '';
       if(est.method==='regression'||est.method==='band'){
         const d=displayEstimate(est.price,est.low,est.high);
         const methodTitle=est.method==='regression'?'Floor-adjusted estimate (regression)':'Floor-adjusted estimate (band median)';
@@ -3445,6 +3532,7 @@ async function renderPriceTab(result,asking,flatType,mb){
           <p class="sl">${methodTitle}</p>
           <div style="font-size:28px;font-weight:500;color:var(--text);margin-bottom:4px">${sgdK(d.price)}</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">${sgdK(d.low)} – ${sgdK(d.high)} <span style="color:var(--text3);font-size:11px">(wider = less data / more scatter)</span></div>
+          ${scopeEmphHtml}
           <div style="font-size:12px;color:var(--text2);margin-bottom:0.75rem">${methodNoteLine(est,userFloor,scope)}</div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:0.5rem">Pool median (all floors in scope): <strong style="color:var(--text2)">${sgdK(est.observedMedian)}</strong> · Observed range: ${sgdK(r1kDown(est.observedLow))} – ${sgdK(r1kUp(est.observedHigh))}</div>
           <details style="margin-top:0.75rem">
@@ -3453,12 +3541,17 @@ async function renderPriceTab(result,asking,flatType,mb){
           </details>
         </div>`;
       } else {
-        // method === 'none' — the range IS the answer, so promote it to the hero slot
+        // Cell F — method === 'none'. The range IS the answer, so promote it to
+        // the hero slot. Small note underneath is factual (n, scope, median),
+        // then the same widen-window prompt as the whole-ladder-fail state
+        // (H/F share the "no-estimate" family per work order).
         const dl=r1kDown(est.observedLow),dh=r1kUp(est.observedHigh);
         cardHtml=`<div class="card">
           <p class="sl">Observed price range</p>
           <div style="font-size:32px;font-weight:500;color:var(--text);letter-spacing:-0.5px;margin-bottom:4px">${sgdK(dl)} – ${sgdK(dh)}</div>
+          ${scopeEmphHtml}
           <div style="font-size:12px;color:var(--text2);margin-bottom:0.5rem">Too few comparable sales to model floor ${userFloor} · median ${sgdK(est.observedMedian)} across ${est.n} tx (${scope})</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:0.5rem;padding-top:4px;border-top:0.5px dashed var(--border)">${esc(emptyStateCopy(mb))}</div>
         </div>`;
       }
       estCardEl.innerHTML=cardHtml;
@@ -3553,13 +3646,24 @@ async function renderTrendChart(records,asking,tier,mb){
   document.getElementById('chartLegend').innerHTML=datasets.map(d=>`<div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:0;border-top:2px ${d.borderDash?'dashed':'solid'} ${d.borderColor}"></div><span>${d.label}</span></div>`).join('');
 }
 
+// Comparables table renderer. Emits BOTH thead and tbody so the Model column
+// (cell J) can be added/removed dynamically based on whether flat_model
+// varies across the rendered rows. Mobile column budget (390px): Month,
+// Storey, Price, Lease (remaining years). Everything else is `hide-mobile`
+// — numeric columns never clip because they don't render at that width.
 function renderTable(records,med){
   const sorted=[...records].sort((a,b)=>b.month.localeCompare(a.month));
+  const uniqueModels=new Set(sorted.map(r=>(r.flat_model||'').trim())).size;
+  const showModel=uniqueModels>1;
+  const modelHead=showModel?'<th style="width:64px" class="hide-mobile">Model</th>':'';
+  document.getElementById('txHead').innerHTML=
+    `<tr><th style="width:54px">Month</th><th style="width:38px" class="hide-mobile">Blk</th><th style="width:62px">Storey</th>${modelHead}<th style="width:40px" class="hide-mobile">sqm</th><th style="width:78px">Price (S$)</th><th style="width:46px" class="hide-mobile">PSF (S$)</th><th style="width:46px" class="hide-mobile">Built</th><th style="width:44px">Lease</th><th style="width:46px" class="hide-mobile">Band</th><th style="width:46px" class="hide-mobile">vs med</th></tr>`;
   document.getElementById('txBody').innerHTML=sorted.map(r=>{
     const price=+r.resale_price,area=+r.floor_area_sqm,psfV=psfCalc(price,area),rb=getBand(smid(r.storey_range)),isSame=rb.label===selectedBand?.label;
     const diff=Math.round(((price-med)/med)*100),tc=diff>5?'p-above':diff<-5?'p-below':'p-fair',tt=diff>0?`+${diff}%`:`${diff}%`;
     const rl=remLease(r.lease_commence_date,r.month),lf=leaseFlag(rl);
-    return`<tr><td>${esc(r.month)}</td><td>${esc(r.block)}</td><td>${esc(r.storey_range)}</td><td class="hide-mobile">${area}</td><td>${sgd(price)}</td><td class="hide-mobile">S$${psfV}</td><td class="hide-mobile">${esc(r.lease_commence_date||'—')}</td><td><span class="pill ${lf.cls}">${lf.txt}</span></td><td class="hide-mobile"><span class="pill ${isSame?'p-same':'p-band'}">${esc(rb.label.split('(')[0].trim())}</span></td><td><span class="pill ${tc}">${tt}</span></td></tr>`;
+    const modelCell=showModel?`<td class="hide-mobile">${esc(r.flat_model||'—')}</td>`:'';
+    return`<tr><td>${formatMonth(r.month)}</td><td class="hide-mobile">${esc(r.block)}</td><td>${formatStorey(r.storey_range)}</td>${modelCell}<td class="hide-mobile">${area}</td><td>${formatPriceCell(price)}</td><td class="hide-mobile">${psfV}</td><td class="hide-mobile">${esc(r.lease_commence_date||'—')}</td><td><span class="pill ${lf.cls}">${lf.txt}</span></td><td class="hide-mobile"><span class="pill ${isSame?'p-same':'p-band'}">${esc(rb.label.split('(')[0].trim())}</span></td><td class="hide-mobile"><span class="pill ${tc}">${tt}</span></td></tr>`;
   }).join('');
 }
 
