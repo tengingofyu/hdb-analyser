@@ -16,8 +16,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Moved 2026-07-30 from scripts/ to scripts/tests/; HTML_PATH walks up two dirs.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HTML_PATH = process.env.HTML_PATH || path.join(__dirname, '..', 'index.html');
+const HTML_PATH = process.env.HTML_PATH || path.join(__dirname, '..', '..', 'index.html');
 
 function extractPropertyInfo(html) {
   const m = html.match(/const PROPERTY_INFO=(\{[\s\S]*?\n\});/m);

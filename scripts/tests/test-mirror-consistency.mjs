@@ -18,10 +18,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ABBREVIATIONS as MJS_ABBREV, CANON_EXCEPTIONS as MJS_CANEX } from './street-normalizers.mjs';
+import { ABBREVIATIONS as MJS_ABBREV, CANON_EXCEPTIONS as MJS_CANEX } from '../street-normalizers.mjs';
 
+// Moved 2026-07-30 from scripts/ to scripts/tests/; REPO now walks up two dirs.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO = path.resolve(__dirname, '..');
+const REPO = path.resolve(__dirname, '..', '..');
 const HTML_PATH = path.join(REPO, 'index.html');
 const YML_PATH  = path.join(REPO, '.github', 'workflows', 'update-coords.yml');
 

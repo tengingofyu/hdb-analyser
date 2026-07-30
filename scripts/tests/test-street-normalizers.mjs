@@ -6,7 +6,7 @@
 // bare "ST." to "STREET." That was the ingest bug that put the two corrupted
 // "STREET. GEORGE'S …" keys into PROPERTY_INFO.
 
-import { canonStreet, abbrevStreet, ABBREVIATIONS, CANON_EXCEPTIONS } from './street-normalizers.mjs';
+import { canonStreet, abbrevStreet, ABBREVIATIONS, CANON_EXCEPTIONS } from '../street-normalizers.mjs';
 
 let failed = 0;
 
