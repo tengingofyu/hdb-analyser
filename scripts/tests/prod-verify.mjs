@@ -1,11 +1,16 @@
 // Prod self-verify — runs immediately after push to catch prod-only failures.
-// Three probes:
+// Four probes:
 //   1. Real 650118 quick + full: same tier, banner copy correct, scope-emphasis
 //      renders, no divergence between quick/full estimates.
 //   2. Real 560472 (dense block, tier 1-2 regression): cell A copy correct,
 //      no scope-emphasis (tier 1-2 stays quiet), model column hidden
 //      (uniform).
 //   3. Mobile 390px on 650118: no truncation in facts panel or comparables.
+//   4. Value / Signals tab renders correctly at desktop AND 390px — added
+//      2026-07-30 to catch CSS-removal regressions that a functional
+//      assertion wouldn't see. Asserts #valueSignals has content, the
+//      layout height is sane (proves stylesheet still applied), and no
+//      column has clipped by scrollWidth.
 // On ANY failure, exits 2 → caller auto-reverts the commit.
 
 import puppeteer from 'puppeteer-core';
@@ -150,6 +155,57 @@ console.log('\n== (3) 650118 · mobile 390px · truncation gate ==');
   else fail('3.1', `${trunc.length} cell(s) truncated on mobile`, JSON.stringify(trunc));
   await page.close();
 }
+
+// ── (4) Value / Signals tab still renders correctly ────────────────────
+// Guards CSS-removal regressions that a functional assertion wouldn't see.
+// The Value tab is styled by .signal-* classes; the removed .value-* were
+// dead legacy CSS, so removal should be invisible. If someone accidentally
+// deletes a live class alongside a dead one, this probe catches it as a
+// layout collapse (near-zero height, or overflow).
+async function valueTabProbe(mobile) {
+  const page = await browser.newPage();
+  await driveToFull(page, { postal: '560472', flatType: '4 ROOM', floor: 10, mobile });
+  await page.evaluate(() => window.showTab && window.showTab('value'));
+  await new Promise(r => setTimeout(r, 2000));
+  const state = await page.evaluate(() => {
+    const el = document.getElementById('tab-value');
+    const summary = document.getElementById('valueSummary');
+    const signals = document.getElementById('valueSignals');
+    const items = signals?.querySelectorAll('.signal-item') || [];
+    const rectSummary = summary?.getBoundingClientRect();
+    const rectSignals = signals?.getBoundingClientRect();
+    return {
+      tabVisible: el?.style.display !== 'none',
+      summaryText: summary?.textContent?.trim().slice(0, 160) || '',
+      signalCount: items.length,
+      summaryHeight: rectSummary?.height || 0,
+      signalsHeight: rectSignals?.height || 0,
+      firstBadgeText: items[0]?.querySelector('.signal-badge')?.textContent?.trim() || '',
+      firstIconClass: items[0]?.querySelector('.signal-icon')?.className || '',
+    };
+  });
+  const truncOnValue = await truncationCheck(page);
+  const label = mobile ? 'mobile 390px' : 'desktop';
+  console.log(`   ${label}: signalCount=${state.signalCount} summaryHeight=${Math.round(state.summaryHeight)}px signalsHeight=${Math.round(state.signalsHeight)}px`);
+  console.log(`   ${label}: summary="${state.summaryText}"`);
+  console.log(`   ${label}: firstBadge="${state.firstBadgeText}" firstIconClass="${state.firstIconClass}"`);
+  const id = mobile ? '4.mobile' : '4.desktop';
+  if (state.tabVisible) pass(`${id}.1`, `Value tab visible`);
+  else fail(`${id}.1`, 'Value tab not visible', JSON.stringify(state));
+  if (state.signalCount >= 5) pass(`${id}.2`, `signal-item count ${state.signalCount} >= 5`);
+  else fail(`${id}.2`, `signal-item count ${state.signalCount} < 5 (Value tab may have collapsed)`, state.signalCount);
+  if (state.signalsHeight > 200) pass(`${id}.3`, `signals block height ${Math.round(state.signalsHeight)}px (layout applied)`);
+  else fail(`${id}.3`, `signals block height ${Math.round(state.signalsHeight)}px suspiciously small`, state.signalsHeight);
+  if (state.firstIconClass.includes('signal-icon')) pass(`${id}.4`, `first signal uses .signal-icon class (styling wired)`);
+  else fail(`${id}.4`, `first signal not styled by .signal-icon`, state.firstIconClass);
+  if (truncOnValue.length === 0) pass(`${id}.5`, `Value tab no truncated cells`);
+  else fail(`${id}.5`, `${truncOnValue.length} truncated cell(s) on Value tab`, JSON.stringify(truncOnValue));
+  await page.close();
+}
+console.log('\n== (4) Value / Signals tab render — DESKTOP ==');
+await valueTabProbe(false);
+console.log('\n== (4) Value / Signals tab render — MOBILE 390px ==');
+await valueTabProbe(true);
 
 await browser.close();
 
