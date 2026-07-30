@@ -1,5 +1,5 @@
 // Prod self-verify — runs immediately after push to catch prod-only failures.
-// Four probes:
+// Five probes:
 //   1. Real 650118 quick + full: same tier, banner copy correct, scope-emphasis
 //      renders, no divergence between quick/full estimates.
 //   2. Real 560472 (dense block, tier 1-2 regression): cell A copy correct,
@@ -11,6 +11,11 @@
 //      assertion wouldn't see. Asserts #valueSignals has content, the
 //      layout height is sane (proves stylesheet still applied), and no
 //      column has clipped by scrollWidth.
+//   5. Ko-fi buttons target the tengingofyu page, not the bare homepage —
+//      added 2026-07-30 after both buttons shipped pointing at
+//      https://ko-fi.com/. Inspects the onclick attribute of every
+//      .kofi-btn on the page (there are two: quick-result + comparables
+//      tail) and asserts the URL contains "/tengingofyu".
 // On ANY failure, exits 2 → caller auto-reverts the commit.
 
 import puppeteer from 'puppeteer-core';
@@ -206,6 +211,32 @@ console.log('\n== (4) Value / Signals tab render — DESKTOP ==');
 await valueTabProbe(false);
 console.log('\n== (4) Value / Signals tab render — MOBILE 390px ==');
 await valueTabProbe(true);
+
+// ── (5) Ko-fi buttons point at /tengingofyu, not the bare homepage ─────
+// Read the onclick attribute of every .kofi-btn present on the page. Two
+// exist by design (quick-result kofi-bar + comparables kofi-bar); both
+// must open the /tengingofyu URL. Inspecting the attribute rather than
+// clicking avoids opening real Ko-fi tabs on the CI machine.
+console.log('\n== (5) Ko-fi buttons target /tengingofyu ==');
+{
+  const page = await browser.newPage();
+  await driveToFull(page, { postal: '560472', flatType: '4 ROOM', floor: 10 });
+  const kofi = await page.evaluate(() => {
+    const btns = [...document.querySelectorAll('.kofi-btn')];
+    return btns.map(b => ({ onclick: b.getAttribute('onclick') || '' }));
+  });
+  console.log(`   .kofi-btn count : ${kofi.length}`);
+  for (const [i, k] of kofi.entries()) console.log(`   [${i}] onclick=${JSON.stringify(k.onclick)}`);
+  if (kofi.length >= 2) pass('5.1', `both Ko-fi buttons present (found ${kofi.length})`);
+  else fail('5.1', `expected >=2 kofi buttons, got ${kofi.length}`);
+  const allTargeted = kofi.length > 0 && kofi.every(k => k.onclick.includes('/tengingofyu'));
+  const anyBare = kofi.some(k => /['"]https:\/\/ko-fi\.com['"]/.test(k.onclick));
+  if (allTargeted) pass('5.2', 'all Ko-fi buttons open /tengingofyu');
+  else fail('5.2', 'at least one Ko-fi button missing /tengingofyu', JSON.stringify(kofi));
+  if (!anyBare) pass('5.3', 'no bare "https://ko-fi.com" homepage URL in any button');
+  else fail('5.3', 'a Ko-fi button still opens the bare homepage', JSON.stringify(kofi));
+  await page.close();
+}
 
 await browser.close();
 
