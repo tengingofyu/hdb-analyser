@@ -79,7 +79,7 @@ Fix — exact translation table only, no fuzzy matching anywhere in the valuatio
 - **`#blockFactsPanel`** at the top of results always shows the exact block's in-window transactions verbatim (or `"No FLAT sales at Block N, STREET, in this N-month window."` for n=0). Facts, not aggregation.
 - **`buildPropertyInfoConst`** in `update-coords.yml` sorts BOTH street keys and block keys before stringify — future PROPERTY_INFO diffs are byte-deterministic.
 - **Verification gate** (`scripts/verify-street-table.mjs`) runs monthly in the workflow: asserts every PROPERTY_INFO street's `abbrevStreet` output exists in the HDB resale distinct-street list (fixture at `.github/data/hdb-resale-street-names.json`, 595 streets union across all 5 HDB resale datasets 1990-present). Report-only in the workflow log — surfaces vocabulary drift (e.g. Tengah's first resales post-MOP) at refresh time.
-- **Mirror-consistency tripwire** (`scripts/test-mirror-consistency.mjs`) asserts the abbreviation table is byte-identical in all three copies (`.mjs` source of truth, `index.html` inline, `update-coords.yml` inline).
+- **Mirror-consistency tripwire** (`scripts/tests/test-mirror-consistency.mjs`) asserts the abbreviation table is byte-identical in all three copies (`.mjs` source of truth, `index.html` inline, `update-coords.yml` inline).
 
 Do NOT reintroduce `includes()` / `startsWith` / Levenshtein-style street matching. CLAUDE.md §6 codifies this. Vocabulary edits go into `scripts/street-normalizers.mjs` and both mirrors get updated in the same commit — the tripwire enforces it.
 
@@ -95,9 +95,9 @@ All puppeteer harnesses now live in `scripts/tests/` and are version-controlled.
 
 Current suite:
 
-- `scripts/test-street-normalizers.mjs` — offline round-trip tests (65 cases, SAINT + ST-hazard + all abbrev classes).
-- `scripts/test-prefix-pairs.mjs` — structural: zero shared blocks across prefix-containment street pairs.
-- `scripts/test-mirror-consistency.mjs` — the tripwire: `.mjs` source of truth vs `index.html` inline vs `update-coords.yml` inline, byte-identical.
+- `scripts/tests/test-street-normalizers.mjs` — offline round-trip tests (65 cases, SAINT + ST-hazard + all abbrev classes).
+- `scripts/tests/test-prefix-pairs.mjs` — structural: zero shared blocks across prefix-containment street pairs.
+- `scripts/tests/test-mirror-consistency.mjs` — the tripwire: `.mjs` source of truth vs `index.html` inline vs `update-coords.yml` inline, byte-identical.
 - `scripts/verify-street-table.mjs` — injectivity + existence gate.
 - `scripts/tests/geo-cache-regression.mjs` — 11 assertions locking the 650118 field-failure fix (transient failures never persist to localStorage).
 - `scripts/tests/exact-match-verify.mjs` — 12 assertions: 650118 town + Woodlands guard, qr-scope tier alignment, composed SAINT, abbrev round-trips, prefix-pair guard.
@@ -105,12 +105,10 @@ Current suite:
 - `scripts/tests/absent-block-verify.mjs` — 18 assertions: positive-evidence-only contract (650118 present + 400001 absent).
 - `scripts/tests/regression-suite-v2.mjs` — 21-case suite covering estimation methods, banner scope, input edges, consistency, amenities, value tab wording.
 
-Two more harnesses that don't live in `scripts/` (yet) but are load-bearing:
+- `scripts/tests/golden-cells.mjs` — golden-screenshot harness for state-grid cells A–J. Emits `/tmp/hdb-goldens/*.png` + `BASELINE.json`. Includes the mobile-truncation gate (`scrollWidth > clientWidth` at 390 px) — the automated reviewer that replaces owner eyeball on the "no numeric column clipped" invariant.
+- `scripts/tests/prod-verify.mjs` — post-push self-verify against `https://tengingofyu.github.io/hdb-analyser/`. Three probes: 650118 quick vs full parity, 560472 cell A copy, 650118 mobile 390 px truncation. Runs immediately after every push; exits 2 on failure → caller auto-reverts.
 
-- `/tmp/hdb-test/golden-cells.mjs` — Move-2 golden-screenshot harness for state-grid cells A–J. Emits `/tmp/hdb-goldens/*.png` + `BASELINE.json`. Includes the mobile-truncation gate (`scrollWidth > clientWidth` at 390 px) — the automated reviewer that replaces owner eyeball on the "no numeric column clipped" invariant.
-- `/tmp/hdb-test/prod-verify.mjs` — post-push self-verify against `https://tengingofyu.github.io/hdb-analyser/`. Three probes: 650118 quick vs full parity, 560472 cell A copy, 650118 mobile 390 px truncation. Runs immediately after every push; exits 2 on failure → caller auto-reverts.
-
-Both should move into `scripts/tests/` in the next mechanical commit.
+All harness output (screenshots, BASELINE.json, puppeteer profile dirs) still goes to `/tmp` by convention — no repo pollution.
 
 ## Closed threads (former open items resolved)
 

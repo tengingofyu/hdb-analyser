@@ -1,3 +1,10 @@
 node_modules/
 package-lock.json
 scripts/node_modules/
+
+# Puppeteer profile dirs (accidentally created if a harness is run from
+# repo root instead of /tmp)
+pupp-profile-*
+
+# Claude Code scheduler lock (persistent process state, never for git)
+.claude/scheduled_tasks.lock
