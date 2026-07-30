@@ -49,6 +49,17 @@ Any change to `PRIMARY_SCHOOLS`, the Worker upstream contract, the schools rende
 
 Automated tests catch shape drift; the manual OneMap parity check catches semantic drift. Both are required.
 
+### 8. Pre-push harness runs against the COMMITTED tree, not the working tree
+
+The gate proves the PUSHED code works, not that your uncommitted edits work. Before the pre-push sweep, `git status --short` MUST show clean of application-code / test-code / normalizer changes. If it isn't, either `git stash --include-untracked` first, `git add` the pending changes into the same commit, or re-run from a fresh clone. The harness passing while unstaged edits shadow the committed tree is the worst possible false-green — CI on a fresh checkout will crash on the first import, and prod is already live with the untested code.
+
+Two incidents traced to skipping this:
+
+- **`52105df` (2026-07-30)**: `git mv scripts/test-*.mjs scripts/tests/` staged the rename; the subsequent `./street-normalizers.mjs` → `../street-normalizers.mjs` import edits were not staged. Local sweep passed because the working tree had both changes. The committed content at `scripts/tests/test-*.mjs` still had the old `./` imports, which resolve to a nonexistent file at the new location — any fresh clone would crash on module resolution.
+- **Earlier local-vs-prod count gap**: an unstaged edit lifted a local test count higher than the committed code could achieve; the "green" push landed a lower count on prod. Same root cause.
+
+Procedure: after `git commit`, before `git push`, either `git stash --include-untracked && node scripts/tests/<harness>.mjs && git stash pop`, or (safer) `git worktree add /tmp/verify-$(date +%s) HEAD` and run the harness from that worktree. If either shows a change vs. what you tested from the working tree, the gate wasn't real.
+
 ## Two-source schools architecture (Phase 2, shipped 2026-07-12)
 
 The schools section calls the Cloudflare Worker at `https://hdb-schools-parity.hdb-analyser.workers.dev` first. On any failure (3 s timeout, non-200 including 429, malformed JSON, empty-sentinel for a resolvable block), the client falls back instantly to the static straight-line list computed from the in-page `PRIMARY_SCHOOLS` constant.
