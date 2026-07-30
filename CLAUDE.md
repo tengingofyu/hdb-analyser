@@ -60,6 +60,8 @@ Two incidents traced to skipping this:
 
 Procedure: after `git commit`, before `git push`, either `git stash --include-untracked && node scripts/tests/<harness>.mjs && git stash pop`, or (safer) `git worktree add /tmp/verify-$(date +%s) HEAD` and run the harness from that worktree. If either shows a change vs. what you tested from the working tree, the gate wasn't real.
 
+Gotcha: a fresh `git worktree` doesn't inherit `scripts/node_modules/` (gitignored). Either `npm install --prefix scripts` in the worktree, or symlink: `ln -s $(git rev-parse --show-toplevel)/scripts/node_modules $WORKTREE/scripts/node_modules` before running the puppeteer tests. Offline tests (test-street-normalizers, test-prefix-pairs, test-mirror-consistency) don't need this.
+
 ## Two-source schools architecture (Phase 2, shipped 2026-07-12)
 
 The schools section calls the Cloudflare Worker at `https://hdb-schools-parity.hdb-analyser.workers.dev` first. On any failure (3 s timeout, non-200 including 429, malformed JSON, empty-sentinel for a resolvable block), the client falls back instantly to the static straight-line list computed from the in-page `PRIMARY_SCHOOLS` constant.
