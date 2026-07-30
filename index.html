@@ -3068,44 +3068,68 @@ async function fetchRecs(filters,monthsBack,maxOffset=3000){
   cacheSet(cacheKey,all);return all;
 }
 
-const GEO_CACHE_TTL=180*24*60*60*1000; // 6 months in ms
-const GEO_FAIL='__FAIL__'; // sentinel for failed lookups
+const GEO_CACHE_TTL=180*24*60*60*1000; // 6 months in ms — SUCCESSES ONLY
+const GEO_FAIL='__FAIL__'; // in-session sentinel for failed lookups
 
+// Persistent geo cache — SUCCESSES ONLY. Failures never touch localStorage.
+//
+// Why: transient failures (network blip, in-app-browser throttle, OneMap
+// 429/5xx) look identical to genuine ones (bad/nonexistent postal) at the
+// call site, and the 180-day TTL used to lock the user out for six months
+// on the FIRST transient failure — the 650118 field bug. Session-only
+// failure caching sidesteps the classification problem entirely: transients
+// forget when the tab closes; genuine bad postals cost at most one cheap
+// retry per session. Successes still cache 180 days as before.
+//
+// Self-healing: if geoCacheGet encounters a pre-fix localStorage entry
+// storing the GEO_FAIL sentinel, it evicts and returns undefined so the
+// next lookup does a fresh fetch. Old locked-out users get unstuck on
+// their next visit.
 function geoCacheGet(key){
   try{
     const raw=localStorage.getItem('geo_'+key);
     if(!raw)return undefined;
     const{v,t}=JSON.parse(raw);
     if(Date.now()-t>GEO_CACHE_TTL){localStorage.removeItem('geo_'+key);return undefined;}
-    return v; // may be GEO_FAIL sentinel or actual result
+    if(v===GEO_FAIL){localStorage.removeItem('geo_'+key);return undefined;}
+    return v;
   }catch(e){return undefined;}
 }
-function geoCacheSet(key,value){
+function geoCacheSetSuccess(key,value){
+  // Guardrail — if called with a null/false-y value, refuse. Only real
+  // successes get persisted. Any refactor that reintroduces failure
+  // caching here trips the caching-regression test in scripts/tests/.
+  if(!value||value===GEO_FAIL)return;
   try{localStorage.setItem('geo_'+key,JSON.stringify({v:value,t:Date.now()}));}catch(e){}
 }
 
 async function geocodeOM(query){
   const clean=cleanStr(query);
   const cacheKey=clean.toLowerCase().replace(/\W+/g,'_').slice(0,60);
-  // Check sessionStorage first (fast path)
+  // Check sessionStorage first (fast path, holds both successes and failures
+  // — session-only sentinel is the ONLY place failures persist)
   const sess=cacheGet('om_'+cacheKey);
   if(sess)return sess===GEO_FAIL?null:sess;
-  // Check localStorage (persistent across sessions)
+  // Check localStorage — successes only (post-fix). Legacy GEO_FAIL entries
+  // are auto-evicted by geoCacheGet (see comment above).
   const local=geoCacheGet(cacheKey);
-  if(local!==undefined)return local===GEO_FAIL?null:local;
+  if(local!==undefined)return local;
   // Make API call
   try{
     const r=await fetch(`${ONEMAP}?searchVal=${encodeURIComponent(clean)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`);
-    if(!r.ok){geoCacheSet(cacheKey,GEO_FAIL);cacheSet('om_'+cacheKey,GEO_FAIL);return null;}
+    if(!r.ok){cacheSet('om_'+cacheKey,GEO_FAIL);return null;}
     const j=await r.json();
     const result=j.results?.length?j.results[0]:null;
-    const toStore=result||GEO_FAIL;
-    geoCacheSet(cacheKey,toStore);
-    cacheSet('om_'+cacheKey,toStore);
+    if(result){
+      geoCacheSetSuccess(cacheKey,result);
+      cacheSet('om_'+cacheKey,result);
+    } else {
+      cacheSet('om_'+cacheKey,GEO_FAIL);
+    }
     return result;
   }catch(e){
-    // CORS or network error — cache failure to prevent retry spam
-    geoCacheSet(cacheKey,GEO_FAIL);
+    // CORS / network error — session-only failure cache to prevent retry
+    // spam within a tab. Forgotten on tab close (as designed).
     cacheSet('om_'+cacheKey,GEO_FAIL);
     return null;
   }

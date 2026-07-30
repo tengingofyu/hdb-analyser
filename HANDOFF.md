@@ -87,12 +87,35 @@ Do NOT reintroduce `includes()` / `startsWith` / Levenshtein-style street matchi
 
 - **Phase 3 dashboarding.** The watchdog fails-loud but doesn't summarise. If drift becomes common, add a metrics push to whatever observability we have.
 - **Multiple known-answer postals.** Currently the watchdog checks only 560472. If HSD boundaries drift, one postal may be a lagging indicator. Consider adding 123311 (Henry Park in 1–2 km) and 600268 (Yuhua in 1 km) as second and third canaries.
-- **GEO_FAIL localStorage caching.** Failures currently cached 6 months (`GEO_CACHE_TTL=180d`) — that's the root cause of the 650118 field report chain. Separate decision pending (proposal: ~1h TTL for failures, 180d for successes). Out of scope of the exact-match work order.
 - **Demolished-block residual.** Blocks present in old resale transactions but absent from PROPERTY_INFO. Fallback deletion (Commit 1) closes the corruption vector anyway; low priority.
+
+## Test harnesses (2026-07-30 reorganisation)
+
+All puppeteer harnesses now live in `scripts/tests/` and are version-controlled. Previously they lived at `/tmp/hdb-test/*.mjs` and evaporated between sessions — that's how we lost `exact-match-verify`, `property-info-verify`, `absent-block-verify`, and `regression-suite-v2` between the property-info commit and the display-hardening commit.
+
+Current suite:
+
+- `scripts/test-street-normalizers.mjs` — offline round-trip tests (65 cases, SAINT + ST-hazard + all abbrev classes).
+- `scripts/test-prefix-pairs.mjs` — structural: zero shared blocks across prefix-containment street pairs.
+- `scripts/test-mirror-consistency.mjs` — the tripwire: `.mjs` source of truth vs `index.html` inline vs `update-coords.yml` inline, byte-identical.
+- `scripts/verify-street-table.mjs` — injectivity + existence gate.
+- `scripts/tests/geo-cache-regression.mjs` — 11 assertions locking the 650118 field-failure fix (transient failures never persist to localStorage).
+- `scripts/tests/exact-match-verify.mjs` — 12 assertions: 650118 town + Woodlands guard, qr-scope tier alignment, composed SAINT, abbrev round-trips, prefix-pair guard.
+- `scripts/tests/property-info-verify.mjs` — 30 assertions: short-circuit copy + mobile 390px + badge-click recovery + field-report case.
+- `scripts/tests/absent-block-verify.mjs` — 18 assertions: positive-evidence-only contract (650118 present + 400001 absent).
+- `scripts/tests/regression-suite-v2.mjs` — 21-case suite covering estimation methods, banner scope, input edges, consistency, amenities, value tab wording.
+
+Two more harnesses that don't live in `scripts/` (yet) but are load-bearing:
+
+- `/tmp/hdb-test/golden-cells.mjs` — Move-2 golden-screenshot harness for state-grid cells A–J. Emits `/tmp/hdb-goldens/*.png` + `BASELINE.json`. Includes the mobile-truncation gate (`scrollWidth > clientWidth` at 390 px) — the automated reviewer that replaces owner eyeball on the "no numeric column clipped" invariant.
+- `/tmp/hdb-test/prod-verify.mjs` — post-push self-verify against `https://tengingofyu.github.io/hdb-analyser/`. Three probes: 650118 quick vs full parity, 560472 cell A copy, 650118 mobile 390 px truncation. Runs immediately after every push; exits 2 on failure → caller auto-reverts.
+
+Both should move into `scripts/tests/` in the next mechanical commit.
 
 ## Closed threads (former open items resolved)
 
 - **Exact street matching + block-facts panel** — closed 2026-07-17 (Commit 1 `4173f2a`, Commit 2 `e911e25`, Commit 2b `bfb4099`). All work-order acceptance criteria met: exact-match pipeline shipped, PROPERTY_INFO regenerated with the corrupted Saint keys renamed, deterministic ordering, mirror-consistency tripwire, monthly gate integration in `update-coords.yml`.
+- **GEO_FAIL localStorage lockout** — closed 2026-07-30. Failed geocodes now confined to sessionStorage; localStorage carries successes only under the existing 180-day TTL. `geoCacheGet` also self-evicts legacy `__FAIL__` entries so pre-fix locked-out users get unstuck on their next visit. Locked in by `scripts/tests/geo-cache-regression.mjs` (11 assertions).
 
 ## Historical incidents worth remembering
 
