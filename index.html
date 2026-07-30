@@ -2905,7 +2905,6 @@ function estimateFromPool(records,targetFloor,targetSqm,tier){
   // Method 3: none — no point estimate. Range = observed pool span.
   return{...base,method:'none',price:null,low:observedLow,high:observedHigh};
 }
-function normStr(s){if(!s)return'';return s.toUpperCase().replace(/\bAVENUE\b/g,'AVE').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR').replace(/\bCLOSE\b/g,'CL').replace(/\bCRESCENT\b/g,'CRES').replace(/\bSTREET\b/g,'ST').replace(/\bPLACE\b/g,'PL').replace(/\s+/g,' ').trim();}
 // canonStreet / abbrevStreet — the ONLY route between OneMap's spelled-out
 // form, our PROPERTY_INFO canonical form, and HDB's abbreviated street_name
 // form. See CLAUDE.md §5 ("no fuzzy matching in the valuation path") and
@@ -2939,9 +2938,9 @@ function canonStreet(s){
   return out.replace(/\s+/g,' ').trim();
 }
 // abbrevStreet: canonical (spelled out) → HDB abbreviated form. Used by
-// doQuickSearch to construct the server-side street_name filter — replaces
-// the old normStr / includes() / towns[0] chain that silently pulled
-// Woodlands data for a Bukit Batok postal in the 650118 field failure.
+// doQuickSearch to construct the exact server-side street_name filter.
+// (Historical context on why exact matching replaced the earlier chain
+// lives in HANDOFF.md § "Exact-match street pipeline".)
 function abbrevStreet(s){
   if(!s)return'';
   let out=s.toUpperCase();
@@ -3208,13 +3207,12 @@ async function doQuickSearch(){
     document.getElementById('resolved-tag').innerHTML=`<div class="tag t-ok"><div>Block ${esc(resolvedBlock)}, ${esc(resolvedStreet)}</div>${mixTag}</div>`;
     showStatus('Fetching prices...');
     const mb=+document.getElementById('months_back').value;
-    // EXACT-MATCH pipeline (design rule, CLAUDE.md §5). resolvedStreet is
+    // EXACT-MATCH pipeline (design rule, CLAUDE.md §6). resolvedStreet is
     // OneMap's spelled-out form; abbrevStreet converts to HDB's form for a
-    // server-side street_name filter. This replaces the previous
-    //   fetchRecs({block:resolvedBlock},2000)  → normStr eq → includes() → towns[0]
-    // ladder that silently rebuilt the pool on Woodlands data for postal
-    // 650118 (Bukit Batok blk 118). Zero results → honest empty state; the
-    // labelled ladder inside runFullFallback handles widening.
+    // server-side street_name filter. Zero results → honest empty state; the
+    // labelled ladder inside runFullFallback handles widening. See HANDOFF.md
+    // § "Exact-match street pipeline" for the pre-2026-07-17 chain this
+    // replaced and the 650118 field failure that motivated it.
     const hdbStreet=abbrevStreet(canonStreet(resolvedStreet));
     allBlockRecs=await fetchRecs({block:resolvedBlock,street_name:hdbStreet},mb,500);
     // Same-street pool for the estimation ladder — fetched once, filtered
@@ -3610,7 +3608,7 @@ async function renderPriceTab(result,asking,flatType,mb){
 async function refetchTierPool(tier,mb){
   const flatType=selectedFlatType;
   // Same exact-match filter shape as doQuickSearch: convert OneMap spelled-out
-  // to HDB abbreviated form and query server-side. No normStr fuzz.
+  // to HDB abbreviated form and query server-side. No fuzzy matching.
   const hdbStreet=abbrevStreet(canonStreet(resolvedStreet));
   const inBand=r=>adjBands&&adjBands.some(b=>{const m=smid(r.storey_range);return m>=b.min&&m<=b.max;});
   if(tier===1||tier===2){
