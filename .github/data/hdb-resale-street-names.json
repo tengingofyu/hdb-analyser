@@ -1,36 +1,36 @@
 {
-  "pulled_at": "2026-07-17",
-  "pull_scope": "FULL HISTORY 1990-01 → 2026 across all 5 HDB resale datasets",
-  "total_rows_across_datasets": 981907,
+  "pulled_at": "2026-08-01",
+  "pull_scope": "FULL HISTORY 1990-01 → present across all 5 HDB resale datasets",
+  "total_rows_across_datasets": 983162,
   "per_dataset": [
     {
       "resource_id": "d_ebc5ab87086db484f88045b47411ebc5",
-      "label": "1990–1999",
+      "label": "1990-Dec1999",
       "rows": 287196,
       "distinct_in_this_dataset": 417
     },
     {
       "resource_id": "d_43f493c6c50d54243cc1eab0df142d6a",
-      "label": "2000–Feb2012",
+      "label": "2000-Feb2012",
       "rows": 369651,
       "distinct_in_this_dataset": 523
     },
     {
       "resource_id": "d_2d5ff9ea31397b66239f245f57751537",
-      "label": "Mar2012–Dec2014",
+      "label": "Mar2012-Dec2014",
       "rows": 52203,
       "distinct_in_this_dataset": 515
     },
     {
       "resource_id": "d_ea9ed51da2787afaf8e51f827c304208",
-      "label": "2015–Dec2016",
+      "label": "2015-Dec2016",
       "rows": 37153,
       "distinct_in_this_dataset": 519
     },
     {
       "resource_id": "d_8b84c4ee58e3cfc0ece0d773c8ca6abc",
-      "label": "2017–present",
-      "rows": 235704,
+      "label": "2017-present",
+      "rows": 236959,
       "distinct_in_this_dataset": 578
     }
   ],
