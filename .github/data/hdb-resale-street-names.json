@@ -1,7 +1,7 @@
 {
-  "pulled_at": "2026-08-01",
+  "pulled_at": "2026-09-01",
   "pull_scope": "FULL HISTORY 1990-01 → present across all 5 HDB resale datasets",
-  "total_rows_across_datasets": 983162,
+  "total_rows_across_datasets": 985670,
   "per_dataset": [
     {
       "resource_id": "d_ebc5ab87086db484f88045b47411ebc5",
@@ -30,8 +30,8 @@
     {
       "resource_id": "d_8b84c4ee58e3cfc0ece0d773c8ca6abc",
       "label": "2017-present",
-      "rows": 236959,
-      "distinct_in_this_dataset": 578
+      "rows": 239467,
+      "distinct_in_this_dataset": 580
     }
   ],
   "distinct_street_names": [
@@ -76,6 +76,7 @@
     "BEDOK NTH AVE 2",
     "BEDOK NTH AVE 3",
     "BEDOK NTH AVE 4",
+    "BEDOK NTH DR",
     "BEDOK NTH RD",
     "BEDOK NTH ST 1",
     "BEDOK NTH ST 2",
@@ -492,6 +493,7 @@
     "TAH CHING RD",
     "TAMAN HO SWEE",
     "TAMPINES AVE 1",
+    "TAMPINES AVE 12",
     "TAMPINES AVE 4",
     "TAMPINES AVE 5",
     "TAMPINES AVE 7",
