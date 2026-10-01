@@ -1,7 +1,7 @@
 {
-  "pulled_at": "2026-09-01",
+  "pulled_at": "2026-10-01",
   "pull_scope": "FULL HISTORY 1990-01 → present across all 5 HDB resale datasets",
-  "total_rows_across_datasets": 985670,
+  "total_rows_across_datasets": 987913,
   "per_dataset": [
     {
       "resource_id": "d_ebc5ab87086db484f88045b47411ebc5",
@@ -30,7 +30,7 @@
     {
       "resource_id": "d_8b84c4ee58e3cfc0ece0d773c8ca6abc",
       "label": "2017-present",
-      "rows": 239467,
+      "rows": 241710,
       "distinct_in_this_dataset": 580
     }
   ],
